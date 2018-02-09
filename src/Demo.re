@@ -55,3 +55,7 @@ let rec loop = () => {
 };
 
 loop();
+
+Js.log("shader");
+
+Js.log(GLSL.shader);
