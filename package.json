@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "scripts": {
     "build": "bsb -make-world",
-    "start": "bsb -make-world -w",
+    "watch": "bsb -make-world -w",
+    "serve": "budo ./src/Demo.bs.js --port 3000 --live",
+    "start": "concurrently --raw 'npm run watch' 'npm run serve'",
     "clean": "bsb -clean-world"
   },
   "keywords": [
@@ -13,5 +15,9 @@
   "license": "MIT",
   "devDependencies": {
     "bs-platform": "^2.1.0"
+  },
+  "dependencies": {
+    "@types/three": "^0.89.6",
+    "@types/webgl2": "0.0.2"
   }
 }
