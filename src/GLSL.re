@@ -31,9 +31,13 @@ type varT =
   | Uniform
   | Variable;
 
-type leftExprT = (varT, glslTypeT, string);
+type varExprT = (varT, glslTypeT, string);
 
-type rightExprT = (varT, glslTypeT, string);
+type leftExprT = varExprT;
+
+type rightExprT =
+  | Var(varExprT)
+  | Plus(rightExprT, rightExprT);
 
 type statementT =
   | Assignment(leftExprT, rightExprT)
@@ -72,15 +76,14 @@ let walkTree = (tree, f) =>
     tree
   );
 
-let fmtLExpr = lexpr =>
-  switch lexpr {
-  | (_, _, name) => name
+let rec fmtRExpr = rexpr =>
+  switch rexpr {
+  | Var(_, _, name) => name
+  | Plus(l, r) => fmtRExpr(l) ++ " + " ++ fmtRExpr(r)
   };
 
-let fmtRExpr = lexpr =>
-  switch lexpr {
-  | (_, _, name) => name
-  };
+let fmtLExpr = lexpr =>
+  fmtRExpr(lexpr);
 
 let fmtTree = tree =>
   String.join(
@@ -107,22 +110,22 @@ let fmtFun = gf => {
   glslTypeString(t) ++ " " ++ name ++ "() {" ++ newline ++ fmtTree(tree) ++ "}";
 };
 
-let attr = (t, name) => (Attribute, t, name);
+let attr = (t, name) => Var(Attribute, t, name);
 
-let builtin = (t, name) => (Builtin, t, name);
+let builtin = (t, name) => Var(Builtin, t, name);
 
 let gfun = (t, name, ast) => (t, name, ast);
 
 let getAttributes = gf => {
-  let (t, name, astf) = gf;
+  let (_, _, astf) = gf;
   let tree = astf();
   let ar = ref([]);
   let f = x =>
     switch x {
-    | LExpr((Attribute, t, name)) =>
+    | LExpr(Var(Attribute, t, name)) =>
       ar := [(t, name), ...ar^];
       ();
-    | RExpr((Attribute, t, name)) =>
+    | RExpr(Var(Attribute, t, name)) =>
       ar := [(t, name), ...ar^];
       ();
     | _ => ()
@@ -146,11 +149,12 @@ let (=@) = (dest, src) => Assignment(dest, src);
 /* One specific shader */
 let position = attr(Vec4, "a_position");
 
-let functions = [
-  "\r\n  void main() {\r\n    // gl_Position is a special variable a vertex shader\r\n    // is responsible for setting\r\n    gl_Position = a_position;\r\n  }\r\n  "
-];
-
-let main = gfun(Void, "main", () => [gl_Position =@ position]);
+let main =
+  gfun(Void, "main", () =>
+    /* gl_Position is a special variable a vertex shader is responsible for setting */ [
+      gl_Position =@ position
+    ]
+  );
 
 let getShader = main =>
   version
