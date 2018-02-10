@@ -225,15 +225,36 @@ let ( *@ ) = (l, r) => Mul(l, r);
 
 let (/@) = (l, r) => Div(l, r);
 
+let rx = var => Common(Swizzle(var, X));
+
+let ry = var => Common(Swizzle(var, Y));
+
+let rz = var => Common(Swizzle(var, Z));
+
+let rw = var => Common(Swizzle(var, W));
+
+let ( **. ) = (var, st) => Swizzle(var, st);
+
+let ( **.. ) = (var, st) => Common(Swizzle(var, st));
+
+let lx = var => Swizzle(var, X);
+
+let ly = var => Swizzle(var, Y);
+
+let lz = var => Swizzle(var, Z);
+
+let lw = var => Swizzle(var, W);
+
+let lxyzw = var => Swizzle(var, XYZW);
+
 /* One specific shader */
 let position = attr(Vec4, "a_position");
 
 let main =
   gfun(Void, "main", () =>
     /* gl_Position is a special variable a vertex shader is responsible for setting */ [
-      Swizzle(gl_Position, XYZW)
-      =@ Common(Swizzle(position, X))
-      +@ Common(Swizzle(position, Y))
+      lxyzw(gl_Position) =@ rx(position) +@ ry(position),
+      gl_Position **. XYZW =@ position **.. X +@ position **.. Y
     ]
   );
 
