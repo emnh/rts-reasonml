@@ -1,6 +1,9 @@
 # Prerequisites
 
+```bash
+npm install -g https://github.com/reasonml/reason-cli/archive/3.0.4-bin-linux.tar.gz
 npm install -g concurrently budo
+```
 
 # Basic Reason Template
 
