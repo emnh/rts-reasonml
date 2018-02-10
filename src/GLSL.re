@@ -136,7 +136,7 @@ let getAttributes = gf => {
 
 let formatAttribute = attr => {
   let (t, name) = attr;
-  glslTypeString(t) ++ " " ++ name ++ ";";
+  "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
 };
 
 let formatAttributes = attrs =>
