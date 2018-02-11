@@ -75,131 +75,73 @@ let glslTypeString = t =>
   | Vec4 => "vec4"
   };
 
-/* let rec walkCommonExpr = (tree, combine, transform) =>
-     switch tree {
-     | Var(e) => combine([transform(VarNode(e))])
-     | Swizzle(tree, st) =>
-       combine([transform(CommonExprNode(tree)), transform(SwizzleNode(st))]);
-       walkCommonExpr(tree, st);
-     };
-
-   let walkLExpr = (tree, combine, transform) =>
-     walkCommonExpr(tree, combine, transform);
-
-   let rec walkRExpr = (tree, combine, transform) =>
-     switch tree {
-     | Common(expr) =>
-       combine([transform(CommonExprNode(expr))]);
-       walkCommonExpr(expr, combine, transform);
-     | Plus(l, r) =>
-       combine([transform(RExprNode(l)), transform(RExprNode(r))]);
-       walkRExpr(l, combine, transform);
-       walkRExpr(r, combine, transform);
-     | Minus(l, r) =>
-       combine([f(RExprNode(l)), f(RExprNode(r))]);
-       walkRExpr(l, combine, transform);
-       walkRExpr(r, combine, transform);
-     | Mul(l, r) =>
-       combine([f(RExprNode(l)), f(RExprNode(r))]);
-       walkRExpr(l, combine, transform);
-       walkRExpr(r, combine, transform);
-     | Div(l, r) =>
-       combine([f(RExprNode(l)), f(RExprNode(r))]);
-       walkRExpr(l, combine, transform);
-       walkRExpr(r, combine, transform);
-     };
-
-   let walkTree = (tree, f) =>
-     List.iter(
-       stmt =>
-         /* f(Statement(stmt)); */
-         switch stmt {
-         | Assignment(left, right) =>
-           f(LExprNode(left));
-           f(RExprNode(right));
-           walkLExpr(left, f);
-           walkRExpr(right, f);
-           ();
-         | Discard =>
-           f(StatementNode(Discard));
-           ();
-         },
-       tree
-     ); */
-/* let fmtTransform = t => t;
-
-   let fmtCombine = l => List.reduce((++), l);
-
-   let fmtNew = tree => walkTree(tree, fmtCombine, fmtTransform); */
-/* module Transformer = {
-     let plusLeft =
-     let combinePlus = (l, r) => ;
-   }; */
 type transformer('a) = {
-  .
-  combine: list('a) => 'a,
-  rExpr: rightExprT => 'a,
-  plusCombine: list('a) => 'a,
-  plusLeft: rightExprT => 'a,
-  plusRight: rightExprT => 'a
+  combine: (transformer('a), list('a)) => 'a,
+  rexprCombine: (transformer('a), list('a)) => 'a,
+  common: (transformer('a), commonExprT) => 'a,
+  lExpr: (transformer('a), leftExprT) => 'a,
+  rExpr: (transformer('a), rightExprT) => 'a,
+  tree: (transformer('a), list(statementT)) => 'a,
+  tfun: (transformer('a), (glslTypeT, string, unit => list(statementT))) => 'a
 };
 
-let fmtTransformer: transformer(list(string)) = {
-  combine: l => List.reduce((++), l),
-  rExpr: expr =>
-    switch rexpr {
-    | Common(expr) => fmtCommon(expr)
-    | Plus(l, r) => ["(", this#plusLeft(l), " + ", this#plusRight(r), ")"]
-    | Minus(l, r) => ["(", fmtRExpr(l), " - ", fmtRExpr(r), ")"]
-    | Mul(l, r) => ["(", fmtRExpr(l), " * ", fmtRExpr(r), ")"]
-    | Div(l, r) => ["(", fmtRExpr(l), " / ", fmtRExpr(r), ")"]
-    },
-  plusCombine: this#combine(expr),
-  plusLeft: expr => this#rExpr(expr),
-  plusRight: expr => this#rExpr(expr)
+let combine = (_, l) => List.fold_left((++), "", l);
+
+let fmtTransformer = {
+  combine,
+  rexprCombine: (t, l) => t.combine(t, ["(", t.combine(t, l), ")"]),
+  common: (t, expr) =>
+    t.combine(
+      t,
+      switch expr {
+      | Var((_, _, name)) => [name]
+      | Swizzle(expr, swizzle) => [t.common(t, expr), ".", fmtSwizzle(swizzle)]
+      }
+    ),
+  lExpr: (t, expr) => t.common(t, expr),
+  rExpr: (t, expr) =>
+    t.rexprCombine(
+      t,
+      switch expr {
+      | Common(e) => [t.common(t, e)]
+      | Plus(l, r) => ["(", t.rExpr(t, l), " + ", t.rExpr(t, r), ")"]
+      | Minus(l, r) => ["(", t.rExpr(t, l), " - ", t.rExpr(t, r), ")"]
+      | Mul(l, r) => ["(", t.rExpr(t, l), " * ", t.rExpr(t, r), ")"]
+      | Div(l, r) => ["(", t.rExpr(t, l), " / ", t.rExpr(t, r), ")"]
+      }
+    ),
+  tree: (t, tree) =>
+    t.combine(
+      t,
+      List.map(
+        stmt =>
+          t.combine(
+            t,
+            [
+              indent,
+              switch stmt {
+              | Assignment(left, right) =>
+                t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)])
+              | Discard => "discard"
+              },
+              ";",
+              newline
+            ]
+          ),
+        tree
+      )
+    ),
+  tfun: (t, gf) => {
+    let (tt, name, astf) = gf;
+    let tree = astf();
+    t.combine(
+      t,
+      [glslTypeString(tt), " ", name, "() {", newline, t.tree(t, tree), "}"]
+    );
+  }
 };
 
-let rec fmtCommon = expr =>
-  switch expr {
-  | Var((_, _, name)) => name
-  | Swizzle(expr, swizzle) => fmtCommon(expr) ++ "." ++ fmtSwizzle(swizzle)
-  };
-
-let rec fmtRExpr = rexpr =>
-  switch rexpr {
-  | Common(expr) => fmtCommon(expr)
-  | Plus(l, r) => fmtRExpr(l) ++ " + " ++ fmtRExpr(r)
-  | Minus(l, r) => fmtRExpr(l) ++ " - " ++ fmtRExpr(r)
-  | Mul(l, r) => fmtRExpr(l) ++ " * " ++ fmtRExpr(r)
-  | Div(l, r) => fmtRExpr(l) ++ " / " ++ fmtRExpr(r)
-  };
-
-let fmtLExpr = lexpr => fmtCommon(lexpr);
-
-let fmtTree = tree =>
-  String.join(
-    "",
-    List.map(
-      stmt =>
-        indent
-        ++ (
-          switch stmt {
-          | Assignment(left, right) =>
-            fmtLExpr(left) ++ " = " ++ fmtRExpr(right)
-          | Discard => "discard"
-          }
-        )
-        ++ ";"
-        ++ newline,
-      tree
-    )
-  );
-
-let fmtFun = gf => {
-  let (t, name, astf) = gf;
-  let tree = astf();
-  glslTypeString(t) ++ " " ++ name ++ "() {" ++ newline ++ fmtTree(tree) ++ "}";
-};
+let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
 
 let attr = (t, name) => Var((Attribute, t, name));
 
@@ -207,28 +149,33 @@ let builtin = (t, name) => Var((Builtin, t, name));
 
 let gfun = (t, name, ast) => (t, name, ast);
 
-let getAttributes = gf => {
-  let (_, _, astf) = gf;
-  let tree = astf();
-  let ar = ref([]);
-  let f = x =>
-    switch x {
-    | VarNode((Attribute, t, name)) =>
-      ar := [(t, name), ...ar^];
-      ();
-    | _ => ()
-    };
-  walkTree(tree, f);
-  ar^;
-};
+module SS = Set.Make(String);
 
 let formatAttribute = attr => {
   let (t, name) = attr;
   "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
 };
 
+let getAttributes = gf => {
+  let ar = ref(SS.empty);
+  let walkTransformer = {
+    ...fmtTransformer,
+    common: (t, expr) => {
+      switch expr {
+      | Var((Attribute, t, name)) => 
+        ar := SS.add(formatAttribute((t, name)), ar^)
+      | _ => ()
+      };
+      fmtTransformer.common(t, expr);
+    }
+  };
+  let _ = walkTransformer.tfun(walkTransformer, gf);
+  ar^;
+};
+
+
 let formatAttributes = attrs =>
-  String.join(newline, List.map(formatAttribute, attrs));
+  MyString.join(newline, SS.elements(attrs));
 
 let gl_Position = builtin(Vec4, "gl_Position");
 
