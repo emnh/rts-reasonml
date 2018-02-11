@@ -62,7 +62,8 @@ type nodeT =
   | LExprNode(leftExprT)
   | RExprNode(rightExprT)
   | CommonExprNode(commonExprT)
-  | VarNode(varExprT);
+  | VarNode(varExprT)
+  | SwizzleNode(swizzleT);
 
 let glslTypeString = t =>
   switch t {
@@ -74,58 +75,89 @@ let glslTypeString = t =>
   | Vec4 => "vec4"
   };
 
-let rec walkCommonExpr = (tree, f) =>
-  switch tree {
-  | Var(e) =>
-    f(CommonExprNode(Var(e)));
-    f(VarNode(e));
-  | Swizzle(e, _) =>
-    f(CommonExprNode(e));
-    walkCommonExpr(e, f);
-  };
+/* let rec walkCommonExpr = (tree, combine, transform) =>
+     switch tree {
+     | Var(e) => combine([transform(VarNode(e))])
+     | Swizzle(tree, st) =>
+       combine([transform(CommonExprNode(tree)), transform(SwizzleNode(st))]);
+       walkCommonExpr(tree, st);
+     };
 
-let walkLExpr = (tree, f) => walkCommonExpr(tree, f);
+   let walkLExpr = (tree, combine, transform) =>
+     walkCommonExpr(tree, combine, transform);
 
-let rec walkRExpr = (tree, f) =>
-  switch tree {
-  | Common(expr) =>
-    f(CommonExprNode(expr));
-    walkCommonExpr(expr, f);
-  | Plus(l, r) =>
-    f(RExprNode(l));
-    f(RExprNode(r));
-    walkRExpr(r, f);
-  | Minus(l, r) =>
-    f(RExprNode(l));
-    f(RExprNode(r));
-    walkRExpr(r, f);
-  | Mul(l, r) =>
-    f(RExprNode(l));
-    f(RExprNode(r));
-    walkRExpr(r, f);
-  | Div(l, r) =>
-    f(RExprNode(l));
-    f(RExprNode(r));
-    walkRExpr(r, f);
-  };
+   let rec walkRExpr = (tree, combine, transform) =>
+     switch tree {
+     | Common(expr) =>
+       combine([transform(CommonExprNode(expr))]);
+       walkCommonExpr(expr, combine, transform);
+     | Plus(l, r) =>
+       combine([transform(RExprNode(l)), transform(RExprNode(r))]);
+       walkRExpr(l, combine, transform);
+       walkRExpr(r, combine, transform);
+     | Minus(l, r) =>
+       combine([f(RExprNode(l)), f(RExprNode(r))]);
+       walkRExpr(l, combine, transform);
+       walkRExpr(r, combine, transform);
+     | Mul(l, r) =>
+       combine([f(RExprNode(l)), f(RExprNode(r))]);
+       walkRExpr(l, combine, transform);
+       walkRExpr(r, combine, transform);
+     | Div(l, r) =>
+       combine([f(RExprNode(l)), f(RExprNode(r))]);
+       walkRExpr(l, combine, transform);
+       walkRExpr(r, combine, transform);
+     };
 
-let walkTree = (tree, f) =>
-  List.iter(
-    stmt =>
-      /* f(Statement(stmt)); */
-      switch stmt {
-      | Assignment(left, right) =>
-        f(LExprNode(left));
-        f(RExprNode(right));
-        walkLExpr(left, f);
-        walkRExpr(right, f);
-        ();
-      | Discard =>
-        f(StatementNode(Discard));
-        ();
-      },
-    tree
-  );
+   let walkTree = (tree, f) =>
+     List.iter(
+       stmt =>
+         /* f(Statement(stmt)); */
+         switch stmt {
+         | Assignment(left, right) =>
+           f(LExprNode(left));
+           f(RExprNode(right));
+           walkLExpr(left, f);
+           walkRExpr(right, f);
+           ();
+         | Discard =>
+           f(StatementNode(Discard));
+           ();
+         },
+       tree
+     ); */
+/* let fmtTransform = t => t;
+
+   let fmtCombine = l => List.reduce((++), l);
+
+   let fmtNew = tree => walkTree(tree, fmtCombine, fmtTransform); */
+/* module Transformer = {
+     let plusLeft =
+     let combinePlus = (l, r) => ;
+   }; */
+type transformer('a) = {
+  .
+  combine: list('a) => 'a,
+  rExpr: rightExprT => 'a,
+  plusCombine: list('a) => 'a,
+  plusLeft: rightExprT => 'a,
+  plusRight: rightExprT => 'a
+};
+
+let fmtTransformer: transformer(list(string)) = {
+  combine: l => List.reduce((++), l),
+  rExpr: expr =>
+    switch rexpr {
+    | Common(expr) => fmtCommon(expr)
+    | Plus(l, r) => ["(", this#plusLeft(l), " + ", this#plusRight(r), ")"]
+    | Minus(l, r) => ["(", fmtRExpr(l), " - ", fmtRExpr(r), ")"]
+    | Mul(l, r) => ["(", fmtRExpr(l), " * ", fmtRExpr(r), ")"]
+    | Div(l, r) => ["(", fmtRExpr(l), " / ", fmtRExpr(r), ")"]
+    },
+  plusCombine: this#combine(expr),
+  plusLeft: expr => this#rExpr(expr),
+  plusRight: expr => this#rExpr(expr)
+};
 
 let rec fmtCommon = expr =>
   switch expr {
