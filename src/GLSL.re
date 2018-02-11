@@ -17,6 +17,8 @@ let newline = "\n";
 
 let indent = "  ";
 
+exception GLSLTypeError(string);
+
 type glslTypeT =
   | Void
   | Int
@@ -83,7 +85,7 @@ let rec walkCommonExpr = (tree, f) =>
   | Var(e) =>
     f(CommonExprNode(Var(e)));
     f(VarNode(e));
-  | Swizzle(e, se) =>
+  | Swizzle(e, _) =>
     f(CommonExprNode(e));
     walkCommonExpr(e, f);
   };
@@ -215,7 +217,14 @@ let formatAttributes = attrs =>
 
 let gl_Position = builtin(Vec4, "gl_Position");
 
-let (=@) = (dest, src) => Assignment(dest, src);
+let (=@) = (dest, src) => {
+  let dest =
+    switch dest {
+    | Common(x) => x
+    | _ => raise(GLSLTypeError("left hand side must be common expression"))
+    };
+  Assignment(dest, src);
+};
 
 let (+@) = (l, r) => Plus(l, r);
 
@@ -225,27 +234,74 @@ let ( *@ ) = (l, r) => Mul(l, r);
 
 let (/@) = (l, r) => Div(l, r);
 
-let rx = var => Common(Swizzle(var, X));
+let ( **. ) = (var, st) => Common(Swizzle(var, st));
 
-let ry = var => Common(Swizzle(var, Y));
+let symCounter = ref(0);
 
-let rz = var => Common(Swizzle(var, Z));
+let genSym = () => {
+  symCounter := symCounter^ + 1;
+  "v_" ++ string_of_int(symCounter^);
+};
 
-let rw = var => Common(Swizzle(var, W));
+module type MVarType = {let varType: varT; let name: option(string);};
 
-let ( **. ) = (var, st) => Swizzle(var, st);
+module type MBaseType =
+  (MVarType) =>
+  {
+    let get: unit => commonExprT;
+    let getVarType: unit => varT;
+    let getName: unit => string;
+  };
 
-let ( **.. ) = (var, st) => Common(Swizzle(var, st));
+module MBase: MBaseType =
+  (MVar: MVarType) => {
+    let varType = MVar.varType;
+    let name =
+      switch MVar.name {
+      | Some(x) => x
+      | None => genSym()
+      };
+    let get = () => Var((varType, Vec4, name));
+    let getVarType = () => varType;
+    let getName = () => name;
+    /* let cget = () => Common(get()); */
+  };
 
-let lx = var => Swizzle(var, X);
+module type MVec4Type =
+  (MVarType) =>
+  {
+    /* include (module type of MBase); */
+    /* include (module type of MVarType); */
+    let x: unit => rightExprT;
+    let y: unit => rightExprT;
+    let z: unit => rightExprT;
+    let w: unit => rightExprT;
+    let xyzw: unit => rightExprT;
+  };
 
-let ly = var => Swizzle(var, Y);
+module MVec4: MVec4Type =
+  (MVar: MVarType) => {
+    include MBase(MVar);
+    let x = () => Common(Swizzle(get(), X));
+    let y = () => Common(Swizzle(get(), Y));
+    let z = () => Common(Swizzle(get(), Z));
+    let w = () => Common(Swizzle(get(), W));
+    let xyzw = () => Common(Swizzle(get(), XYZW));
+  };
 
-let lz = var => Swizzle(var, Z);
+module PositionV: MVarType = {
+  let name = Some("a_position");
+  let varType = Attribute;
+};
 
-let lw = var => Swizzle(var, W);
+module Position = MVec4(PositionV);
 
-let lxyzw = var => Swizzle(var, XYZW);
+module GL_PositionV: MVarType = {
+  let name = Some("gl_Position");
+  let varType = Attribute;
+};
+
+module GL_Position = MVec4(GL_PositionV);
 
 /* One specific shader */
 let position = attr(Vec4, "a_position");
@@ -253,8 +309,8 @@ let position = attr(Vec4, "a_position");
 let main =
   gfun(Void, "main", () =>
     /* gl_Position is a special variable a vertex shader is responsible for setting */ [
-      lxyzw(gl_Position) =@ rx(position) +@ ry(position),
-      gl_Position **. XYZW =@ position **.. X +@ position **.. Y
+      gl_Position **. XYZW =@ position **. X +@ position **. Y,
+      GL_Position.xyzw() =@ Position.x() +@ Position.y()
     ]
   );
 
