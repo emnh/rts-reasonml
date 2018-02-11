@@ -46,7 +46,7 @@ Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
 let start = Date.now();
 
 let rec loop = () => {
-  let t = Date.now() -. start;
+  /* let t = Date.now() -. start; */
   let width = float_of_int(state.window.width);
   let height = float_of_int(state.window.height);
   Canvas.fillStyle(ctx, "rgba(0.0, 0.0, 0.0, 1.0)");
