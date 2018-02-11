@@ -44,6 +44,7 @@ type commonExprT =
 type leftExprT = commonExprT;
 
 type rightExprT =
+  /* | TypeError */
   | Common(commonExprT)
   | Plus(rightExprT, rightExprT)
   | Minus(rightExprT, rightExprT)
@@ -284,33 +285,60 @@ module PositionV: MVarType = {
 
 module Position = MVec4(PositionV);
 
+type fvec3 = {
+  varExpr: varExprT,
+  self: rightExprT,
+  x: rightExprT,
+  y: rightExprT,
+  xyz: rightExprT
+};
+
 type fvec4 = {
   varExpr: varExprT,
   self: rightExprT,
   x: rightExprT,
-  y: rightExprT
+  y: rightExprT,
+  xyz: rightExprT,
+  xyzw: rightExprT
 };
 
-let fattr = (t, name) => {
-  let varExpr = (Attribute, t, name);
+let vec3attr = name => {
+  let varExpr = (Attribute, Vec4, name);
   {
     varExpr,
     self: Common(Var(varExpr)),
     x: Common(Swizzle(Var(varExpr), X)),
-    y: Common(Swizzle(Var(varExpr), Y))
+    y: Common(Swizzle(Var(varExpr), Y)),
+    xyz: Common(Swizzle(Var(varExpr), XYZ))
+  };
+};
+
+let vec4attr = name => {
+  let varExpr = (Attribute, Vec4, name);
+  {
+    varExpr,
+    self: Common(Var(varExpr)),
+    x: Common(Swizzle(Var(varExpr), X)),
+    y: Common(Swizzle(Var(varExpr), Y)),
+    xyz: Common(Swizzle(Var(varExpr), XYZ)),
+    xyzw: Common(Swizzle(Var(varExpr), XYZW))
   };
 };
 
 let position = attr(Vec4, "a_position");
 
-let fposition = fattr(Vec4, "a_position");
+let fposition3 = vec3attr("a_position");
+
+let fposition4 = vec4attr("a_position");
 
 let main =
   gfun(Void, "main", () =>
     /* gl_Position is a special variable a vertex shader is responsible for setting */ [
       gl_Position **. XYZW =@ position **. X +@ position **. Y,
       GL_Position.xyzw() =@ Position.x() +@ Position.y(),
-      GL_Position.xyzw() =@ fposition.x +@ fposition.y
+      GL_Position.xyzw() =@ fposition4.x +@ fposition4.y,
+      GL_Position.xyzw() =@ fposition3.xyz +@ fposition3.xyz,
+      GL_Position.xyzw() =@ fposition4.xyzw +@ fposition4.xyzw
     ]
   );
 
