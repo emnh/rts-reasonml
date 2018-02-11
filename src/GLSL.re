@@ -35,14 +35,7 @@ type varT =
 
 type varExprT = (varT, glslTypeT, string);
 
-type swizzleT =
-  | X
-  | Y
-  | Z
-  | W
-  | XY
-  | XYZ
-  | XYZW;
+include GLSLSwizzleFormat;
 
 type commonExprT =
   | Var(varExprT)
@@ -132,17 +125,6 @@ let walkTree = (tree, f) =>
       },
     tree
   );
-
-let fmtSwizzle = swizzle =>
-  switch swizzle {
-  | X => "x"
-  | Y => "y"
-  | Z => "z"
-  | W => "w"
-  | XY => "xy"
-  | XYZ => "xyz"
-  | XYZW => "xyzw"
-  };
 
 let rec fmtCommon = expr =>
   switch expr {
@@ -270,8 +252,6 @@ module MBase: MBaseType =
 module type MVec4Type =
   (MVarType) =>
   {
-    /* include (module type of MBase); */
-    /* include (module type of MVarType); */
     let x: unit => rightExprT;
     let y: unit => rightExprT;
     let z: unit => rightExprT;
@@ -289,6 +269,14 @@ module MVec4: MVec4Type =
     let xyzw = () => Common(Swizzle(get(), XYZW));
   };
 
+module GL_PositionV: MVarType = {
+  let name = Some("gl_Position");
+  let varType = Builtin;
+};
+
+module GL_Position = MVec4(GL_PositionV);
+
+/* One specific shader */
 module PositionV: MVarType = {
   let name = Some("a_position");
   let varType = Attribute;
@@ -296,21 +284,33 @@ module PositionV: MVarType = {
 
 module Position = MVec4(PositionV);
 
-module GL_PositionV: MVarType = {
-  let name = Some("gl_Position");
-  let varType = Attribute;
+type fvec4 = {
+  varExpr: varExprT,
+  self: rightExprT,
+  x: rightExprT,
+  y: rightExprT
 };
 
-module GL_Position = MVec4(GL_PositionV);
+let fattr = (t, name) => {
+  let varExpr = (Attribute, t, name);
+  {
+    varExpr,
+    self: Common(Var(varExpr)),
+    x: Common(Swizzle(Var(varExpr), X)),
+    y: Common(Swizzle(Var(varExpr), Y))
+  };
+};
 
-/* One specific shader */
 let position = attr(Vec4, "a_position");
+
+let fposition = fattr(Vec4, "a_position");
 
 let main =
   gfun(Void, "main", () =>
     /* gl_Position is a special variable a vertex shader is responsible for setting */ [
       gl_Position **. XYZW =@ position **. X +@ position **. Y,
-      GL_Position.xyzw() =@ Position.x() +@ Position.y()
+      GL_Position.xyzw() =@ Position.x() +@ Position.y(),
+      GL_Position.xyzw() =@ fposition.x +@ fposition.y
     ]
   );
 
