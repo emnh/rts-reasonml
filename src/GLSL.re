@@ -47,6 +47,8 @@ type leftExprT = commonExprT;
 type rT =
   /* | TypeError */
   | Common(commonExprT)
+  | ImmediateFloat(float)
+  | ImmediateInt(int)
   | Inc(rT)
   | Dec(rT)
   | PreInc(rT)
@@ -65,7 +67,10 @@ type rT =
   | NotEqual(rT, rT)
   | And(rT, rT)
   | Or(rT, rT)
-  | Xor(rT, rT);
+  | Xor(rT, rT)
+  | BuiltinFun1(string, rT)
+  | BuiltinFun2(string, rT, rT)
+  | BuiltinFun3(string, rT, rT, rT);
 
 type rightExprT = rT;
 
@@ -122,6 +127,8 @@ let fmtTransformer = {
       t,
       switch expr {
       | Common(e) => [t.common(t, e)]
+      | ImmediateFloat(e) => [string_of_float(e)]
+      | ImmediateInt(e) => [string_of_int(e)]
       | Inc(l) => ["(", t.rExpr(t, l), "++)"]
       | Dec(l) => ["(", t.rExpr(t, l), "--)"]
       | PreInc(l) => ["(++", t.rExpr(t, l), ")"]
@@ -152,6 +159,25 @@ let fmtTransformer = {
       | And(l, r) => ["(", t.rExpr(t, l), " && ", t.rExpr(t, r), ")"]
       | Or(l, r) => ["(", t.rExpr(t, l), " || ", t.rExpr(t, r), ")"]
       | Xor(l, r) => ["(", t.rExpr(t, l), " ^^ ", t.rExpr(t, r), ")"]
+      | BuiltinFun1(name, l) => [name, "(", t.rExpr(t, l), ")"]
+      | BuiltinFun2(name, l, r) => [
+          name,
+          "(",
+          t.rExpr(t, l),
+          ", ",
+          t.rExpr(t, r),
+          ")"
+        ]
+      | BuiltinFun3(name, l, r, r2) => [
+          name,
+          "(",
+          t.rExpr(t, l),
+          ", ",
+          t.rExpr(t, r),
+          ", ",
+          t.rExpr(t, r2),
+          ")"
+        ]
       }
     ),
   tree: (t, tree) =>
@@ -228,8 +254,6 @@ let assign = (dest, src) => {
   Assignment(dest, src);
 };
 
-let ( **. ) = (var, st) => Common(Swizzle(var, st));
-
 let symCounter = ref(0);
 
 let genSym = () => {
@@ -242,6 +266,7 @@ type fvec3 = {
   self: rightExprT,
   x: rightExprT,
   y: rightExprT,
+  xy: rightExprT,
   xyz: rightExprT
 };
 
@@ -250,41 +275,51 @@ type fvec4 = {
   self: rightExprT,
   x: rightExprT,
   y: rightExprT,
+  xy: rightExprT,
   xyz: rightExprT,
   xyzw: rightExprT
 };
 
-let vec3 = (vart, name) => {
+let dvec3 = (vart, name) => {
   let varExpr = (vart, Vec3, name);
   {
     varExpr,
     self: Common(Var(varExpr)),
     x: Common(Swizzle(Var(varExpr), X)),
     y: Common(Swizzle(Var(varExpr), Y)),
+    xy: Common(Swizzle(Var(varExpr), XY)),
     xyz: Common(Swizzle(Var(varExpr), XYZ))
   };
 };
 
-let vec3attr = (name) => vec3(Attribute, name);
+let vec3attr = name => dvec3(Attribute, name);
 
-let vec4 = (vart, name) => {
+let vec3var = name => dvec3(Variable, name);
+
+let dvec4 = (vart, name) => {
   let varExpr = (vart, Vec4, name);
   {
     varExpr,
     self: Common(Var(varExpr)),
     x: Common(Swizzle(Var(varExpr), X)),
     y: Common(Swizzle(Var(varExpr), Y)),
+    xy: Common(Swizzle(Var(varExpr), XY)),
     xyz: Common(Swizzle(Var(varExpr), XYZ)),
     xyzw: Common(Swizzle(Var(varExpr), XYZW))
   };
 };
 
-let vec4attr = (name) => vec4(Attribute, name);
+let vec4attr = name => dvec4(Attribute, name);
 
-let gl_Position = vec4(Builtin, "gl_Position");
+let vec4var = name => dvec4(Variable, name);
+
+let gl_Position = dvec4(Builtin, "gl_Position");
+
+let gl_FragCoord = dvec4(Builtin, "gl_FragCoord");
+
+let gl_FragColor = dvec4(Builtin, "gl_FragColor");
 
 /* One specific shader */
-
 let position3 = vec3attr("a_position");
 
 let position4 = vec4attr("a_position");
@@ -309,15 +344,19 @@ module Fragment = {
   module Make = (Element: ElementType) => {
     include Element;
     let (=@) = (l, r) => add(assign(l, r));
-    let (++) = (l) => Inc(l);
-    let (--) = (l) => Dec(l);
-    let (+++) = (l) => PreInc(l);
-    let (---) = (l) => PreDec(l);
-    let (!) = (l) => Not(l);
+    let (++) = l => Inc(l);
+    let (--) = l => Dec(l);
+    let (+++) = l => PreInc(l);
+    let (---) = l => PreDec(l);
+    let (!) = l => Not(l);
     let ( * ) = (l, r) => Mul(l, r);
+    let ( *= ) = (l, r) => l =@ l * r;
     let (/) = (l, r) => Div(l, r);
+    let (/=) = (l, r) => l =@ l / r;
     let (+) = (l, r) => Plus(l, r);
+    let (+=) = (l, r) => l =@ l + r;
     let (-) = (l, r) => Minus(l, r);
+    let (-=) = (l, r) => l =@ l - r;
     let (<) = (l, r) => LessThan(l, r);
     let (>) = (l, r) => GreaterThan(l, r);
     let (<=) = (l, r) => LessThanOrEqual(l, r);
@@ -327,21 +366,69 @@ module Fragment = {
     let (&&) = (l, r) => And(l, r);
     let (||) = (l, r) => Or(l, r);
     let (^^) = (l, r) => Xor(l, r);
+    let ( **. ) = (var, st) => Common(Swizzle(Var(var.varExpr), st));
+    let sin = l => BuiltinFun1("sin", l);
+    let cos = l => BuiltinFun1("cos", l);
+    let vec3 = (l, r, r2) => BuiltinFun3("vec3", l, r, r2);
+    let vec4 = (l, r) => BuiltinFun2("vec4", l, r);
+    let f = x => ImmediateFloat(x);
+    let i = x => ImmediateInt(x);
+    /* TODO: all */
+    let xyzw = XYZW;
   };
 };
+
+module VertexShader = Fragment.Make(Fragment.ElementModule);
+
+module FragmentShader = VertexShader;
 
 let main =
   gfun(
     Void,
     "main",
     () => {
-      module Frag1 = Fragment.Make(Fragment.ElementModule);
-      open! Frag1;
+      open! VertexShader;
       /* gl_Position is a special variable a vertex shader is responsible for setting */
       gl_Position.xyzw =@ position4.x + position4.y;
       gl_Position.xyzw =@ position3.xyz + position3.xyz;
       gl_Position.xyzw =@ position4.xyzw + position4.xyzw;
-      gl_Position.self =@ position4.xyzw + position4.xyzw;
+      gl_Position.self =@ position4 **. xyzw + position4 **. xyzw;
+      finish();
+    }
+  );
+
+/* TODO: vec2 */
+let resolution = dvec3(Uniform, "resolution");
+
+/* TODO: float */
+let time = dvec3(Uniform, "time");
+
+let mainFrag =
+  gfun(
+    Void,
+    "main",
+    () => {
+      open! FragmentShader;
+      /* TODO: vec2 */
+      let position = vec3var("position");
+      position.self =@ gl_FragCoord.xy / resolution.xy;
+      /* TODO: float */
+      let color = vec3var("color");
+      color.self =@ f(0.0);
+      color.self
+      += (
+        sin(position.x * cos(time.self / f(15.0)) * f(80.0))
+        + cos(position.y * cos(time.self / f(15.0)) * f(10.0))
+      );
+      color.self
+      += (sin(position.y * sin(time.self / f(10.0)) * f(40.0))
+      + cos(position.x * sin(time.self / f(25.0)) * f(40.0)));
+      color.self
+      += (sin(position.x * sin(time.self / f(5.0)) * f(10.0))
+      + sin(position.y * sin(time.self / f(35.0)) * f(80.0)));
+      color.self *= (sin(time.self / f(10.0)) * f(0.5));
+      gl_FragColor.self
+      =@ vec4(vec3(color.self, color.self * f(0.5), sin(color.self + time.self / f(3.0)) * f(0.75)), f(1.0));
       finish();
     }
   );
@@ -354,4 +441,5 @@ let getShader = main =>
   ++ newline
   ++ fmtFun(main);
 
-let shader = getShader(main);
+/* let shader = getShader(main); */
+let shader = getShader(mainFrag);
