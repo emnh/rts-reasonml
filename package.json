@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@types/three": "^0.89.6",
-    "@types/webgl2": "0.0.2"
+    "@types/webgl2": "0.0.2",
+    "glsl-transpiler": "^1.5.7",
+    "glslify": "^6.1.0"
   }
 }
