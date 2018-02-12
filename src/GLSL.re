@@ -162,7 +162,7 @@ let getAttributes = gf => {
     ...fmtTransformer,
     common: (t, expr) => {
       switch expr {
-      | Var((Attribute, t, name)) => 
+      | Var((Attribute, t, name)) =>
         ar := SS.add(formatAttribute((t, name)), ar^)
       | _ => ()
       };
@@ -173,13 +173,11 @@ let getAttributes = gf => {
   ar^;
 };
 
-
-let formatAttributes = attrs =>
-  MyString.join(newline, SS.elements(attrs));
+let formatAttributes = attrs => MyString.join(newline, SS.elements(attrs));
 
 let gl_Position = builtin(Vec4, "gl_Position");
 
-let (=@) = (dest, src) => {
+let assign = (dest, src) => {
   let dest =
     switch dest {
     | Common(x) => x
@@ -310,6 +308,54 @@ let fposition3 = vec3attr("a_position");
 
 let fposition4 = vec4attr("a_position");
 
+module Fragment = {
+  module type ElementType = {
+    let add: statementT => unit;
+    let finish: unit => list(statementT);
+  };
+  module ElementModule: ElementType = {
+    let ar = ref([]);
+    let add = x => {
+      ar := [x, ...ar^];
+      ();
+    };
+    let finish = () => {
+      let value = List.rev(ar^);
+      ar := [];
+      value;
+    };
+  };
+  module Make = (Element: ElementType) => {
+    include Element;
+    let (=@) = (l, r) => add(assign(l, r));
+    let (+) = (+@);
+  };
+};
+
+let l = gfun(Void, "main", () => {
+  module Frag1 = Fragment.Make(Fragment.ElementModule);
+  open! Frag1;
+  gl_Position **. XYZW =@ position **. X +@ position **. Y;
+  GL_Position.xyzw() =@ Position.x() + Position.y();
+  GL_Position.xyzw() =@ fposition4.x + fposition4.y;
+  GL_Position.xyzw() =@ fposition3.xyz + fposition3.xyz;
+  GL_Position.xyzw() =@ fposition4.xyzw + fposition4.xyzw;
+  finish();
+});
+
+let l2 = gfun(Void, "main", () => {
+  module Frag2 = Fragment.Make(Fragment.ElementModule);
+  open! Frag2;
+  gl_Position **. XYZW =@ position **. X +@ position **. Y;
+  GL_Position.xyzw() =@ Position.x() + Position.y();
+  GL_Position.xyzw() =@ fposition4.x + fposition4.y;
+  GL_Position.xyzw() =@ fposition3.xyz + fposition3.xyz;
+  GL_Position.xyzw() =@ fposition4.xyzw + fposition4.xyzw;
+  finish();
+});
+
+let (=@) = assign;
+
 let main =
   gfun(Void, "main", () =>
     /* gl_Position is a special variable a vertex shader is responsible for setting */ [
@@ -330,3 +376,8 @@ let getShader = main =>
   ++ fmtFun(main);
 
 let shader = getShader(main);
+
+Js.log(getShader(l));
+
+Js.log(getShader(l2));
+
