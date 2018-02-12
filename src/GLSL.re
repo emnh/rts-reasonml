@@ -43,13 +43,31 @@ type commonExprT =
 
 type leftExprT = commonExprT;
 
-type rightExprT =
+/* Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
+type rT =
   /* | TypeError */
   | Common(commonExprT)
-  | Plus(rightExprT, rightExprT)
-  | Minus(rightExprT, rightExprT)
-  | Mul(rightExprT, rightExprT)
-  | Div(rightExprT, rightExprT);
+  | Inc(rT)
+  | Dec(rT)
+  | PreInc(rT)
+  | PreDec(rT)
+  | Not(rT)
+  /* | PlusMinus(rT) */
+  | Mul(rT, rT)
+  | Div(rT, rT)
+  | Plus(rT, rT)
+  | Minus(rT, rT)
+  | LessThan(rT, rT)
+  | GreaterThan(rT, rT)
+  | LessThanOrEqual(rT, rT)
+  | GreaterThanOrEqual(rT, rT)
+  | Equal(rT, rT)
+  | NotEqual(rT, rT)
+  | And(rT, rT)
+  | Or(rT, rT)
+  | Xor(rT, rT);
+
+type rightExprT = rT;
 
 type statementT =
   | Assignment(leftExprT, rightExprT)
@@ -104,10 +122,36 @@ let fmtTransformer = {
       t,
       switch expr {
       | Common(e) => [t.common(t, e)]
-      | Plus(l, r) => ["(", t.rExpr(t, l), " + ", t.rExpr(t, r), ")"]
-      | Minus(l, r) => ["(", t.rExpr(t, l), " - ", t.rExpr(t, r), ")"]
+      | Inc(l) => ["(", t.rExpr(t, l), "++)"]
+      | Dec(l) => ["(", t.rExpr(t, l), "--)"]
+      | PreInc(l) => ["(++", t.rExpr(t, l), ")"]
+      | PreDec(l) => ["(--", t.rExpr(t, l), ")"]
+      | Not(l) => ["(!", t.rExpr(t, l), ")"]
       | Mul(l, r) => ["(", t.rExpr(t, l), " * ", t.rExpr(t, r), ")"]
       | Div(l, r) => ["(", t.rExpr(t, l), " / ", t.rExpr(t, r), ")"]
+      | Plus(l, r) => ["(", t.rExpr(t, l), " + ", t.rExpr(t, r), ")"]
+      | Minus(l, r) => ["(", t.rExpr(t, l), " - ", t.rExpr(t, r), ")"]
+      | LessThan(l, r) => ["(", t.rExpr(t, l), " < ", t.rExpr(t, r), ")"]
+      | GreaterThan(l, r) => ["(", t.rExpr(t, l), " > ", t.rExpr(t, r), ")"]
+      | LessThanOrEqual(l, r) => [
+          "(",
+          t.rExpr(t, l),
+          " <= ",
+          t.rExpr(t, r),
+          ")"
+        ]
+      | GreaterThanOrEqual(l, r) => [
+          "(",
+          t.rExpr(t, l),
+          " >= ",
+          t.rExpr(t, r),
+          ")"
+        ]
+      | Equal(l, r) => ["(", t.rExpr(t, l), " == ", t.rExpr(t, r), ")"]
+      | NotEqual(l, r) => ["(", t.rExpr(t, l), " != ", t.rExpr(t, r), ")"]
+      | And(l, r) => ["(", t.rExpr(t, l), " && ", t.rExpr(t, r), ")"]
+      | Or(l, r) => ["(", t.rExpr(t, l), " || ", t.rExpr(t, r), ")"]
+      | Xor(l, r) => ["(", t.rExpr(t, l), " ^^ ", t.rExpr(t, r), ")"]
       }
     ),
   tree: (t, tree) =>
@@ -175,8 +219,6 @@ let getAttributes = gf => {
 
 let formatAttributes = attrs => MyString.join(newline, SS.elements(attrs));
 
-let gl_Position = builtin(Vec4, "gl_Position");
-
 let assign = (dest, src) => {
   let dest =
     switch dest {
@@ -186,14 +228,6 @@ let assign = (dest, src) => {
   Assignment(dest, src);
 };
 
-let (+@) = (l, r) => Plus(l, r);
-
-let (-@) = (l, r) => Minus(l, r);
-
-let ( *@ ) = (l, r) => Mul(l, r);
-
-let (/@) = (l, r) => Div(l, r);
-
 let ( **. ) = (var, st) => Common(Swizzle(var, st));
 
 let symCounter = ref(0);
@@ -202,65 +236,6 @@ let genSym = () => {
   symCounter := symCounter^ + 1;
   "v_" ++ string_of_int(symCounter^);
 };
-
-module type MVarType = {let varType: varT; let name: option(string);};
-
-module type MBaseType =
-  (MVarType) =>
-  {
-    let get: unit => commonExprT;
-    let getVarType: unit => varT;
-    let getName: unit => string;
-  };
-
-module MBase: MBaseType =
-  (MVar: MVarType) => {
-    let varType = MVar.varType;
-    let name =
-      switch MVar.name {
-      | Some(x) => x
-      | None => genSym()
-      };
-    let get = () => Var((varType, Vec4, name));
-    let getVarType = () => varType;
-    let getName = () => name;
-    /* let cget = () => Common(get()); */
-  };
-
-module type MVec4Type =
-  (MVarType) =>
-  {
-    let x: unit => rightExprT;
-    let y: unit => rightExprT;
-    let z: unit => rightExprT;
-    let w: unit => rightExprT;
-    let xyzw: unit => rightExprT;
-  };
-
-module MVec4: MVec4Type =
-  (MVar: MVarType) => {
-    include MBase(MVar);
-    let x = () => Common(Swizzle(get(), X));
-    let y = () => Common(Swizzle(get(), Y));
-    let z = () => Common(Swizzle(get(), Z));
-    let w = () => Common(Swizzle(get(), W));
-    let xyzw = () => Common(Swizzle(get(), XYZW));
-  };
-
-module GL_PositionV: MVarType = {
-  let name = Some("gl_Position");
-  let varType = Builtin;
-};
-
-module GL_Position = MVec4(GL_PositionV);
-
-/* One specific shader */
-module PositionV: MVarType = {
-  let name = Some("a_position");
-  let varType = Attribute;
-};
-
-module Position = MVec4(PositionV);
 
 type fvec3 = {
   varExpr: varExprT,
@@ -279,8 +254,8 @@ type fvec4 = {
   xyzw: rightExprT
 };
 
-let vec3attr = name => {
-  let varExpr = (Attribute, Vec4, name);
+let vec3 = (vart, name) => {
+  let varExpr = (vart, Vec3, name);
   {
     varExpr,
     self: Common(Var(varExpr)),
@@ -290,8 +265,10 @@ let vec3attr = name => {
   };
 };
 
-let vec4attr = name => {
-  let varExpr = (Attribute, Vec4, name);
+let vec3attr = (name) => vec3(Attribute, name);
+
+let vec4 = (vart, name) => {
+  let varExpr = (vart, Vec4, name);
   {
     varExpr,
     self: Common(Var(varExpr)),
@@ -302,11 +279,15 @@ let vec4attr = name => {
   };
 };
 
-let position = attr(Vec4, "a_position");
+let vec4attr = (name) => vec4(Attribute, name);
 
-let fposition3 = vec3attr("a_position");
+let gl_Position = vec4(Builtin, "gl_Position");
 
-let fposition4 = vec4attr("a_position");
+/* One specific shader */
+
+let position3 = vec3attr("a_position");
+
+let position4 = vec4attr("a_position");
 
 module Fragment = {
   module type ElementType = {
@@ -328,43 +309,41 @@ module Fragment = {
   module Make = (Element: ElementType) => {
     include Element;
     let (=@) = (l, r) => add(assign(l, r));
-    let (+) = (+@);
+    let (++) = (l) => Inc(l);
+    let (--) = (l) => Dec(l);
+    let (+++) = (l) => PreInc(l);
+    let (---) = (l) => PreDec(l);
+    let (!) = (l) => Not(l);
+    let ( * ) = (l, r) => Mul(l, r);
+    let (/) = (l, r) => Div(l, r);
+    let (+) = (l, r) => Plus(l, r);
+    let (-) = (l, r) => Minus(l, r);
+    let (<) = (l, r) => LessThan(l, r);
+    let (>) = (l, r) => GreaterThan(l, r);
+    let (<=) = (l, r) => LessThanOrEqual(l, r);
+    let (>=) = (l, r) => GreaterThanOrEqual(l, r);
+    let (==) = (l, r) => Equal(l, r);
+    let (!=) = (l, r) => NotEqual(l, r);
+    let (&&) = (l, r) => And(l, r);
+    let (||) = (l, r) => Or(l, r);
+    let (^^) = (l, r) => Xor(l, r);
   };
 };
 
-let l = gfun(Void, "main", () => {
-  module Frag1 = Fragment.Make(Fragment.ElementModule);
-  open! Frag1;
-  gl_Position **. XYZW =@ position **. X +@ position **. Y;
-  GL_Position.xyzw() =@ Position.x() + Position.y();
-  GL_Position.xyzw() =@ fposition4.x + fposition4.y;
-  GL_Position.xyzw() =@ fposition3.xyz + fposition3.xyz;
-  GL_Position.xyzw() =@ fposition4.xyzw + fposition4.xyzw;
-  finish();
-});
-
-let l2 = gfun(Void, "main", () => {
-  module Frag2 = Fragment.Make(Fragment.ElementModule);
-  open! Frag2;
-  gl_Position **. XYZW =@ position **. X +@ position **. Y;
-  GL_Position.xyzw() =@ Position.x() + Position.y();
-  GL_Position.xyzw() =@ fposition4.x + fposition4.y;
-  GL_Position.xyzw() =@ fposition3.xyz + fposition3.xyz;
-  GL_Position.xyzw() =@ fposition4.xyzw + fposition4.xyzw;
-  finish();
-});
-
-let (=@) = assign;
-
 let main =
-  gfun(Void, "main", () =>
-    /* gl_Position is a special variable a vertex shader is responsible for setting */ [
-      gl_Position **. XYZW =@ position **. X +@ position **. Y,
-      GL_Position.xyzw() =@ Position.x() +@ Position.y(),
-      GL_Position.xyzw() =@ fposition4.x +@ fposition4.y,
-      GL_Position.xyzw() =@ fposition3.xyz +@ fposition3.xyz,
-      GL_Position.xyzw() =@ fposition4.xyzw +@ fposition4.xyzw
-    ]
+  gfun(
+    Void,
+    "main",
+    () => {
+      module Frag1 = Fragment.Make(Fragment.ElementModule);
+      open! Frag1;
+      /* gl_Position is a special variable a vertex shader is responsible for setting */
+      gl_Position.xyzw =@ position4.x + position4.y;
+      gl_Position.xyzw =@ position3.xyz + position3.xyz;
+      gl_Position.xyzw =@ position4.xyzw + position4.xyzw;
+      gl_Position.self =@ position4.xyzw + position4.xyzw;
+      finish();
+    }
   );
 
 let getShader = main =>
@@ -376,8 +355,3 @@ let getShader = main =>
   ++ fmtFun(main);
 
 let shader = getShader(main);
-
-Js.log(getShader(l));
-
-Js.log(getShader(l2));
-
