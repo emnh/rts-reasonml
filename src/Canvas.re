@@ -14,7 +14,7 @@ external getContext : (Document.element, string) => context = "getContext";
 [@bs.send] external stroke : context => unit = "stroke";
 
 [@bs.send]
-external fillRect : (context, float, float, float, float) => unit = "fillRect";
+external fillRect : (context, int, int, int, int) => unit = "fillRect";
 
 [@bs.send]
 external clearRect : (context, float, float, float, float) => unit =

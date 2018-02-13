@@ -14,7 +14,9 @@ type windowT = {
   mutable height: int
 };
 
-type stateT = {window: windowT};
+type stateT = {
+  window: windowT
+};
 
 let state: stateT = {
   window: {
@@ -45,12 +47,44 @@ Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
 
 let start = Date.now();
 
+let dg = DatGui.datGUI(DatGui.default);
+
+let addUIColor = (name, value, onChange) => {
+  let guiObj = Js.Dict.empty();
+  let _ = Js.Dict.set(guiObj, name, value);
+  let controller = DatGui.addColorRGBA(dg, guiObj, name);
+  DatGui.onColorRGBAChange(controller, onChange);
+};
+
+let backgroundColor =
+  Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
+
+addUIColor("backGroundColor", backgroundColor.get(), v => backgroundColor.set(v));
+
+/*
+backgroundColor.registerUpdate(v => {
+  Js.log(v);
+});
+*/
+
+let a = Config.intConfigVar(["configtest"], 3);
+
 let rec loop = () => {
   /* let t = Date.now() -. start; */
-  let width = float_of_int(state.window.width);
-  let height = float_of_int(state.window.height);
-  Canvas.fillStyle(ctx, "rgba(0.0, 0.0, 0.0, 1.0)");
-  Canvas.fillRect(ctx, Math.random(), 0.0, width, height);
+  let width = state.window.width;
+  let height = state.window.height;
+  let (r, g, b, _) = backgroundColor.get();
+  let stringColor =
+    "rgb("
+    ++ string_of_int(r)
+    ++ ","
+    ++ string_of_int(g)
+    ++ ","
+    ++ string_of_int(b)
+    ++ ")";
+  Js.log(stringColor);
+  Canvas.fillStyle(ctx, stringColor);
+  Canvas.fillRect(ctx, 0, 0, width, height);
   Document.requestAnimationFrame(loop);
 };
 
@@ -59,7 +93,3 @@ loop();
 Js.log("shader");
 
 Js.log(GLSL.shader);
-
-Js.log(Config.a.get());
-
-let dg = DatGui.datGUI(DatGui.default);
