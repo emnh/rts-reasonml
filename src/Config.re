@@ -1,4 +1,4 @@
-type configVar('a) = {
+type configVarT('a) = {
   path: list(string),
   pathStr: list(string) => string,
   get: unit => 'a,
@@ -9,10 +9,10 @@ type configVar('a) = {
 type rgbaT = Color.rgbaT;
 
 type configT =
-  | IntConfig(configVar(int))
-  | FloatConfig(configVar(float))
-  | StringConfig(configVar(string))
-  | ColorConfig(configVar(rgbaT));
+  | IntConfig(configVarT(int))
+  | FloatConfig(configVarT(float))
+  | StringConfig(configVarT(string))
+  | ColorConfig(configVarT(rgbaT));
 
 let createVarCallbacks = ref([]);
 
