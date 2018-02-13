@@ -14,9 +14,7 @@ type windowT = {
   mutable height: int
 };
 
-type stateT = {
-  window: windowT
-};
+type stateT = {window: windowT};
 
 let state: stateT = {
   window: {
@@ -49,24 +47,56 @@ let start = Date.now();
 
 let dg = DatGui.datGUI(DatGui.default);
 
-let addUIColor = (name, value, onChange) => {
+let uiFolders = Js.Dict.empty();
+
+/* Create Dat.GUI folders if they don't exist */
+let createFolders = (var: Config.configVar('a)) => {
+  let rec createFolder = path => {
+    let p = var.pathStr(path);
+    let folder =
+      switch (Js.Dict.get(uiFolders, p)) {
+      | Some(folder) => folder
+      | None =>
+        let f =
+          switch path {
+          | [] => dg
+          | [head, ...tail] =>
+            let folder = createFolder(tail);
+            DatGui.addFolder(folder, head);
+          };
+        let _ = Js.Dict.set(uiFolders, p, f);
+        f;
+      };
+    folder;
+  };
+  createFolder(List.tl(List.rev(var.path)));
+};
+
+let addUIColor = (var: Config.configVar(Config.rgbaT)) => {
   let guiObj = Js.Dict.empty();
-  let _ = Js.Dict.set(guiObj, name, value);
-  let controller = DatGui.addColorRGBA(dg, guiObj, name);
-  DatGui.onColorRGBAChange(controller, onChange);
+  let name = List.hd(List.rev(var.path));
+  let _ = Js.Dict.set(guiObj, name, var.get());
+  let folder = createFolders(var);
+  let controller = DatGui.addColorRGBA(folder, guiObj, name);
+  DatGui.onColorRGBAChange(controller, v => {
+    let (r, g, b, a) = v;
+    let r = r + 0;
+    let g = g + 0;
+    let b = b + 0;
+    var.set((r, g, b, a));
+  });
 };
 
 let backgroundColor =
   Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
 
-addUIColor("backGroundColor", backgroundColor.get(), v => backgroundColor.set(v));
+addUIColor(backgroundColor);
 
 /*
-backgroundColor.registerUpdate(v => {
-  Js.log(v);
-});
-*/
-
+ backgroundColor.registerUpdate(v => {
+   Js.log(v);
+ });
+ */
 let a = Config.intConfigVar(["configtest"], 3);
 
 let rec loop = () => {
