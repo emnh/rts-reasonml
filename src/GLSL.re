@@ -243,7 +243,7 @@ let getAttributes = gf => {
   ar^;
 };
 
-let formatAttributes = attrs => MyString.join(newline, SS.elements(attrs));
+let formatAttributes = attrs => String.concat(newline, SS.elements(attrs));
 
 let assign = (dest, src) => {
   let dest =
@@ -429,12 +429,14 @@ let mainFrag =
       color.self *= (sin(time.self / f(10.0)) * f(0.5));
       gl_FragColor.self
       =@ vec4(vec3(color.self, color.self * f(0.5), sin(color.self + time.self / f(3.0)) * f(0.75)), f(1.0));
+      gl_FragColor.self =@ position4 **. XYZW;
       finish();
     }
   );
 
 let getShader = main =>
   version
+  ++ newline
   ++ newline
   ++ formatAttributes(getAttributes(main))
   ++ newline

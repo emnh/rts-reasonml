@@ -59,3 +59,5 @@ loop();
 Js.log("shader");
 
 Js.log(GLSL.shader);
+
+Js.log(Config.a.get());
