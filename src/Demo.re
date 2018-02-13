@@ -45,24 +45,24 @@ Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
 
 let start = Date.now();
 
+let _ = ConfigUI.registerCreateHandlers();
+
 let backgroundColor =
   Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
+
+let foregroundColor =
+  Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
 
 let rec loop = () => {
   /* let t = Date.now() -. start; */
   let width = state.window.width;
   let height = state.window.height;
-  let (r, g, b, _) = backgroundColor.get();
-  let stringColor =
-    "rgb("
-    ++ string_of_int(r)
-    ++ ","
-    ++ string_of_int(g)
-    ++ ","
-    ++ string_of_int(b)
-    ++ ")";
-  Canvas.fillStyle(ctx, stringColor);
+  let bgColorString = Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
+  let fgColorString = Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
+  Canvas.fillStyle(ctx, bgColorString);
   Canvas.fillRect(ctx, 0, 0, width, height);
+  Canvas.fillStyle(ctx, fgColorString);
+  Canvas.fillRect(ctx, 0, 0, width / 2, height / 2);
   Document.requestAnimationFrame(loop);
 };
 

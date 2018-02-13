@@ -1,4 +1,5 @@
 type configVarT('a) = {
+  .
   path: list(string),
   pathStr: list(string) => string,
   get: unit => 'a,
@@ -32,22 +33,23 @@ let configVar = (path, defaultValue, getValue, setValue, wrap) => {
   let cached = ref(getInitial());
   let get = () => cached^;
   let var = {
-    path,
-    pathStr,
-    get,
-    set: value => {
+    pri blah = this;
+    pub path = path;
+    pub pathStr = pathStr;
+    pub get = get;
+    pub set = value => {
       cached := value;
       setValue(pathStr(path), value);
       List.iter(f => f(value), update^);
-    },
-    registerUpdate: f => {
+    };
+    pub registerUpdate = f => {
       f(get());
       update := [f, ...update^];
       ();
     }
   };
   /* Set default/stored value and call updaters */
-  var.set(var.get());
+  var#set(var#get());
   /* Call config variable creation callbacks */
   List.iter(f => f(wrap(var)), createVarCallbacks^);
   var;
