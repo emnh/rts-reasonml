@@ -112,7 +112,6 @@ let rec loop = () => {
     ++ ","
     ++ string_of_int(b)
     ++ ")";
-  Js.log(stringColor);
   Canvas.fillStyle(ctx, stringColor);
   Canvas.fillRect(ctx, 0, 0, width, height);
   Document.requestAnimationFrame(loop);
