@@ -1,5 +1,6 @@
 Error.stackTraceLimit = Infinity;
 
+var fs = require('fs');
 var cycle = require('./cycle.js');
 var glslify = require('glslify');
 var GLSL = require('glsl-transpiler');
@@ -203,68 +204,161 @@ compiler.scopes;
 
 parsed = parsed[0];
 var positions = [];
-var Letter = function() {
-};
+var Letter = function() {};
 for (var i = 0; i < source.length; i++) {
   var letter = new Letter();
-  letter.letter = source[i];
   letter.node = undefined;
+  letter.letter = source[i];
+  letter.inserts = [];
   positions[i] = letter;
 }
 
-function processNode(node) {
-  var arrays = node.children.map(processNode);
-  var merged = [].concat.apply([], arrays);
-  /*
-  if (node.token.preceding !== undefined) {
-    var preceding = node.token.preceding.map(function(x) { 
-      var pos = x.position;
-      var length = x.data.length;
-      var printIt = true;
-      for (var i = 0; i < length; i++) {
-        if (positions[pos + i].node !== undefined) {
-          printIt = false;
-        } else {
-          positions[pos + i] = x.data[i];
+var whitePass = false;
+var insertPass = false;
+
+var path = [];
+
+var seen;
+
+function insertToken(token) {
+  var pos = token.position;
+  if (pos !== undefined) {
+    positions[pos].inserts.push(token);
+  }
+}
+
+function processToken(isNode, token) {
+  var pos = token.position;
+  if (pos !== undefined) {
+    var length = token.data.length;
+    for (var i = 0; i < length; i++) {
+      if (isNode) {
+        if (positions[pos + i].node === undefined) {
+          positions[pos + i].node = token;
+        }
+      } else {
+        if (positions[pos + i].token === undefined) {
+          positions[pos + i].token = token;
         }
       }
-      return printIt ? x.data : "";
-    });
-    preceding = [].concat.apply([], preceding);
-    merged.unshift(preceding);
-  }
-  */
-  var pos = node.token.position;
-  var length = node.token.data.length;
-  var printIt = true;
-  for (var i = 0; i < length; i++) {
-    if (positions[pos + i].node !== undefined) {
-      printIt = false;
+    }
+    if (!isNaN(length) && length > 0) {
+      return pos + length;
     } else {
-      positions[pos + i] = node;
+      return 0;
     }
   }
-  if (printIt) {
-    merged.unshift(node.token.data);
-  }
-  switch (node.type) {
-    case "stmt":
-      merged.push(";");
-      break;
-  }
-  return(merged);
+  return 0;
 }
-var tokens = processNode(parsed);
+
+var gid = 0;
+function processNode(node) {
+  if (seen[node.gid] === true) {
+    return;
+  };
+  node.gid = gid++;
+  node.maxPos = 0;
+  seen[node.gid] = true;
+  var ns = [node.data];
+  if (node.token !== undefined) {
+    ns.push(node.token.data);
+  }
+  if (node.tokens !== undefined) {
+    node.tokens.map((tk) => ns.push(tk.data));
+  }
+  path.push(ns.join(":") + "(" + node.type + ")");
+  // console.log("path", path.join("/"));
+
+  if (node.children !== undefined) {
+    node.children.map(processNode);
+    node.maxPos =
+      Math.max(node.maxPos,
+        node.children.map(x => x.maxPos).reduce((x, y) => Math.max(x, y), 0));
+  }
+
+  node.maxPos = Math.max(node.maxPos, processToken(false, node.token));
+  if (node.tokens !== undefined) {
+    node.maxPos = 
+      Math.max(node.maxPos,
+        node.tokens
+          .map((x) => processToken(false, x))
+          .reduce((x, y) => Math.max(x, y), 0));
+  }
+
+  node.maxPos = Math.max(node.maxPos, processToken(true, node));
+
+  if (whitePass && node.token.preceding !== undefined) {
+    node.token.preceding.map((x) => processToken(false, x));
+  }
+
+  if (insertPass) {
+    if (node.type == "stmt" || node.type == "decl") {
+      insertToken({
+        position: node.maxPos,
+        data: ";"
+      });
+    }
+    if (node.type == "expr") {
+      var leftParen = false;
+      for (var i = node.position; i < node.maxPos; i++) {
+        var node = positions[i].node;
+        var token = positions[i].token;
+        if (node.data.match(/(/) || token.data.match(/(/)) {
+          leftParen = true;
+        }
+      }
+      if (leftParen) {
+        insertToken({
+          position: node.maxPos,
+          data: ")"
+        });
+      }
+    }
+  }
+
+  path.pop();
+}
+seen = {};
+processNode(parsed);
+whitePass = true;
+seen = {};
+processNode(parsed);
+insertPass = true;
+seen = {};
+processNode(parsed);
 
 var s = "";
-for (var i = 0; i < Object.keys(positions).length; i++) {
-  s += positions[i];
+var oldNode = undefined;
+for (var i = 0; i < positions.length; i++) {
+  var node = positions[i].node || positions[i].token;
+  if (oldNode === undefined || oldNode != node) {
+    if (node !== undefined) {
+      var data = "";
+      if (node.type == "whitespace" ||
+          node.token === undefined ||
+          node.token.data === undefined) {
+        data = node.data;
+      } else {
+        data = node.token.data;
+      }
+      s += data;
+    }
+    oldNode = node;
+  }
+  if (node === undefined) {
+    var insert = positions[i].inserts.map(x => x.data).join("");
+    if (!s.endsWith(insert)) {
+      s += insert;
+    }
+  }
 }
 console.log(s);
 
-//var dec = JSON.decycle(parsed[0]);
-//console.log(JSON.stringify(dec));
-//console.log(result);
+/*
+var dec = JSON.decycle(parsed);
+var result = JSON.stringify(dec, null, 2);
+fs.writeFileSync("parsed.json", result);
+*/
 
 //clean collected info
 compiler.reset();
