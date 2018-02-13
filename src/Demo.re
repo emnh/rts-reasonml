@@ -61,3 +61,5 @@ Js.log("shader");
 Js.log(GLSL.shader);
 
 Js.log(Config.a.get());
+
+let dg = DatGui.datGUI(DatGui.default);
