@@ -26,9 +26,56 @@ let state: stateT = {
 /* canvas/context setup */
 let canvas = Document.createElement("canvas");
 
-let ctx = Canvas.getContext(canvas, "2d");
+let showError = msg => {
+  let body = Document.body;
+  Document.setInnerHTML(body, "<h1 style='color: red;'>" ++ msg ++ "</h1>");
+};
+
+exception NoGL;
+
+exception No2D;
+
+exception NoProgram;
 
 Document.appendChild(canvas);
+
+let gl =
+  switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl2"))) {
+  | Some(gl) => gl
+  | None =>
+    showError("No WebGL2!");
+    raise(NoGL);
+  };
+
+let vertexShader =
+  WebGL2.createShader(
+    gl,
+    WebGL2.getVERTEX_SHADER(gl),
+    WebGL2.exampleVertexShader
+  );
+
+let fragmentShader =
+  WebGL2.createShader(
+    gl,
+    WebGL2.getFRAGMENT_SHADER(gl),
+    WebGL2.exampleFragmentShader
+  );
+
+let program =
+  switch (vertexShader, fragmentShader) {
+  | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
+  | _ => None
+  };
+
+let run = (_) => {
+  let _ =
+    switch program {
+    | Some(p) =>
+      WebGL2.testProgram(gl, p, state.window.width, state.window.height)
+    | None => raise(NoProgram)
+    };
+  ();
+};
 
 let setCanvasSize = (_) => {
   let width = Document.getWidth(Document.window);
@@ -42,6 +89,8 @@ let setCanvasSize = (_) => {
 Document.addEventListener(Document.window, "resize", setCanvasSize);
 
 Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
+
+Document.addEventListener(Document.window, "DOMContentLoaded", run);
 
 let start = Date.now();
 
@@ -57,12 +106,10 @@ let rec loop = () => {
   /* let t = Date.now() -. start; */
   let width = state.window.width;
   let height = state.window.height;
-  let bgColorString = Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
-  let fgColorString = Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
-  Canvas.fillStyle(ctx, bgColorString);
-  Canvas.fillRect(ctx, 0, 0, width, height);
-  Canvas.fillStyle(ctx, fgColorString);
-  Canvas.fillRect(ctx, 0, 0, width / 2, height / 2);
+  let bgColorString =
+    Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
+  let fgColorString =
+    Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
   Document.requestAnimationFrame(loop);
 };
 

@@ -1,7 +1,7 @@
 type context;
 
 [@bs.send]
-external getContext : (Document.element, string) => context = "getContext";
+external getContext : (Document.element, string) => Js.Nullable.t(context) = "getContext";
 
 [@bs.send] external beginPath : context => unit = "beginPath";
 
