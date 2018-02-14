@@ -3,6 +3,8 @@ let exampleVertexShader = {|#version 300 es
 // an attribute is an input (in) to a vertex shader.
 // It will receive data from a buffer
 in vec4 a_position;
+in vec2 a_uv;
+out vec2 v_uv;
 
 layout(std140) uniform u_PerScene
 {
@@ -19,6 +21,7 @@ void main() {
 
   // gl_Position is a special variable a vertex shader
   // is responsible for setting
+	v_uv = a_uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(a_position.xyz, 1.0);
 	/* gl_Position = a_position; */
 }
@@ -41,6 +44,7 @@ layout(std140) uniform u_PerScene
 };
 
 // we need to declare an output for the fragment shader
+in vec2 v_uv;
 out vec4 outColor;
 
 void main() {
@@ -48,6 +52,7 @@ void main() {
   // outColor = vec4(1, 0, 0.5, 1);
 	vec2 resolution = u_resolution;
 	vec2 position = ( gl_FragCoord.xy / resolution.xy );
+	position = v_uv;
 
 	float time = u_time;
 	float color = 0.0;
@@ -103,6 +108,8 @@ type drawGeometryT;
 type uniformLocationT;
 
 type uniformBlockIndexT;
+
+type enableT;
 
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
@@ -241,6 +248,10 @@ external getCOLOR_BUFFER_BIT : glT => colorBufferBitT = "COLOR_BUFFER_BIT";
 
 [@bs.get] external getTRIANGLES : glT => drawGeometryT = "TRIANGLES";
 
+[@bs.get] external getDEPTH_TEST : glT => enableT = "DEPTH_TEST";
+
+[@bs.send] external enable : (glT, enableT) => unit = "enable";
+
 let createShader = (gl, stype, source) => {
   let shader = createShader(gl, stype);
   shaderSource(gl, shader, source);
@@ -271,9 +282,6 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
 };
 
 let testProgram = (gl, program, width, height, time) => {
-  let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
-  let positionBuffer = createBuffer(gl);
-  bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   /*
      let positions =
        Float32Array.create([|
@@ -291,20 +299,26 @@ let testProgram = (gl, program, width, height, time) => {
          1.0
        |]);
    */
-  let box = Three.createBox(1.0, 1.0, 1.0,
-		Math.sin(time) *. 2.0 *. Math.pi,
-		Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
-		Math.sin(0.73 *. time) *. 2.0 *. Math.pi
-	);
+  let box =
+    Three.createBox(
+      1.0,
+      1.0,
+      1.0,
+      Math.sin(time) *. 2.0 *. Math.pi,
+      Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
+      Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+    );
   let positions = box.position;
   let index = box.index;
+  let positionBuffer = createBuffer(gl);
+  bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
-  let indexBuffer = createBuffer(gl);
+
   let vao = createVertexArray(gl);
   bindVertexArray(gl, vao);
+  let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   enableVertexAttribArray(gl, positionAttributeLocation);
   let size = 3;
-  let ttype = getFLOAT(gl);
   let normalize = Js.Boolean.to_js_boolean(false);
   let stride = 0;
   let offset = 0;
@@ -312,18 +326,43 @@ let testProgram = (gl, program, width, height, time) => {
     gl,
     positionAttributeLocation,
     size,
-    ttype,
+    getFLOAT(gl),
     normalize,
     stride,
     offset
   );
+
+  let uvBuffer = createBuffer(gl);
+  bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
+  bufferData(gl, getARRAY_BUFFER(gl), box.uv, getSTATIC_DRAW(gl));
+
+  let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
+  enableVertexAttribArray(gl, uvAttributeLocation);
+  let size = 2;
+  let normalize = Js.Boolean.to_js_boolean(false);
+  let stride = 0;
+  let offset = 0;
+  vertexAttribPointer(
+    gl,
+    uvAttributeLocation,
+    size,
+    getFLOAT(gl),
+    normalize,
+    stride,
+    offset
+  );
+
+  let indexBuffer = createBuffer(gl);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
   bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
   viewport(gl, 0, 0, width, height);
+	enable(gl, getDEPTH_TEST(gl));
   clearColor(gl, 0, 0, 0, 0);
   clear(gl, getCOLOR_BUFFER_BIT(gl));
+
   useProgram(gl, program);
   bindVertexArray(gl, vao);
+
   let uniformBlockBindingIndex = 0;
   let uniformPerSceneLocation =
     getUniformBlockIndex(gl, program, "u_PerScene");
