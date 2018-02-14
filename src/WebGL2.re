@@ -19,6 +19,7 @@ let exampleFragmentShader = {|#version 300 es
 // to pick one. mediump is a good default. It means "medium precision"
 precision mediump float;
 
+uniform vec2 u_resolution;
 uniform float u_time;
 
 // we need to declare an output for the fragment shader
@@ -27,7 +28,7 @@ out vec4 outColor;
 void main() {
   // Just set the output to a constant redish-purple
   // outColor = vec4(1, 0, 0.5, 1);
-	vec2 resolution = vec2(800.0, 800.0);
+	vec2 resolution = u_resolution;
 	vec2 position = ( gl_FragCoord.xy / resolution.xy );
 
 	float time = u_time;
@@ -80,10 +81,15 @@ type drawGeometryT;
 type uniformLocationT;
 
 [@bs.send]
-external getUniformLocation : (glT, programT, string) => uniformLocationT = "getUniformLocation";
+external getUniformLocation : (glT, programT, string) => uniformLocationT =
+  "getUniformLocation";
 
 [@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
+
+[@bs.send]
+external uniform2f : (glT, uniformLocationT, float, float) => unit =
+  "uniform2f";
 
 [@bs.new]
 external createFloat32Array : array(float) => float32ArrayT = "Float32Array";
@@ -229,8 +235,8 @@ let testProgram = (gl, program, width, height, time) => {
     1.0,
     1.0,
     (-1.0),
-    (1.0),
-    (1.0)
+    1.0,
+    1.0
   |];
   bufferData(
     gl,
@@ -260,10 +266,10 @@ let testProgram = (gl, program, width, height, time) => {
   clear(gl, getCOLOR_BUFFER_BIT(gl));
   useProgram(gl, program);
   bindVertexArray(gl, vao);
-
-	let timeLocation = getUniformLocation(gl, program, "u_time");
-	uniform1f(gl, timeLocation, time);
-
+  let timeLocation = getUniformLocation(gl, program, "u_time");
+  uniform1f(gl, timeLocation, time);
+  let resolutionLocation = getUniformLocation(gl, program, "u_resolution");
+  uniform2f(gl, resolutionLocation, float_of_int(width), float_of_int(height));
   let primitiveType = getTRIANGLES(gl);
   let offset = 0;
   let count = 6;
