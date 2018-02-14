@@ -6,6 +6,8 @@ let window: element = [%bs.raw "window"];
 
 let body: element = [%bs.raw "window.document.body"];
 
+[@bs.get] external iteration : element => int = "iteration";
+
 [@bs.val]
 external createElement : string => element = "document.createElement";
 

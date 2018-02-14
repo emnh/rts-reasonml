@@ -4,9 +4,10 @@
   "scripts": {
     "build": "bsb -make-world",
     "watch": "bsb -make-world -w",
-    "webpack": "webpack -w",
-    "serve": "budo ./src/Demo.bs.js --port 3000 --live",
-    "start": "concurrently --raw 'npm run watch' 'npm run webpack'",
+    "webpack": "webpack",
+    "dev": "webpack-dev-server --hot",
+    "serve": "budo ./src/Index.bs.js --port 3000 --live",
+    "start": "concurrently --raw 'npm run watch' 'npm run dev'",
     "clean": "bsb -clean-world"
   },
   "keywords": [
@@ -15,7 +16,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "^2.1.0"
+    "bs-platform": "^2.1.0",
+    "webpack": "^3.11.0",
+    "webpack-dev-server": "^2.11.1"
   },
   "dependencies": {
     "@types/three": "^0.89.6",

@@ -19,11 +19,16 @@ let state: stateT = {
 };
 
 exception NoGL;
+
 exception No2D;
+
 exception NoProgram;
 
 /* canvas/context setup */
 let main = (_) => {
+  /* Clear doc in case of hot reloading */
+  Document.setInnerHTML(Document.body, "");
+  
   Document.setMargin(Document.getStyle(Document.body), "0px");
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
@@ -91,24 +96,36 @@ let main = (_) => {
    */
   let start = Date.now();
   ConfigUI.init();
+  let _ = Config.intConfigVar(["run", "index"], 0);
+
   /*
-  let backgroundColor =
-    Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
-  let foregroundColor =
-    Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
-    */
+   let backgroundColor =
+     Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
+   let foregroundColor =
+     Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
+     */
+  let startIteration = Document.iteration(Document.window);
   let rec loop = () => {
     let t = Date.now() -. start;
     /*
-    let width = state.window.width;
-    let height = state.window.height;
-    let bgColorString =
-      Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
-    let fgColorString =
-      Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
-      */
+     let width = state.window.width;
+     let height = state.window.height;
+     let bgColorString =
+       Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
+     let fgColorString =
+       Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
+       */
     run(t /. 1000.0);
-    Document.requestAnimationFrame(loop);
+    let currentIteration = Document.iteration(Document.window);
+    if (currentIteration == startIteration) {
+      Document.requestAnimationFrame(loop);
+    } else {
+      Js.log(
+        "exiting render loop "
+        ++ string_of_int(startIteration)
+        ++ " due to hot reload"
+      );
+    };
   };
   loop();
   Js.log("shader");
@@ -116,7 +133,5 @@ let main = (_) => {
   let box = Three.createBox(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
   Js.log(box);
   Js.log(Three.getViewMatrices(box.matrixWorld(), 1, 1));
-  Js.log("hello2");
+  Js.log("hello5");
 };
-
-Document.addEventListener(Document.window, "DOMContentLoaded", main);
