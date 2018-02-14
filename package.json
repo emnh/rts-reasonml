@@ -4,8 +4,9 @@
   "scripts": {
     "build": "bsb -make-world",
     "watch": "bsb -make-world -w",
+    "webpack": "webpack -w",
     "serve": "budo ./src/Demo.bs.js --port 3000 --live",
-    "start": "concurrently --raw 'npm run watch' 'npm run serve'",
+    "start": "concurrently --raw 'npm run watch' 'npm run webpack'",
     "clean": "bsb -clean-world"
   },
   "keywords": [

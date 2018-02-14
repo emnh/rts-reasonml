@@ -1,4 +1,6 @@
-let dg = DatGui.datGUI(DatGui.default);
+let dg = ref(None);
+
+exception DatGuiNotInitialized;
 
 let uiFolders = Js.Dict.empty();
 
@@ -12,7 +14,10 @@ let createFolders = (var : Config.configVarT('a)) => {
       | None =>
         let f =
           switch path {
-          | [] => dg
+          | [] => switch dg^ {
+            | Some(dg) => dg
+            | None => raise(DatGuiNotInitialized)
+            }
           | [head, ...tail] =>
             let folder = createFolder(tail);
             DatGui.addFolder(folder, head);
@@ -51,4 +56,8 @@ let registerCreateHandlers = () => {
       | ColorConfig(var) => addUIVar(var, DatGui.addColorRGBA, DatGui.onColorRGBAChange, transformColor(var))
     }
   });
-}
+};
+
+let init = () => {
+  dg := Some(DatGui.create());
+};
