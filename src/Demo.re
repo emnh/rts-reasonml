@@ -1,8 +1,4 @@
 /* externals */
-module Math = {
-  let pi = [%bs.raw "Math.PI"];
-  [@bs.val] external random : unit => float = "Math.random";
-};
 
 module Date = {
   [@bs.val] external now : unit => float = "Date.now";
@@ -24,8 +20,8 @@ let state: stateT = {
 };
 
 /* canvas/context setup */
-
 Document.setMargin(Document.getStyle(Document.body), "0px");
+
 Document.setOverflow(Document.getStyle(Document.body), "hidden");
 
 let canvas = Document.createElement("canvas");
@@ -71,7 +67,7 @@ let program =
   | _ => None
   };
 
-let run = (time) => {
+let run = time => {
   let _ =
     switch program {
     | Some(p) =>
@@ -95,9 +91,8 @@ Document.addEventListener(Document.window, "resize", setCanvasSize);
 Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
 
 /*
-Document.addEventListener(Document.window, "DOMContentLoaded", run);
-*/
-
+ Document.addEventListener(Document.window, "DOMContentLoaded", run);
+ */
 let start = Date.now();
 
 let _ = ConfigUI.registerCreateHandlers();
@@ -116,7 +111,7 @@ let rec loop = () => {
     Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
   let fgColorString =
     Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
-	run(t /. 1000.0);
+  run(t /. 1000.0);
   Document.requestAnimationFrame(loop);
 };
 
@@ -125,3 +120,9 @@ loop();
 Js.log("shader");
 
 Js.log(GLSL.shader);
+
+let box = Three.createBox(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
+
+Js.log(box);
+
+Js.log(Three.getViewMatrices(box.matrixWorld(), 1, 1));

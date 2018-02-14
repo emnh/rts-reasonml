@@ -22,6 +22,7 @@
     "dat.gui": "^0.7.0",
     "glsl-transpiler": "^1.5.7",
     "glslify": "^6.1.0",
-    "glslx": "^0.1.26"
+    "glslx": "^0.1.26",
+    "three": "^0.89.0"
   }
 }

@@ -4,12 +4,23 @@ let exampleVertexShader = {|#version 300 es
 // It will receive data from a buffer
 in vec4 a_position;
 
+layout(std140) uniform u_PerScene
+{
+	mediump mat4 modelViewMatrix;
+	mediump mat4 projectionMatrix;
+	mediump vec4 u_color1;
+	mediump vec4 u_color2;
+	mediump vec2 u_resolution;
+	mediump float u_time;
+};
+
 // all shaders have a main function
 void main() {
 
   // gl_Position is a special variable a vertex shader
   // is responsible for setting
-  gl_Position = a_position;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(a_position.xyz, 1.0);
+	/* gl_Position = a_position; */
 }
 |};
 
@@ -19,8 +30,15 @@ let exampleFragmentShader = {|#version 300 es
 // to pick one. mediump is a good default. It means "medium precision"
 precision mediump float;
 
-uniform vec2 u_resolution;
-uniform float u_time;
+layout(std140) uniform u_PerScene
+{
+	mediump mat4 modelViewMatrix;
+	mediump mat4 projectionMatrix;
+	mediump vec4 u_color1;
+	mediump vec4 u_color2;
+	mediump vec2 u_resolution;
+	mediump float u_time;
+};
 
 // we need to declare an output for the fragment shader
 out vec4 outColor;
@@ -62,11 +80,15 @@ type linkStatusT;
 
 type attributeLocationT;
 
-type bufferT;
+type bufferSubT;
+
+type bufferT = Js.Nullable.t(bufferSubT);
 
 type arrayBufferTypeT;
 
-type float32ArrayT;
+type uniformBufferTypeT = arrayBufferTypeT;
+
+type elementArrayBufferT = arrayBufferTypeT;
 
 type drawT;
 
@@ -80,19 +102,26 @@ type drawGeometryT;
 
 type uniformLocationT;
 
+type uniformBlockIndexT;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
 
 [@bs.send]
+external getUniformBlockIndex : (glT, programT, string) => uniformBlockIndexT =
+  "getUniformBlockIndex";
+
+[@bs.send]
+external uniformBlockBinding : (glT, programT, uniformBlockIndexT, int) => unit =
+  "getUniformBlockIndex";
+
+[@bs.send] [@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
 
 [@bs.send]
 external uniform2f : (glT, uniformLocationT, float, float) => unit =
   "uniform2f";
-
-[@bs.new]
-external createFloat32Array : array(float) => float32ArrayT = "Float32Array";
 
 [@bs.send]
 external getContext : (Document.element, string) => Js.Nullable.t(glT) =
@@ -146,8 +175,16 @@ external getAttribLocation : (glT, programT, string) => attributeLocationT =
 external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 
 [@bs.send]
-external bufferData : (glT, arrayBufferTypeT, float32ArrayT, drawT) => unit =
+external bufferData : (glT, arrayBufferTypeT, Float32Array.t, drawT) => unit =
   "bufferData";
+
+[@bs.send]
+external bufferDataInt16 : (glT, arrayBufferTypeT, Int16Array.t, drawT) => unit =
+  "bufferData";
+
+[@bs.send]
+external bindBufferBase : (glT, arrayBufferTypeT, int, bufferT) => unit =
+  "bindBufferBase";
 
 [@bs.send]
 external bindVertexArray : (glT, vertexArrayT) => unit = "bindVertexArray";
@@ -171,6 +208,10 @@ external clearColor : (glT, int, int, int, int) => unit = "clearColor";
 [@bs.send]
 external drawArrays : (glT, drawGeometryT, int, int) => unit = "drawArrays";
 
+[@bs.send]
+external drawElements : (glT, drawGeometryT, int, primitiveT, int) => unit =
+  "drawElements";
+
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 
 [@bs.get] external getFRAGMENT_SHADER : glT => shaderTypeT = "FRAGMENT_SHADER";
@@ -182,9 +223,18 @@ external getCOMPILE_STATUS : glT => compileStatusT = "COMPILE_STATUS";
 
 [@bs.get] external getARRAY_BUFFER : glT => arrayBufferTypeT = "ARRAY_BUFFER";
 
+[@bs.get]
+external getUNIFORM_BUFFER : glT => uniformBufferTypeT = "UNIFORM_BUFFER";
+
 [@bs.get] external getSTATIC_DRAW : glT => drawT = "STATIC_DRAW";
 
 [@bs.get] external getFLOAT : glT => primitiveT = "FLOAT";
+
+[@bs.get] external getUNSIGNED_SHORT : glT => primitiveT = "UNSIGNED_SHORT";
+
+[@bs.get]
+external getELEMENT_ARRAY_BUFFER : glT => elementArrayBufferT =
+  "ELEMENT_ARRAY_BUFFER";
 
 [@bs.get]
 external getCOLOR_BUFFER_BIT : glT => colorBufferBitT = "COLOR_BUFFER_BIT";
@@ -224,30 +274,36 @@ let testProgram = (gl, program, width, height, time) => {
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   let positionBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
-  let positions = [|
-    (-1.0),
-    (-1.0),
-    (-1.0),
-    1.0,
-    1.0,
-    (-1.0),
-    (-1.0),
-    1.0,
-    1.0,
-    (-1.0),
-    1.0,
-    1.0
-  |];
-  bufferData(
-    gl,
-    getARRAY_BUFFER(gl),
-    createFloat32Array(positions),
-    getSTATIC_DRAW(gl)
-  );
+  /*
+     let positions =
+       Float32Array.create([|
+         (-1.0),
+         (-1.0),
+         (-1.0),
+         1.0,
+         1.0,
+         (-1.0),
+         (-1.0),
+         1.0,
+         1.0,
+         (-1.0),
+         1.0,
+         1.0
+       |]);
+   */
+  let box = Three.createBox(1.0, 1.0, 1.0,
+		Math.sin(time) *. 2.0 *. Math.pi,
+		Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
+		Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+	);
+  let positions = box.position;
+  let index = box.index;
+  bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
+  let indexBuffer = createBuffer(gl);
   let vao = createVertexArray(gl);
   bindVertexArray(gl, vao);
   enableVertexAttribArray(gl, positionAttributeLocation);
-  let size = 2;
+  let size = 3;
   let ttype = getFLOAT(gl);
   let normalize = Js.Boolean.to_js_boolean(false);
   let stride = 0;
@@ -261,17 +317,72 @@ let testProgram = (gl, program, width, height, time) => {
     stride,
     offset
   );
+  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
+  bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
   viewport(gl, 0, 0, width, height);
   clearColor(gl, 0, 0, 0, 0);
   clear(gl, getCOLOR_BUFFER_BIT(gl));
   useProgram(gl, program);
   bindVertexArray(gl, vao);
-  let timeLocation = getUniformLocation(gl, program, "u_time");
-  uniform1f(gl, timeLocation, time);
-  let resolutionLocation = getUniformLocation(gl, program, "u_resolution");
-  uniform2f(gl, resolutionLocation, float_of_int(width), float_of_int(height));
-  let primitiveType = getTRIANGLES(gl);
+  let uniformBlockBindingIndex = 0;
+  let uniformPerSceneLocation =
+    getUniformBlockIndex(gl, program, "u_PerScene");
+  uniformBlockBinding(
+    gl,
+    program,
+    uniformPerSceneLocation,
+    uniformBlockBindingIndex
+  );
+  let viewMatrices = Three.getViewMatrices(box.matrixWorld(), width, height);
+  let uniformBlock =
+    Float32Array.create(
+      Array.concat([
+        viewMatrices.modelViewMatrix,
+        viewMatrices.projectionMatrix,
+        [|
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.5,
+          0.0,
+          0.0,
+          float_of_int(width),
+          float_of_int(height),
+          time,
+          0.0
+        |]
+      ])
+    );
+  let uniformPerSceneBuffer = createBuffer(gl);
+  bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
+  bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getSTATIC_DRAW(gl));
+  bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
+  /* Render */
+  bindBufferBase(
+    gl,
+    getUNIFORM_BUFFER(gl),
+    uniformBlockBindingIndex,
+    uniformPerSceneBuffer
+  );
+  /*
+    let timeLocation = getUniformLocation(gl, program, "u_time");
+    uniform1f(gl, timeLocation, time);
+    let resolutionLocation = getUniformLocation(gl, program, "u_resolution");
+    uniform2f(gl, resolutionLocation, float_of_int(width), float_of_int(height));
+   */
   let offset = 0;
-  let count = 6;
-  drawArrays(gl, primitiveType, offset, count);
+  let count = Int16Array.length(index);
+  bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
+  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
+  /*
+     drawArrays(
+       gl,
+       getTRIANGLES(gl),
+       offset,
+       Float32Array.length(positions) / size
+     );
+   */
+  drawElements(gl, getTRIANGLES(gl), count, getUNSIGNED_SHORT(gl), offset);
 };
