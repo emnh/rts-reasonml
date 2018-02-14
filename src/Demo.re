@@ -24,6 +24,10 @@ let state: stateT = {
 };
 
 /* canvas/context setup */
+
+Document.setMargin(Document.getStyle(Document.body), "0px");
+Document.setOverflow(Document.getStyle(Document.body), "hidden");
+
 let canvas = Document.createElement("canvas");
 
 let showError = msg => {
@@ -67,11 +71,11 @@ let program =
   | _ => None
   };
 
-let run = (_) => {
+let run = (time) => {
   let _ =
     switch program {
     | Some(p) =>
-      WebGL2.testProgram(gl, p, state.window.width, state.window.height)
+      WebGL2.testProgram(gl, p, state.window.width, state.window.height, time)
     | None => raise(NoProgram)
     };
   ();
@@ -90,7 +94,9 @@ Document.addEventListener(Document.window, "resize", setCanvasSize);
 
 Document.addEventListener(Document.window, "DOMContentLoaded", setCanvasSize);
 
+/*
 Document.addEventListener(Document.window, "DOMContentLoaded", run);
+*/
 
 let start = Date.now();
 
@@ -103,13 +109,14 @@ let foregroundColor =
   Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
 
 let rec loop = () => {
-  /* let t = Date.now() -. start; */
+  let t = Date.now() -. start;
   let width = state.window.width;
   let height = state.window.height;
   let bgColorString =
     Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
   let fgColorString =
     Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
+	run(t /. 1000.0);
   Document.requestAnimationFrame(loop);
 };
 

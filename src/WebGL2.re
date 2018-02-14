@@ -19,12 +19,25 @@ let exampleFragmentShader = {|#version 300 es
 // to pick one. mediump is a good default. It means "medium precision"
 precision mediump float;
 
+uniform float u_time;
+
 // we need to declare an output for the fragment shader
 out vec4 outColor;
 
 void main() {
   // Just set the output to a constant redish-purple
-  outColor = vec4(1, 0, 0.5, 1);
+  // outColor = vec4(1, 0, 0.5, 1);
+	vec2 resolution = vec2(800.0, 800.0);
+	vec2 position = ( gl_FragCoord.xy / resolution.xy );
+
+	float time = u_time;
+	float color = 0.0;
+	color += sin(position.x * cos(time / 15.0) * 80.0) + cos(position.y * cos(time / 15.0) * 10.0);
+	color += sin( position.y * sin( time / 10.0 ) * 40.0 ) + cos( position.x * sin( time / 25.0 ) * 40.0 );
+	color += sin( position.x * sin( time / 5.0 ) * 10.0 ) + sin( position.y * sin( time / 35.0 ) * 80.0 );
+	color *= sin( time / 10.0 ) * 0.5;
+
+	outColor = vec4( vec3( color, color * 0.5, sin( color + time / 3.0 ) * 0.75 ), 1.0 );
 }
 |};
 
@@ -63,6 +76,14 @@ type colorBufferBitT;
 type vertexArrayT;
 
 type drawGeometryT;
+
+type uniformLocationT;
+
+[@bs.send]
+external getUniformLocation : (glT, programT, string) => uniformLocationT = "getUniformLocation";
+
+[@bs.send]
+external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
 
 [@bs.new]
 external createFloat32Array : array(float) => float32ArrayT = "Float32Array";
@@ -193,11 +214,24 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-let testProgram = (gl, program, width, height) => {
+let testProgram = (gl, program, width, height, time) => {
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   let positionBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
-  let positions = [|0.0, 0.0, 0.0, 0.5, 0.7, 0.0|];
+  let positions = [|
+    (-1.0),
+    (-1.0),
+    (-1.0),
+    1.0,
+    1.0,
+    (-1.0),
+    (-1.0),
+    1.0,
+    1.0,
+    (-1.0),
+    (1.0),
+    (1.0)
+  |];
   bufferData(
     gl,
     getARRAY_BUFFER(gl),
@@ -226,8 +260,12 @@ let testProgram = (gl, program, width, height) => {
   clear(gl, getCOLOR_BUFFER_BIT(gl));
   useProgram(gl, program);
   bindVertexArray(gl, vao);
+
+	let timeLocation = getUniformLocation(gl, program, "u_time");
+	uniform1f(gl, timeLocation, time);
+
   let primitiveType = getTRIANGLES(gl);
   let offset = 0;
-  let count = 3;
+  let count = 6;
   drawArrays(gl, primitiveType, offset, count);
 };
