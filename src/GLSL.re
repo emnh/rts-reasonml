@@ -435,9 +435,7 @@ module Fragment = {
     };
     let hasVar = var =>
       switch (SS.find(var, vars^)) {
-      | _ =>
-        Js.log(["hasVar", var]);
-        true;
+      | _ => true
       | exception Not_found => false
       };
     let addVar = var => {
