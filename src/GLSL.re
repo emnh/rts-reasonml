@@ -245,8 +245,7 @@ let getAttributes = gf => {
     ...fmtTransformer,
     var: (t, expr) => {
       switch expr {
-      | (Attribute, t, name) =>
-        ar := SS.add(formatAttribute((t, name)), ar^)
+      | (Attribute, t, name) => ar := SS.add(formatAttribute((t, name)), ar^)
       | _ => ()
       };
       fmtTransformer.var(t, expr);
@@ -258,17 +257,14 @@ let getAttributes = gf => {
 
 let formatAttributes = attrs => String.concat(newline, SS.elements(attrs));
 
-let rightToLeft = (right) => {
-  switch (right) {
-    | RVar(x) => Var(x)
-    | RSwizzle(RVar(x), s) => Swizzle(x, s)
-    | _ => raise(GLSLTypeError("invalid left hand side"))
+let rightToLeft = right =>
+  switch right {
+  | RVar(x) => Var(x)
+  | RSwizzle(RVar(x), s) => Swizzle(x, s)
+  | _ => raise(GLSLTypeError("invalid left hand side"))
   };
-};
 
-let assign = (dest, src) => {
-  Assignment(rightToLeft(dest), src);
-};
+let assign = (dest, src) => Assignment(rightToLeft(dest), src);
 
 let symCounter = ref(0);
 
@@ -406,7 +402,7 @@ let mainFrag =
     () => {
       open! FragmentShader;
       let position = vec2var("position");
-      position =@ gl_FragCoord **. XY / resolution **. XY;
+      position =@ gl_FragCoord **. XY / (resolution **. XY);
       let color = floatvar("color");
       color =@ f(0.0);
       color
