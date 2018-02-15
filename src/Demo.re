@@ -63,11 +63,12 @@ let main = (_) => {
     | _ => None
     };
   let run = (time, geometryType, fg, bg) => {
-    let geof = switch (geometryType) {
+    let geof =
+      switch geometryType {
       | "Box" => Three.createBoxGeometry
       | "Sphere" => Three.createSphereGeometry
       | _ => Three.createBoxGeometry
-    };
+      };
     switch program {
     | Some(p) =>
       WebGL2.testProgram(
@@ -83,7 +84,7 @@ let main = (_) => {
         Three.getViewMatrices
       )
     | None => raise(NoProgram)
-  };
+    };
   };
   let setCanvasSize = (_) => {
     let width = Document.getWidth(Document.window);
@@ -103,23 +104,33 @@ let main = (_) => {
   let start = Date.now();
   ConfigUI.init();
   let backgroundColor =
-    Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
+    Config.colorConfigVar(
+      ["canvas", "background", "color"],
+      (0, 0, 0, 1.0),
+      ()
+    );
   let foregroundColor =
-    Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
-  let geometryType = 
-    Config.stringConfigVar(["object", "geometry"], "Box");
+    Config.colorConfigVar(
+      ["canvas", "foreground", "color"],
+      (0, 0, 0, 1.0),
+      ()
+    );
+  let geometryType =
+    Config.stringConfigVar(
+      ["object", "geometry"],
+      "Box",
+      ~choices=Config.Choices([|"Box", "Sphere"|]),
+      ()
+    );
   let startIteration = Document.iteration(Document.window);
   let rec loop = () => {
     let t = Date.now() -. start;
-    /*
-     let width = state.window.width;
-     let height = state.window.height;
-     let bgColorString =
-       Color.stringColor(Color.setA(backgroundColor#get(), 1.0));
-     let fgColorString =
-       Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
-       */
-    run(t /. 1000.0, geometryType#get(), foregroundColor#get(), backgroundColor#get());
+    run(
+      t /. 1000.0,
+      geometryType#get(),
+      foregroundColor#get(),
+      backgroundColor#get()
+    );
     let currentIteration = Document.iteration(Document.window);
     if (currentIteration == startIteration) {
       Document.requestAnimationFrame(loop);

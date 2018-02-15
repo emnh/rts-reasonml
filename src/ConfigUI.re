@@ -31,20 +31,16 @@ let createFolders = var => {
   createFolder(List.tl(List.rev(var#path)));
 };
 
-let addUIVar = (var, addF, changeF, onChange) => {
-  let f = () => {
-    let guiObj = Js.Dict.empty();
-    let name = List.hd(List.rev(var#path));
-    let _ = Js.Dict.set(guiObj, name, var#get());
-    let folder = createFolders(var);
-    let controller = addF(folder, guiObj, name);
-    changeF(controller, onChange);
-  };
-  Document.onReady(f);
+let getNameFolderAndStorageObject = var => {
+  let storageObject = Js.Dict.empty();
+  let name = List.hd(List.rev(var#path));
+  let _ = Js.Dict.set(storageObject, name, var#get());
+  let folder = createFolders(var);
+  (name, folder, storageObject);
 };
 
 let registerCreateHandlers = () => {
-  let onChange = (var, v) => var#set(v);
+  let genericOnChange = (var, v) => var#set(v);
   let transformColor = (var, v) => {
     let (r, g, b, a) = v;
     let r = r + 0;
@@ -52,29 +48,81 @@ let registerCreateHandlers = () => {
     let b = b + 0;
     var#set((r, g, b, a));
   };
-  Config.addCreateVarCallBack(cvar =>
-    switch cvar {
-    | IntConfig(var) =>
-      addUIVar(var, DatGui.addInt, DatGui.onIntChange, onChange(var))
-    | FloatConfig(var) =>
-      addUIVar(var, DatGui.addFloat, DatGui.onFloatChange, onChange(var))
-    | StringConfig(var) =>
-      addUIVar(var, DatGui.addString, DatGui.onStringChange, onChange(var))
-    | ColorConfig(var) =>
-      addUIVar(
-        var,
-        DatGui.addColorRGBA,
-        DatGui.onColorRGBAChange,
-        transformColor(var)
-      )
-    }
-  );
+  Config.addCreateVarCallBack(cvar => {
+    let f = () => {
+      /*
+       let Config.IntConfig(var) | Config.FloatConfig(var) | Config.StringConfig(var) |
+           Config.ColorConfig(var) = cvar;
+           */
+      let (controller, onChange) =
+        switch cvar {
+        | IntConfig(var) =>
+          let choices =
+            switch var#choices {
+            | Some(Choices(x)) => `IntArray(x)
+            | Some(NamedChoices(x)) => `IntDict(x)
+            | None => `AllChoices(Js.Nullable.from_opt(None))
+            };
+          let (name, folder, storageObject) =
+            getNameFolderAndStorageObject(var);
+          let storageObject = `IntDict(storageObject);
+          let onChange = `IntChange(genericOnChange(var));
+          let controller =
+            DatGui.addChoices(folder, storageObject, name, choices);
+          (controller, onChange);
+        | FloatConfig(var) =>
+          let choices =
+            switch var#choices {
+            | Some(Choices(x)) => `FloatArray(x)
+            | Some(NamedChoices(x)) => `FloatDict(x)
+            | None => `AllChoices(Js.Nullable.from_opt(None))
+            };
+          let (name, folder, storageObject) =
+            getNameFolderAndStorageObject(var);
+          let storageObject = `FloatDict(storageObject);
+          let controller =
+            DatGui.addChoices(folder, storageObject, name, choices);
+          let onChange = `FloatChange(genericOnChange(var));
+          (controller, onChange);
+        | StringConfig(var) =>
+          let choices =
+            switch var#choices {
+            | Some(Choices(x)) => `StringArray(x)
+            | Some(NamedChoices(x)) => `StringDict(x)
+            | None => `AllChoices(Js.Nullable.from_opt(None))
+            };
+          let (name, folder, storageObject) =
+            getNameFolderAndStorageObject(var);
+          let storageObject = `StringDict(storageObject);
+          let onChange = `StringChange(genericOnChange(var));
+          let controller =
+            DatGui.addChoices(folder, storageObject, name, choices);
+          (controller, onChange);
+        | ColorConfig(var) =>
+          let choices =
+            switch var#choices {
+            | Some(Choices(x)) => `ColorArray(x)
+            | Some(NamedChoices(x)) => `ColorDict(x)
+            | None => `AllChoices(Js.Nullable.from_opt(None))
+            };
+          let (name, folder, storageObject) =
+            getNameFolderAndStorageObject(var);
+          let storageObject = `ColorDict(storageObject);
+          let onChange = `ColorChange(genericOnChange(var));
+          let controller =
+            DatGui.addChoices(folder, storageObject, name, choices);
+          (controller, onChange);
+        };
+      DatGui.onChange(controller, onChange);
+    };
+    Document.onReady(f);
+  });
 };
 
 let init = () => {
   registerCreateHandlers();
   let datgui = DatGui.create();
-  Document.debug(Document.window, datgui); 
+  Document.debug(Document.window, datgui);
   dg := Some(datgui);
 };
 

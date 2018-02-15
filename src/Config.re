@@ -1,10 +1,15 @@
+type choiceT('a) =
+  | Choices(array('a))
+  | NamedChoices(Js.Dict.t('a));
+
 type configVarT('a) = {
   .
   path: list(string),
   pathStr: list(string) => string,
   get: unit => 'a,
   set: 'a => unit,
-  registerUpdate: ('a => unit) => unit
+  registerUpdate: ('a => unit) => unit,
+  choices: option(choiceT('a))
 };
 
 type rgbaT = Color.rgbaT;
@@ -20,7 +25,7 @@ let createVarCallbacks = ref([]);
 let addCreateVarCallBack = f =>
   createVarCallbacks := [f, ...createVarCallbacks^];
 
-let configVar = (path, defaultValue, getValue, setValue, wrap) => {
+let configVar = (path, defaultValue, getValue, setValue, wrap, ~choices=?, ()) => {
   let pathStr = p => String.concat("/", p);
   let update = ref([]);
   let getInitial = () => {
@@ -46,7 +51,8 @@ let configVar = (path, defaultValue, getValue, setValue, wrap) => {
       f(get());
       update := [f, ...update^];
       ();
-    }
+    };
+    pub choices = choices
   };
   /* Set default/stored value and call updaters */
   var#set(var#get());
@@ -77,17 +83,35 @@ let colorConfigVar = (path, defaultValue) => {
   configVar(path, defaultValue, getColor, setColor, wrap);
 };
 
-let intConfigVar = (path, defaultValue) =>
-  configVar(path, defaultValue, LocalStorage.getInt, LocalStorage.setInt, var =>
-    IntConfig(var)
+let intConfigVar = (path, defaultValue, ~choices=?, ()) =>
+  configVar(
+    path,
+    defaultValue,
+    LocalStorage.getInt,
+    LocalStorage.setInt,
+    var => IntConfig(var),
+    ~choices?,
+    ()
   );
 
-let floatConfigVar = (path, defaultValue) =>
-  configVar(path, defaultValue, LocalStorage.getFloat, LocalStorage.setFloat, var =>
-    FloatConfig(var)
+let floatConfigVar = (path, defaultValue, ~choices=?, ()) =>
+  configVar(
+    path,
+    defaultValue,
+    LocalStorage.getFloat,
+    LocalStorage.setFloat,
+    var => FloatConfig(var),
+    ~choices?,
+    ()
   );
 
-let stringConfigVar = (path, defaultValue) =>
-  configVar(path, defaultValue, LocalStorage.getString, LocalStorage.setString, var =>
-    StringConfig(var)
+let stringConfigVar = (path, defaultValue, ~choices=?, ()) =>
+  configVar(
+    path,
+    defaultValue,
+    LocalStorage.getString,
+    LocalStorage.setString,
+    var => StringConfig(var),
+    ~choices?,
+    ()
   );
