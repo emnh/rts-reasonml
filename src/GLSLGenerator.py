@@ -69,6 +69,14 @@ let fmtSwizzle = (swizzle: swizzleT) =>
   switch swizzle {
   %s
   };
-''' % ("\n".join(['  | %s => "%s" ' % (x.upper(), x.lower()) for x in allperms]))
-)
+
+/*
+module LowerSwizzle = {
+    %s
+};
+*/
+''' % (
+    "\n".join(['  | %s => "%s" ' % (x.upper(), x.lower()) for x in allperms]),
+    "\n".join(['  let %s = %s;' % (x.lower(), x.upper()) for x in allperms])))
+
 fd.close()
