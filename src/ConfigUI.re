@@ -50,10 +50,6 @@ let registerCreateHandlers = () => {
   };
   Config.addCreateVarCallBack(cvar => {
     let f = () => {
-      /*
-       let Config.IntConfig(var) | Config.FloatConfig(var) | Config.StringConfig(var) |
-           Config.ColorConfig(var) = cvar;
-           */
       let (controller, onChange) =
         switch cvar {
         | IntConfig(var) =>
