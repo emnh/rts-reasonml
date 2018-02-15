@@ -291,7 +291,7 @@ let testProgram =
       time,
       fgColor,
       bgColor,
-      createBoxGeometry,
+      createGeometry,
       getObjectMatrix,
       getViewMatrices
     ) => {
@@ -312,7 +312,7 @@ let testProgram =
          1.0
        |]);
    */
-  let box: Three.geometryBuffersT = createBoxGeometry();
+  let box: Three.geometryBuffersT = createGeometry();
   let obj: Three.objectTransformT =
     getObjectMatrix(
       (0.0, 0.0, (-10.0)),

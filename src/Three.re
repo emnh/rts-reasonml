@@ -4,6 +4,8 @@ type geometryT;
 
 type boxT = geometryT;
 
+type sphereT = geometryT;
+
 type meshT;
 
 type attributesT;
@@ -21,6 +23,10 @@ type positionT = vector3T;
 [@bs.new] [@bs.module "three"]
 external createBoxBufferGeometry : (float, float, float, int, int, int) => boxT =
   "BoxBufferGeometry";
+
+[@bs.new] [@bs.module "three"]
+external createSphereBufferGeometry : (float, int, int) => sphereT =
+  "SphereBufferGeometry";
 
 [@bs.new] [@bs.module "three"]
 external createBasicMaterial : unit => materialT = "MeshBasicMaterial";
@@ -99,6 +105,17 @@ type viewTransformT = {
 let protoBox = createBoxBufferGeometry(1.0, 1.0, 1.0, 1, 1, 1);
 let protoBoxMaterial = createBasicMaterial();
 let protoMesh = createMesh(protoBox, protoBoxMaterial);
+
+let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
+
+let createSphereGeometry = () => {
+  let box = protoSphere;
+  {
+    position: getFloat32Array(getPosition(getAttributes(box))),
+    uv: getFloat32Array(getUV(getAttributes(box))),
+    index: getInt16Array(getIndex(box)),
+  };
+};
 
 let createBoxGeometry = () => {
   let box = protoBox;

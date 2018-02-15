@@ -81,5 +81,13 @@ let intConfigVar = (path, defaultValue) =>
   configVar(path, defaultValue, LocalStorage.getInt, LocalStorage.setInt, var =>
     IntConfig(var)
   );
-/* let canvasBackgroundColor = intConfigVar(["canvas", "background", "color"], 0);
- * */
+
+let floatConfigVar = (path, defaultValue) =>
+  configVar(path, defaultValue, LocalStorage.getFloat, LocalStorage.setFloat, var =>
+    FloatConfig(var)
+  );
+
+let stringConfigVar = (path, defaultValue) =>
+  configVar(path, defaultValue, LocalStorage.getString, LocalStorage.setString, var =>
+    StringConfig(var)
+  );

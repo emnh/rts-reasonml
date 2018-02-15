@@ -28,7 +28,7 @@ external onColorRGBAChange : (controllerT, Color.rgbaT => unit) => unit =
 [@bs.send]
 external addInt :
   (datGUIT, Js.Dict.t(int), string) => controllerT =
-  "addColor";
+  "add";
 
 [@bs.send]
 external onIntChange : (controllerT, int => unit) => unit =
@@ -37,7 +37,7 @@ external onIntChange : (controllerT, int => unit) => unit =
 [@bs.send]
 external addFloat :
   (datGUIT, Js.Dict.t(float), string) => controllerT =
-  "addColor";
+  "add";
 
 [@bs.send]
 external onFloatChange : (controllerT, float => unit) => unit =
@@ -46,7 +46,7 @@ external onFloatChange : (controllerT, float => unit) => unit =
 [@bs.send]
 external addString :
   (datGUIT, Js.Dict.t(string), string) => controllerT =
-  "addColor";
+  "add";
 
 [@bs.send]
 external onStringChange : (controllerT, string => unit) => unit =

@@ -28,8 +28,8 @@ exception NoProgram;
 let main = (_) => {
   /* Clear doc in case of hot reloading. Didn't work with dat.gui. */
   /*
-  Document.setInnerHTML(Document.body, "");
-  */
+   Document.setInnerHTML(Document.body, "");
+   */
   Document.setMargin(Document.getStyle(Document.body), "0px");
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
@@ -62,25 +62,28 @@ let main = (_) => {
     | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
     | _ => None
     };
-  let run = (time, fg, bg) => {
-    let _ =
-      switch program {
-      | Some(p) =>
-        WebGL2.testProgram(
-          gl,
-          p,
-          state.window.width,
-          state.window.height,
-          time,
-          fg,
-          bg,
-          Three.createBoxGeometry,
-          Three.getObjectMatrix,
-          Three.getViewMatrices
-        )
-      | None => raise(NoProgram)
-      };
-    ();
+  let run = (time, geometryType, fg, bg) => {
+    let geof = switch (geometryType) {
+      | "Box" => Three.createBoxGeometry
+      | "Sphere" => Three.createSphereGeometry
+      | _ => Three.createBoxGeometry
+    };
+    switch program {
+    | Some(p) =>
+      WebGL2.testProgram(
+        gl,
+        p,
+        state.window.width,
+        state.window.height,
+        time,
+        fg,
+        bg,
+        geof,
+        Three.getObjectMatrix,
+        Three.getViewMatrices
+      )
+    | None => raise(NoProgram)
+  };
   };
   let setCanvasSize = (_) => {
     let width = Document.getWidth(Document.window);
@@ -97,16 +100,14 @@ let main = (_) => {
     "DOMContentLoaded",
     setCanvasSize
   );
-  /*
-   Document.addEventListener(Document.window, "DOMContentLoaded", run);
-   */
   let start = Date.now();
   ConfigUI.init();
-  let _ = Config.intConfigVar(["run", "index"], 0);
   let backgroundColor =
     Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
   let foregroundColor =
     Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
+  let geometryType = 
+    Config.stringConfigVar(["object", "geometry"], "Box");
   let startIteration = Document.iteration(Document.window);
   let rec loop = () => {
     let t = Date.now() -. start;
@@ -118,7 +119,7 @@ let main = (_) => {
      let fgColorString =
        Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
        */
-    run(t /. 1000.0, foregroundColor#get(), backgroundColor#get());
+    run(t /. 1000.0, geometryType#get(), foregroundColor#get(), backgroundColor#get());
     let currentIteration = Document.iteration(Document.window);
     if (currentIteration == startIteration) {
       Document.requestAnimationFrame(loop);
@@ -134,6 +135,7 @@ let main = (_) => {
   loop();
   Js.log("shader");
   Js.log(GLSL.shader);
+  Js.log(__LOC__);
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();
