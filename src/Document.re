@@ -49,3 +49,13 @@ external addEventListener : (element, string, Events.event => unit) => unit =
 [@bs.val]
 external requestAnimationFrame : (unit => unit) => unit =
   "requestAnimationFrame";
+
+let onReady = (f) => {
+  let g = (_) => f();
+  let isDone = readyState(document) == "complete";
+  if (isDone) {
+    f();
+  } else {
+    addEventListener(window, "DOMContentLoaded", g);
+  };
+};

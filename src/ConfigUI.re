@@ -40,13 +40,7 @@ let addUIVar = (var, addF, changeF, onChange) => {
     let controller = addF(folder, guiObj, name);
     changeF(controller, onChange);
   };
-  let g = (_) => f();
-  let isDone = Document.readyState(Document.document) == "complete";
-  if (isDone) {
-    f();
-  } else {
-    Document.addEventListener(Document.window, "DOMContentLoaded", g);
-  }
+  Document.onReady(f);
 };
 
 let registerCreateHandlers = () => {
