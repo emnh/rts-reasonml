@@ -282,7 +282,19 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
+let testProgram =
+    (
+      gl,
+      program,
+      width,
+      height,
+      time,
+      fgColor,
+      bgColor,
+      createBoxGeometry,
+      getObjectMatrix,
+      getViewMatrices
+    ) => {
   /*
      let positions =
        Float32Array.create([|
@@ -300,21 +312,22 @@ let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
          1.0
        |]);
    */
-  let box =
-    Three.createBox(
-      1.0,
-      1.0,
-      1.0,
-      Math.sin(time) *. 2.0 *. Math.pi,
-      Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
-      Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+  let box: Three.geometryBuffersT = createBoxGeometry();
+  let obj: Three.objectTransformT =
+    getObjectMatrix(
+      (0.0, 0.0, (-10.0)),
+      (1.0, 1.0, 1.0),
+      (
+        Math.sin(time) *. 2.0 *. Math.pi,
+        Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
+        Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+      )
     );
   let positions = box.position;
   let index = box.index;
   let positionBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
-
   let vao = createVertexArray(gl);
   bindVertexArray(gl, vao);
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
@@ -332,11 +345,9 @@ let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
     stride,
     offset
   );
-
   let uvBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), box.uv, getSTATIC_DRAW(gl));
-
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   enableVertexAttribArray(gl, uvAttributeLocation);
   let size = 2;
@@ -352,18 +363,15 @@ let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
     stride,
     offset
   );
-
   let indexBuffer = createBuffer(gl);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
   bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
   viewport(gl, 0, 0, width, height);
-	enable(gl, getDEPTH_TEST(gl));
+  enable(gl, getDEPTH_TEST(gl));
   clearColor(gl, 0, 0, 0, 0);
   clear(gl, getCOLOR_BUFFER_BIT(gl));
-
   useProgram(gl, program);
   bindVertexArray(gl, vao);
-
   let uniformBlockBindingIndex = 0;
   let uniformPerSceneLocation =
     getUniformBlockIndex(gl, program, "u_PerScene");
@@ -373,7 +381,8 @@ let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
     uniformPerSceneLocation,
     uniformBlockBindingIndex
   );
-  let viewMatrices = Three.getViewMatrices(box.matrixWorld(), width, height);
+  let viewMatrices: Three.viewTransformT =
+    getViewMatrices(obj.matrixWorld, width, height);
   let (r, g, b, _) = fgColor;
   let (r2, g2, b2, _) = bgColor;
   let c = 256.0;

@@ -73,7 +73,10 @@ let main = (_) => {
           state.window.height,
           time,
           fg,
-          bg
+          bg,
+          Three.createBoxGeometry,
+          Three.getObjectMatrix,
+          Three.getViewMatrices
         )
       | None => raise(NoProgram)
       };
@@ -131,10 +134,6 @@ let main = (_) => {
   loop();
   Js.log("shader");
   Js.log(GLSL.shader);
-  let box = Three.createBox(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
-  Js.log(box);
-  Js.log(Three.getViewMatrices(box.matrixWorld(), 1, 1));
-  Js.log("hello6");
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();

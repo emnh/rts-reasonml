@@ -19,7 +19,7 @@ type vector3T;
 type positionT = vector3T;
 
 [@bs.new] [@bs.module "three"]
-external createBoxBufferGeometry : (float, float, float) => boxT =
+external createBoxBufferGeometry : (float, float, float, int, int, int) => boxT =
   "BoxBufferGeometry";
 
 [@bs.new] [@bs.module "three"]
@@ -69,22 +69,26 @@ external updateMeshMatrixWorld : meshT => unit = "updateMatrixWorld";
 
 [@bs.get] external getMeshRotation : meshT => positionT = "rotation";
 
-[@bs.send]
-external setPosition : (positionT, float, float, float) => unit = "set";
+[@bs.send] [@bs.scope "scale"]
+external setScale : (meshT, float, float, float) => unit = "set";
 
-[@bs.send]
-external setRotation : (positionT, float, float, float) => unit = "set";
+[@bs.send] [@bs.scope "position"]
+external setPosition : (meshT, float, float, float) => unit = "set";
+
+[@bs.send] [@bs.scope "rotation"]
+external setRotation : (meshT, float, float, float) => unit = "set";
 
 [@bs.send]
 external updateCameraMatrixWorld : cameraT => unit = "updateMatrixWorld";
 
 type geometryBuffersT = {
-  mesh: meshT,
-  box: boxT,
   position: Float32Array.t,
   uv: Float32Array.t,
   index: Int16Array.t,
-  matrixWorld: unit => matrix4T
+};
+
+type objectTransformT = {
+  matrixWorld: matrix4T
 };
 
 type viewTransformT = {
@@ -92,19 +96,29 @@ type viewTransformT = {
   projectionMatrix: array(float)
 };
 
-let createBox = (x, y, z, xr, yr, zr) => {
-  let box = createBoxBufferGeometry(x, y, z);
-  let material = createBasicMaterial();
-  let mesh = createMesh(box, material);
-  setPosition(getMeshPosition(mesh), 0.0, 0.0, -10.0);
-  setRotation(getMeshRotation(mesh), xr, yr, zr);
+let protoBox = createBoxBufferGeometry(1.0, 1.0, 1.0, 1, 1, 1);
+let protoBoxMaterial = createBasicMaterial();
+let protoMesh = createMesh(protoBox, protoBoxMaterial);
+
+let createBoxGeometry = () => {
+  let box = protoBox;
   {
-    mesh,
-    box,
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
     index: getInt16Array(getIndex(box)),
-    matrixWorld: () => {
+  };
+};
+
+let getObjectMatrix = (position, scale, rotation) => {
+  let mesh = protoMesh;
+  let (x, y, z) = position;
+  setPosition(mesh, x, y, z);
+  let (xs, ys, zs) = scale;
+  setScale(mesh, xs, ys, zs);
+  let (xr, yr, zr) = rotation;
+  setRotation(mesh, xr, yr, zr);
+  {
+    matrixWorld: {
       updateMeshMatrixWorld(mesh);
       getMeshMatrixWorld(mesh);
     }
