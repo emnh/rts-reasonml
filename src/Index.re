@@ -6,13 +6,20 @@
   }
   window.iteration++;
 
-  App.main();
+  if (window.destroy !== undefined) {
+    window.destroy();
+  }
+  window.destroy = App.main();
 
   if (module.hot) {
     module.hot.accept(() => {
+      destroy();
       const NextApp = require('./Demo.bs.js').default;
       console.log("iteration: ", window.iteration);
-      NextApp.main(window.iteration);
+      if (window.destroy !== undefined) {
+        window.destroy();
+      }
+      window.destroy = NextApp.main();
     });
   }
 |}];

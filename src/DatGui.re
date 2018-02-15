@@ -23,6 +23,8 @@ let create = () => datGUI(datGUIModule);
 
 [@bs.send] external addFolder : (datGUIT, string) => datGUIT = "addFolder";
 
+[@bs.send] external destroy : datGUIT => unit = "destroy";
+
 [@bs.send]
 external addColorRGBA :
   (datGUIT, Js.Dict.t(Color.rgbaT), string) => controllerT =

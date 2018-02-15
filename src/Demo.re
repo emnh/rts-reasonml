@@ -26,9 +26,10 @@ exception NoProgram;
 
 /* canvas/context setup */
 let main = (_) => {
-  /* Clear doc in case of hot reloading */
+  /* Clear doc in case of hot reloading. Didn't work with dat.gui. */
+  /*
   Document.setInnerHTML(Document.body, "");
-  
+  */
   Document.setMargin(Document.getStyle(Document.body), "0px");
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
@@ -61,7 +62,7 @@ let main = (_) => {
     | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
     | _ => None
     };
-  let run = time => {
+  let run = (time, fg, bg) => {
     let _ =
       switch program {
       | Some(p) =>
@@ -70,7 +71,9 @@ let main = (_) => {
           p,
           state.window.width,
           state.window.height,
-          time
+          time,
+          fg,
+          bg
         )
       | None => raise(NoProgram)
       };
@@ -97,13 +100,10 @@ let main = (_) => {
   let start = Date.now();
   ConfigUI.init();
   let _ = Config.intConfigVar(["run", "index"], 0);
-
-  /*
-   let backgroundColor =
-     Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
-   let foregroundColor =
-     Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
-     */
+  let backgroundColor =
+    Config.colorConfigVar(["canvas", "background", "color"], (0, 0, 0, 1.0));
+  let foregroundColor =
+    Config.colorConfigVar(["canvas", "foreground", "color"], (0, 0, 0, 1.0));
   let startIteration = Document.iteration(Document.window);
   let rec loop = () => {
     let t = Date.now() -. start;
@@ -115,11 +115,12 @@ let main = (_) => {
      let fgColorString =
        Color.stringColor(Color.setA(foregroundColor#get(), 1.0));
        */
-    run(t /. 1000.0);
+    run(t /. 1000.0, foregroundColor#get(), backgroundColor#get());
     let currentIteration = Document.iteration(Document.window);
     if (currentIteration == startIteration) {
       Document.requestAnimationFrame(loop);
     } else {
+      let _ = Document.removeChild(canvas);
       Js.log(
         "exiting render loop "
         ++ string_of_int(startIteration)
@@ -133,5 +134,9 @@ let main = (_) => {
   let box = Three.createBox(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
   Js.log(box);
   Js.log(Three.getViewMatrices(box.matrixWorld(), 1, 1));
-  Js.log("hello5");
+  Js.log("hello6");
+  () => {
+    Js.log("destroying last app generation");
+    ConfigUI.destroy();
+  };
 };

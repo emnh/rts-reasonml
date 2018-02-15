@@ -4,15 +4,27 @@ type styleT;
 
 let window: element = [%bs.raw "window"];
 
+let document: element = [%bs.raw "window.document"];
+
 let body: element = [%bs.raw "window.document.body"];
 
 [@bs.get] external iteration : element => int = "iteration";
+
+[@bs.get] external readyState : element => string = "readyState";
+
+[@bs.set] external debug : (element, 'a) => unit = "debug";
 
 [@bs.val]
 external createElement : string => element = "document.createElement";
 
 [@bs.val]
 external appendChild : element => element = "document.body.appendChild";
+
+[@bs.val]
+external removeChild : element => element = "document.body.removeChild";
+
+[@bs.val]
+external getElementsByClassName : element => array(element) = "getElementsByClassName";
 
 [@bs.send]
 external addEventListener : (element, string, Events.event => unit) => unit =

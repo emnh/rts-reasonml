@@ -62,6 +62,7 @@ void main() {
 	color *= sin( time / 10.0 ) * 0.5;
 
 	outColor = vec4( vec3( color, color * 0.5, sin( color + time / 3.0 ) * 0.75 ), 1.0 );
+  outColor += u_color1;
 }
 |};
 
@@ -281,7 +282,7 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-let testProgram = (gl, program, width, height, time) => {
+let testProgram = (gl, program, width, height, time, fgColor, bgColor) => {
   /*
      let positions =
        Float32Array.create([|
@@ -373,20 +374,23 @@ let testProgram = (gl, program, width, height, time) => {
     uniformBlockBindingIndex
   );
   let viewMatrices = Three.getViewMatrices(box.matrixWorld(), width, height);
+  let (r, g, b, _) = fgColor;
+  let (r2, g2, b2, _) = bgColor;
+  let c = 256.0;
   let uniformBlock =
     Float32Array.create(
       Array.concat([
         viewMatrices.modelViewMatrix,
         viewMatrices.projectionMatrix,
         [|
-          0.1,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.5,
-          0.0,
-          0.0,
+          float_of_int(r) /. c,
+          float_of_int(g) /. c,
+          float_of_int(b) /. c,
+          1.0,
+          float_of_int(r2) /. c,
+          float_of_int(g2) /. c,
+          float_of_int(b2) /. c,
+          1.0,
           float_of_int(width),
           float_of_int(height),
           time,
