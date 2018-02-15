@@ -26,21 +26,19 @@ external addChoices :
       | `StringDict(Js.Dict.t(string))
       | `IntDict(Js.Dict.t(int))
       | `FloatDict(Js.Dict.t(float))
-      | `ColorDict(Js.Dict.t(Color.rgbaT))
     ],
     string,
-    [@bs.unwrap]
-    [
-      | `AllChoices(Js.Nullable.t(int))
-      | `StringArray(Js.Array.t(string))
-      | `IntArray(Js.Array.t(int))
-      | `FloatArray(Js.Array.t(float))
-      | `ColorArray(Js.Array.t(Color.rgbaT))
-      | `StringDict(Js.Dict.t(string))
-      | `IntDict(Js.Dict.t(int))
-      | `FloatDict(Js.Dict.t(float))
-      | `ColorDict(Js.Dict.t(Color.rgbaT))
-    ]
+    ~choices: [@bs.unwrap]
+              [
+                | `StringArray(Js.Array.t(string))
+                | `IntArray(Js.Array.t(int))
+                | `FloatArray(Js.Array.t(float))
+                | `StringDict(Js.Dict.t(string))
+                | `IntDict(Js.Dict.t(int))
+                | `FloatDict(Js.Dict.t(float))
+              ]
+                =?,
+    unit
   ) =>
   controllerT =
   "add";
