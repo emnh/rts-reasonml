@@ -1,20 +1,10 @@
-/* #version 300 es
+module SS = Set.Make(String);
 
-   // an attribute is an input (in) to a vertex shader.
-   // It will receive data from a buffer
-   in vec4 a_position;
-
-   // all shaders have a main function
-   void main() {
-
-     // gl_Position is a special variable a vertex shader
-     // is responsible for setting
-     gl_Position = a_position;
-   } */
 let version = "#version 300 es";
 
 let vertexPrelude = {|
 #define VARYING out
+
 |};
 
 let fragmentPrelude = {|
@@ -92,6 +82,7 @@ type rightExprT = rT;
 
 type statementT =
   | Assignment(leftExprT, rightExprT)
+  | DeclAssignment(glslTypeT, leftExprT, rightExprT)
   | Discard;
 
 type gRootT = list(statementT);
@@ -235,6 +226,17 @@ let fmtTransformer = {
               switch stmt {
               | Assignment(left, right) =>
                 t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)])
+              | DeclAssignment(vart, left, right) =>
+                t.combine(
+                  t,
+                  [
+                    glslTypeString(vart),
+                    " ",
+                    t.lExpr(t, left),
+                    " = ",
+                    t.rExpr(t, right)
+                  ]
+                )
               | Discard => "discard"
               },
               ";",
@@ -256,17 +258,16 @@ let fmtTransformer = {
 
 let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
 
-/*
- * module SS = Set.Make(String);
- */
-
 let formatAttribute = attr => {
   let (t, name) = attr;
   "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
 };
 
-let formatAttributes = attrs => 
-  String.concat(newline, List.map(formatAttribute, List.sort_uniq(Pervasives.compare, attrs)));
+let formatAttributes = attrs =>
+  String.concat(
+    newline,
+    List.map(formatAttribute, List.sort_uniq(Pervasives.compare, attrs))
+  );
 
 let getVarOfType = (vart, gf) => {
   let ar = ref([]);
@@ -285,7 +286,9 @@ let getVarOfType = (vart, gf) => {
 };
 
 let getAttributes = gf => getVarOfType(Attribute, gf);
+
 let getVaryings = gf => getVarOfType(Varying, gf);
+
 let getUniforms = gf => getVarOfType(Uniform, gf);
 
 let formatVarying = attr => {
@@ -294,7 +297,10 @@ let formatVarying = attr => {
 };
 
 let formatVaryings = attrs =>
-  String.concat(newline, List.map(formatVarying, List.sort_uniq(Pervasives.compare, attrs))));
+  String.concat(
+    newline,
+    List.map(formatVarying, List.sort_uniq(Pervasives.compare, attrs))
+  );
 
 let formatUniform = attr => {
   let (t, name) = attr;
@@ -304,18 +310,31 @@ let formatUniform = attr => {
 let formatUniforms = attrs =>
   "layout(std140) uniform u_PerScene {"
   ++ newline
-  ++ String.concat(newline, List.map(formatUniform, List.sort_uniq(Pervasives.compare, attrs)))
+  ++ String.concat(
+       newline,
+       List.map(formatUniform, List.sort_uniq(Pervasives.compare, attrs))
+     )
   ++ newline
   ++ "};";
 
 let rightToLeft = right =>
   switch right {
-  | RVar(x) => Var(x)
-  | RSwizzle(RVar(x), s) => Swizzle(x, s)
+  | RVar(x) => (x, Var(x))
+  | RSwizzle(RVar(x), s) => (x, Swizzle(x, s))
   | _ => raise(GLSLTypeError("invalid left hand side"))
   };
 
-let assign = (dest, src) => Assignment(rightToLeft(dest), src);
+let assign = (hasVar, addVar, dest, src) => {
+  let ((vart, glslt, name), left) = rightToLeft(dest);
+  if (hasVar(name) || vart != Variable) {
+    Assignment(left, src);
+  } else {
+    if (vart == Variable) {
+      addVar(name);
+    };
+    DeclAssignment(glslt, left, src);
+  };
+};
 
 let symCounter = ref(0);
 
@@ -398,9 +417,12 @@ module Fragment = {
   module type ElementType = {
     let add: statementT => unit;
     let finish: unit => list(statementT);
+    let hasVar: string => bool;
+    let addVar: string => unit;
   };
   module ElementModule: ElementType = {
     let ar = ref([]);
+    let vars = ref(SS.empty);
     let add = x => {
       ar := [x, ...ar^];
       ();
@@ -408,12 +430,24 @@ module Fragment = {
     let finish = () => {
       let value = List.rev(ar^);
       ar := [];
+      vars := SS.empty;
       value;
+    };
+    let hasVar = var =>
+      switch (SS.find(var, vars^)) {
+      | _ =>
+        Js.log(["hasVar", var]);
+        true;
+      | exception Not_found => false
+      };
+    let addVar = var => {
+      vars := SS.add(var, vars^);
+      ();
     };
   };
   module Make = (Element: ElementType) => {
     include Element;
-    let (=@) = (l, r) => add(assign(l, r));
+    let (=@) = (l, r) => add(assign(hasVar, addVar, l, r));
     let (++) = l => Inc(l);
     let (--) = l => Dec(l);
     let (+++) = l => PreInc(l);
@@ -473,20 +507,20 @@ let getShader = (prelude, uniforms, varyings, main) =>
   ++ fmtFun(main);
 
 type programT = {
-  attributes: SS.t,
-  uniforms: SS.t,
-  varyings: SS.t,
+  attributes: list((glslTypeT, string)),
+  uniforms: list((glslTypeT, string)),
+  varyings: list((glslTypeT, string)),
   vertexShader: string,
   fragmentShader: string
 };
 
 let getProgram = (vsmain, fsmain) => {
-  let uniforms = SS.union(getUniforms(vsmain), getUniforms(fsmain));
-  let varyings = SS.union(getVaryings(vsmain), getVaryings(fsmain));
+  let uniforms = List.concat([getUniforms(vsmain), getUniforms(fsmain)]);
+  let varyings = List.concat([getVaryings(vsmain), getVaryings(fsmain)]);
   {
     attributes: getAttributes(vsmain),
-    uniforms: uniforms,
-    varyings: varyings,
+    uniforms,
+    varyings,
     vertexShader: getShader(vertexPrelude, uniforms, varyings, vsmain),
     fragmentShader: getShader(fragmentPrelude, uniforms, varyings, fsmain)
   };
