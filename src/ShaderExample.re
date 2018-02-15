@@ -15,7 +15,7 @@ let u_color1 = vec4uniform("u_color1");
 
 let u_color2 = vec4uniform("u_color2");
 
-let resolution = vec2uniform("u_resolution");
+let u_resolution = vec2uniform("u_resolution");
 
 let time = floatuniform("u_time");
 
@@ -42,7 +42,12 @@ let mainFragment =
     () => {
       open! FragmentShader;
       let position = vec2var("position");
+      /*
       position =@ gl_FragCoord **. XY / (resolution **. XY);
+      */
+      let resolution = vec2var("resolution");
+      resolution =@ u_resolution;
+      position =@ v_uv;
       let color = floatvar("color");
       color =@ f(0.0);
       color
@@ -61,13 +66,12 @@ let mainFragment =
         + sin(position **. Y * sin(time / f(35.0)) * f(80.0))
       );
       color *= (sin(time / f(10.0)) * f(0.5));
-      color += (u_color1 + u_color2);
-      gl_FragColor
+      outColor
       =@ vec4([
            vec3([color, color * f(0.5), sin(color + time / f(3.0)) * f(0.75)]),
            f(1.0)
          ]);
-      gl_FragColor =@ position **. XYZW;
+      outColor += (u_color1 + u_color2);
       finish();
     }
   );

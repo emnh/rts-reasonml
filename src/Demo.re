@@ -45,17 +45,21 @@ let main = (_) => {
       showError("No WebGL2!");
       raise(NoGL);
     };
+  Js.log("Vertex shader:");
+  Js.log(ShaderExample.vertexShader);
   let vertexShader =
     WebGL2.createShader(
       gl,
       WebGL2.getVERTEX_SHADER(gl),
-      WebGL2.exampleVertexShader
+      ShaderExample.vertexShader
     );
+  Js.log("Fragment shader:");
+  Js.log(ShaderExample.fragmentShader);
   let fragmentShader =
     WebGL2.createShader(
       gl,
       WebGL2.getFRAGMENT_SHADER(gl),
-      WebGL2.exampleFragmentShader
+      ShaderExample.fragmentShader
     );
   let program =
     switch (vertexShader, fragmentShader) {
@@ -144,10 +148,6 @@ let main = (_) => {
     };
   };
   loop();
-  Js.log("Vertex shader:");
-  Js.log(ShaderExample.vertexShader);
-  Js.log("Fragment shader:");
-  Js.log(ShaderExample.fragmentShader);
   Js.log(__LOC__);
   () => {
     Js.log("destroying last app generation");

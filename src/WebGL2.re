@@ -373,9 +373,10 @@ let testProgram =
   let uniformBlock =
     Float32Array.create(
       Array.concat([
-        viewMatrices.modelViewMatrix,
-        viewMatrices.projectionMatrix,
         [|
+          time,
+          float_of_int(width),
+          float_of_int(height),
           float_of_int(r) /. c,
           float_of_int(g) /. c,
           float_of_int(b) /. c,
@@ -384,11 +385,10 @@ let testProgram =
           float_of_int(g2) /. c,
           float_of_int(b2) /. c,
           1.0,
-          float_of_int(width),
-          float_of_int(height),
-          time,
           0.0
-        |]
+        |],
+        viewMatrices.modelViewMatrix,
+        viewMatrices.projectionMatrix
       ])
     );
   let uniformPerSceneBuffer = createBuffer(gl);

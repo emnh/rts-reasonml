@@ -12,7 +12,7 @@ let fragmentPrelude = {|
 
 let precisionQuantifier = "mediump";
 
-let precision = "precision " ++ precisionQuantifier ++ " float";
+let precision = "precision " ++ precisionQuantifier ++ " float;";
 
 let newline = "\n";
 
@@ -36,7 +36,8 @@ type varT =
   | Attribute
   | Uniform
   | Varying
-  | Variable;
+  | Variable
+  | Output;
 
 type varExprT = (varT, glslTypeT, string);
 
@@ -258,16 +259,8 @@ let fmtTransformer = {
 
 let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
 
-let formatAttribute = attr => {
-  let (t, name) = attr;
-  "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
-};
-
-let formatAttributes = attrs =>
-  String.concat(
-    newline,
-    List.map(formatAttribute, List.sort_uniq(Pervasives.compare, attrs))
-  );
+let orderVars = (fmt, vars) =>
+  List.map(fmt, List.sort_uniq(Pervasives.compare, vars));
 
 let getVarOfType = (vart, gf) => {
   let ar = ref([]);
@@ -291,31 +284,49 @@ let getVaryings = gf => getVarOfType(Varying, gf);
 
 let getUniforms = gf => getVarOfType(Uniform, gf);
 
-let formatVarying = attr => {
-  let (t, name) = attr;
-  "VARYING " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+let getOutputs = gf => getVarOfType(Output, gf);
+
+let formatAttributes = attrs => {
+  let formatAttribute = attr => {
+    let (t, name) = attr;
+    "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+  };
+  String.concat(newline, orderVars(formatAttribute, attrs));
 };
 
-let formatVaryings = attrs =>
-  String.concat(
-    newline,
-    List.map(formatVarying, List.sort_uniq(Pervasives.compare, attrs))
-  );
-
-let formatUniform = attr => {
-  let (t, name) = attr;
-  "  " ++ precisionQuantifier ++ " " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+let formatVaryings = attrs => {
+  let formatVarying = attr => {
+    let (t, name) = attr;
+    "VARYING " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+  };
+  String.concat(newline, orderVars(formatVarying, attrs));
 };
 
-let formatUniforms = attrs =>
+let formatUniforms = attrs => {
+  let formatUniform = attr => {
+    let (t, name) = attr;
+    "  "
+    ++ precisionQuantifier
+    ++ " "
+    ++ glslTypeString(t)
+    ++ " "
+    ++ name
+    ++ ";";
+  };
   "layout(std140) uniform u_PerScene {"
   ++ newline
-  ++ String.concat(
-       newline,
-       List.map(formatUniform, List.sort_uniq(Pervasives.compare, attrs))
-     )
+  ++ String.concat(newline, orderVars(formatUniform, attrs))
   ++ newline
   ++ "};";
+};
+
+let formatOutputs = attrs => {
+  let formatAttribute = attr => {
+    let (t, name) = attr;
+    "out " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+  };
+  String.concat(newline, orderVars(formatAttribute, attrs));
+};
 
 let rightToLeft = right =>
   switch right {
@@ -354,6 +365,8 @@ let builtin = (t, name) => wrap(RVar((Builtin, t, name)));
 let uniform = (t, name) => wrap(RVar((Uniform, t, name)));
 
 let var = (t, name) => wrap(RVar((Variable, t, name)));
+
+let output = (t, name) => wrap(RVar((Output, t, name)));
 
 let gfun = (t, name, ast) => (t, name, ast);
 
@@ -412,6 +425,8 @@ let gl_Position = builtin(Vec4, "gl_Position");
 let gl_FragCoord = builtin(Vec4, "gl_FragCoord");
 
 let gl_FragColor = builtin(Vec4, "gl_FragColor");
+
+let outColor = output(Vec4, "outColor");
 
 module Fragment = {
   module type ElementType = {
@@ -502,12 +517,16 @@ let getShader = (prelude, uniforms, varyings, main) =>
   ++ formatUniforms(uniforms)
   ++ newline
   ++ newline
+  ++ formatOutputs(getOutputs(main))
+  ++ newline
+  ++ newline
   ++ fmtFun(main);
 
 type programT = {
   attributes: list((glslTypeT, string)),
   uniforms: list((glslTypeT, string)),
   varyings: list((glslTypeT, string)),
+  outputs: list((glslTypeT, string)),
   vertexShader: string,
   fragmentShader: string
 };
@@ -517,6 +536,7 @@ let getProgram = (vsmain, fsmain) => {
   let varyings = List.concat([getVaryings(vsmain), getVaryings(fsmain)]);
   {
     attributes: getAttributes(vsmain),
+    outputs: getOutputs(fsmain),
     uniforms,
     varyings,
     vertexShader: getShader(vertexPrelude, uniforms, varyings, vsmain),
