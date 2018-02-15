@@ -59,9 +59,11 @@ external getCameraProjectionMatrix : cameraT => matrix4T = "projectionMatrix";
 
 [@bs.send] external transposeMatrix4 : matrix4T => unit = "transpose";
 
-[@bs.send] external multiplyMatrix4 : (matrix4T, matrix4T) => unit = "multiply";
+[@bs.send]
+external multiplyMatrix4 : (matrix4T, matrix4T) => unit = "multiply";
 
-[@bs.send] external updateMeshMatrixWorld : meshT => unit = "updateMatrixWorld";
+[@bs.send]
+external updateMeshMatrixWorld : meshT => unit = "updateMatrixWorld";
 
 [@bs.get] external getMeshPosition : meshT => positionT = "position";
 
@@ -120,9 +122,9 @@ let getViewMatrices = (matrixWorld, width, height) => {
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));
   multiplyMatrix4(modelViewMatrix, modelMatrix);
   let projectionMatrix = getCameraProjectionMatrix(camera);
-	/*
-	transposeMatrix4(modelViewMatrix);
-	transposeMatrix4(projectionMatrix);*/
+  /*
+   transposeMatrix4(modelViewMatrix);
+   transposeMatrix4(projectionMatrix);*/
   {
     modelViewMatrix: getElements(modelViewMatrix),
     projectionMatrix: getElements(projectionMatrix)

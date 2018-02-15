@@ -8,18 +8,9 @@ type controllerT;
 
 [@bs.module "dat.gui"] external datGUIModule : moduleT = "";
 
-/*
-[@bs.get] external default : moduleT => datGUIDefaultT = "default";
+[@bs.new] [@bs.scope "default"] [@bs.module "dat.gui"] external datGUI : unit => datGUIT = "GUI";
 
-[@bs.new] external datGUI : datGUIDefaultT => datGUIT = "GUI";
-*/
-
-/*
-let datGUI = (moduleT) => [%bs.raw "new require('dat.gui').default.GUI()"];
-*/
-let datGUI : moduleT => datGUIT = [%bs.raw{|function(x){ return new DatGui.default.GUI(); }|}];
-
-let create = () => datGUI(datGUIModule);
+let create = () => datGUI();
 
 [@bs.send] external addFolder : (datGUIT, string) => datGUIT = "addFolder";
 

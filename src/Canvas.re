@@ -21,5 +21,5 @@ external clearRect : (context, float, float, float, float) => unit =
   "clearRect";
 
 [@bs.send]
-external arc : (context, float, float, float, float, float, bool) => unit =
+external arc : (context, float, float, float, float, float, Js.boolean) => unit =
   "arc";
