@@ -144,8 +144,10 @@ let main = (_) => {
     };
   };
   loop();
-  Js.log("shader");
-  Js.log(GLSL.shader);
+  Js.log("Vertex shader:");
+  Js.log(ShaderExample.vertexShader);
+  Js.log("Fragment shader:");
+  Js.log(ShaderExample.fragmentShader);
   Js.log(__LOC__);
   () => {
     Js.log("destroying last app generation");

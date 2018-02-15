@@ -1,10 +1,11 @@
 let exampleVertexShader = {|#version 300 es
 
+#define VARYING out
 // an attribute is an input (in) to a vertex shader.
 // It will receive data from a buffer
 in vec4 a_position;
 in vec2 a_uv;
-out vec2 v_uv;
+VARYING vec2 v_uv;
 
 layout(std140) uniform u_PerScene
 {
@@ -295,23 +296,6 @@ let testProgram =
       getObjectMatrix,
       getViewMatrices
     ) => {
-  /*
-     let positions =
-       Float32Array.create([|
-         (-1.0),
-         (-1.0),
-         (-1.0),
-         1.0,
-         1.0,
-         (-1.0),
-         (-1.0),
-         1.0,
-         1.0,
-         (-1.0),
-         1.0,
-         1.0
-       |]);
-   */
   let box: Three.geometryBuffersT = createGeometry();
   let obj: Three.objectTransformT =
     getObjectMatrix(

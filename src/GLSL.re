@@ -13,6 +13,17 @@
    } */
 let version = "#version 300 es";
 
+let vertexPrelude = {|
+#define VARYING out
+|};
+
+let fragmentPrelude = {|
+#define VARYING in|};
+
+let precisionQuantifier = "mediump";
+
+let precision = "precision " ++ precisionQuantifier ++ " float";
+
 let newline = "\n";
 
 let indent = "  ";
@@ -25,12 +36,16 @@ type glslTypeT =
   | Float
   | Vec2
   | Vec3
-  | Vec4;
+  | Vec4
+  | Mat2
+  | Mat3
+  | Mat4;
 
 type varT =
   | Builtin
   | Attribute
   | Uniform
+  | Varying
   | Variable;
 
 type varExprT = (varT, glslTypeT, string);
@@ -96,6 +111,9 @@ let glslTypeString = t =>
   | Vec2 => "vec2"
   | Vec3 => "vec3"
   | Vec4 => "vec4"
+  | Mat2 => "mat2"
+  | Mat3 => "mat3"
+  | Mat4 => "mat4"
   };
 
 type transformer('a) = {
@@ -165,7 +183,13 @@ let fmtTransformer = {
       | Xor(l, r) => ["(", t.rExpr(t, l), " ^^ ", t.rExpr(t, r), ")"]
       | BuiltinFun(name, l) =>
         let args = List.map(x => t.rExpr(t, x), l);
-        List.concat([[name, "(", ...args], [")"]]);
+        let args =
+          List.fold_left(
+            (x, y) => List.concat([x, [",", y]]),
+            [List.hd(args)],
+            List.tl(args)
+          );
+        List.concat([[name, "("], args, [")"]]);
       | BuiltinFun1(name, l) => [name, "(", t.rExpr(t, l), ")"]
       | BuiltinFun2(name, l, r) => [
           name,
@@ -232,20 +256,25 @@ let fmtTransformer = {
 
 let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
 
-module SS = Set.Make(String);
+/*
+ * module SS = Set.Make(String);
+ */
 
 let formatAttribute = attr => {
   let (t, name) = attr;
   "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
 };
 
-let getAttributes = gf => {
-  let ar = ref(SS.empty);
+let formatAttributes = attrs => 
+  String.concat(newline, List.map(formatAttribute, List.sort_uniq(Pervasives.compare, attrs)));
+
+let getVarOfType = (vart, gf) => {
+  let ar = ref([]);
   let walkTransformer = {
     ...fmtTransformer,
     var: (t, expr) => {
       switch expr {
-      | (Attribute, t, name) => ar := SS.add(formatAttribute((t, name)), ar^)
+      | (x, t, name) when x == vart => ar := [(t, name), ...ar^]
       | _ => ()
       };
       fmtTransformer.var(t, expr);
@@ -255,7 +284,29 @@ let getAttributes = gf => {
   ar^;
 };
 
-let formatAttributes = attrs => String.concat(newline, SS.elements(attrs));
+let getAttributes = gf => getVarOfType(Attribute, gf);
+let getVaryings = gf => getVarOfType(Varying, gf);
+let getUniforms = gf => getVarOfType(Uniform, gf);
+
+let formatVarying = attr => {
+  let (t, name) = attr;
+  "VARYING " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+};
+
+let formatVaryings = attrs =>
+  String.concat(newline, List.map(formatVarying, List.sort_uniq(Pervasives.compare, attrs))));
+
+let formatUniform = attr => {
+  let (t, name) = attr;
+  "  " ++ precisionQuantifier ++ " " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+};
+
+let formatUniforms = attrs =>
+  "layout(std140) uniform u_PerScene {"
+  ++ newline
+  ++ String.concat(newline, List.map(formatUniform, List.sort_uniq(Pervasives.compare, attrs)))
+  ++ newline
+  ++ "};";
 
 let rightToLeft = right =>
   switch right {
@@ -277,6 +328,8 @@ let wrap = x => x;
 
 let attr = (t, name) => wrap(RVar((Attribute, t, name)));
 
+let varying = (t, name) => wrap(RVar((Varying, t, name)));
+
 let builtin = (t, name) => wrap(RVar((Builtin, t, name)));
 
 let uniform = (t, name) => wrap(RVar((Uniform, t, name)));
@@ -293,6 +346,26 @@ let vec3attr = name => attr(Vec3, name);
 
 let vec4attr = name => attr(Vec4, name);
 
+let mat2attr = name => attr(Mat2, name);
+
+let mat3attr = name => attr(Mat3, name);
+
+let mat4attr = name => attr(Mat4, name);
+
+let floatvarying = name => varying(Float, name);
+
+let vec2varying = name => varying(Vec2, name);
+
+let vec3varying = name => varying(Vec3, name);
+
+let vec4varying = name => varying(Vec4, name);
+
+let mat2varying = name => varying(Mat2, name);
+
+let mat3varying = name => varying(Mat3, name);
+
+let mat4varying = name => varying(Mat4, name);
+
 let floatuniform = name => uniform(Float, name);
 
 let vec2uniform = name => uniform(Vec2, name);
@@ -300,6 +373,12 @@ let vec2uniform = name => uniform(Vec2, name);
 let vec3uniform = name => uniform(Vec3, name);
 
 let vec4uniform = name => uniform(Vec4, name);
+
+let mat2uniform = name => uniform(Mat2, name);
+
+let mat3uniform = name => uniform(Mat3, name);
+
+let mat4uniform = name => uniform(Mat4, name);
 
 let floatvar = name => var(Float, name);
 
@@ -314,11 +393,6 @@ let gl_Position = builtin(Vec4, "gl_Position");
 let gl_FragCoord = builtin(Vec4, "gl_FragCoord");
 
 let gl_FragColor = builtin(Vec4, "gl_FragColor");
-
-/* One specific shader */
-let position3 = vec3attr("a_position");
-
-let position4 = vec4attr("a_position");
 
 module Fragment = {
   module type ElementType = {
@@ -365,8 +439,12 @@ module Fragment = {
     let ( **. ) = (var, st) => RSwizzle(var, st);
     let sin = l => BuiltinFun1("sin", l);
     let cos = l => BuiltinFun1("cos", l);
+    let vec2 = l => BuiltinFun("vec2", l);
     let vec3 = l => BuiltinFun("vec3", l);
     let vec4 = l => BuiltinFun("vec4", l);
+    let mat2 = l => BuiltinFun("mat2", l);
+    let mat3 = l => BuiltinFun("mat3", l);
+    let mat4 = l => BuiltinFun("mat4", l);
     let f = x => ImmediateFloat(x);
     let i = x => ImmediateInt(x);
   };
@@ -376,69 +454,40 @@ module VertexShader = Fragment.Make(Fragment.ElementModule);
 
 module FragmentShader = VertexShader;
 
-let main =
-  gfun(
-    Void,
-    "main",
-    () => {
-      open! VertexShader;
-      /* gl_Position is a special variable a vertex shader is responsible for setting */
-      gl_Position **. XYZW =@ position4 **. X + position4 **. Y;
-      gl_Position **. XYZW =@ position3 **. XYZ + position3 **. XYZ;
-      gl_Position **. XYZW =@ position4 **. XYZW + position4 **. XYZW;
-      gl_Position =@ position4 **. XYZW + position4 **. XYZW;
-      finish();
-    }
-  );
-
-let resolution = vec2uniform("resolution");
-
-let time = floatuniform("time");
-
-let mainFrag =
-  gfun(
-    Void,
-    "main",
-    () => {
-      open! FragmentShader;
-      let position = vec2var("position");
-      position =@ gl_FragCoord **. XY / (resolution **. XY);
-      let color = floatvar("color");
-      color =@ f(0.0);
-      color
-      += (
-        sin(position **. X * cos(time / f(15.0)) * f(80.0))
-        + cos(position **. Y * cos(time / f(15.0)) * f(10.0))
-      );
-      color
-      += (
-        sin(position **. Y * sin(time / f(10.0)) * f(40.0))
-        + cos(position **. X * sin(time / f(25.0)) * f(40.0))
-      );
-      color
-      += (
-        sin(position **. X * sin(time / f(5.0)) * f(10.0))
-        + sin(position **. Y * sin(time / f(35.0)) * f(80.0))
-      );
-      color *= (sin(time / f(10.0)) * f(0.5));
-      gl_FragColor
-      =@ vec4([
-           vec3([color, color * f(0.5), sin(color + time / f(3.0)) * f(0.75)]),
-           f(1.0)
-         ]);
-      gl_FragColor =@ position4 **. XYZW;
-      finish();
-    }
-  );
-
-let getShader = main =>
+let getShader = (prelude, uniforms, varyings, main) =>
   version
   ++ newline
   ++ newline
+  ++ precision
+  ++ newline
+  ++ prelude
   ++ formatAttributes(getAttributes(main))
+  ++ newline
+  ++ newline
+  ++ formatVaryings(varyings)
+  ++ newline
+  ++ newline
+  ++ formatUniforms(uniforms)
   ++ newline
   ++ newline
   ++ fmtFun(main);
 
-/* let shader = getShader(main); */
-let shader = getShader(mainFrag);
+type programT = {
+  attributes: SS.t,
+  uniforms: SS.t,
+  varyings: SS.t,
+  vertexShader: string,
+  fragmentShader: string
+};
+
+let getProgram = (vsmain, fsmain) => {
+  let uniforms = SS.union(getUniforms(vsmain), getUniforms(fsmain));
+  let varyings = SS.union(getVaryings(vsmain), getVaryings(fsmain));
+  {
+    attributes: getAttributes(vsmain),
+    uniforms: uniforms,
+    varyings: varyings,
+    vertexShader: getShader(vertexPrelude, uniforms, varyings, vsmain),
+    fragmentShader: getShader(fragmentPrelude, uniforms, varyings, fsmain)
+  };
+};
