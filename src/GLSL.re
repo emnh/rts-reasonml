@@ -37,7 +37,8 @@ type varT =
   | Uniform
   | Varying
   | Variable
-  | Output;
+  | Output
+  | Argument;
 
 type varExprT = (varT, glslTypeT, string);
 
@@ -45,10 +46,13 @@ include GLSLSwizzleFormat;
 
 type leftExprT =
   | Var(varExprT)
-  | Swizzle(varExprT, swizzleT);
-
-/* Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
-type rT =
+  | Swizzle(varExprT, swizzleT)
+/* list(rT) in funExprT is too wide,
+ * but it makes it easy to use vars as arguments and
+ * as right expressions interchangeably */
+and funExprT = (glslTypeT, string, list(rT), gRootT)
+/* rT: Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
+and rT =
   /* | TypeError */
   | RVar(varExprT)
   | RSwizzle(rT, swizzleT)
@@ -73,20 +77,21 @@ type rT =
   | And(rT, rT)
   | Or(rT, rT)
   | Xor(rT, rT)
+  | Ternary(rT, rT, rT)
   | BuiltinFun(string, list(rT))
   | BuiltinFun1(string, rT)
   | BuiltinFun2(string, rT, rT)
   | BuiltinFun3(string, rT, rT, rT)
-  | BuiltinFun4(string, rT, rT, rT, rT);
-
-type rightExprT = rT;
-
-type statementT =
+  | BuiltinFun4(string, rT, rT, rT, rT)
+  | CustomFun(funExprT, list(rT))
+and rightExprT = rT
+and statementT =
   | Assignment(leftExprT, rightExprT)
+  | CustomFunDecl(funExprT)
   | DeclAssignment(glslTypeT, leftExprT, rightExprT)
-  | Discard;
-
-type gRootT = list(statementT);
+  | Return(rightExprT)
+  | Discard
+and gRootT = list(statementT);
 
 type nodeT =
   | StatementNode(statementT)
@@ -119,9 +124,7 @@ type uniformInputT = {
 
 type uniformBlockT = list((rT, uniformInputT => array(float)));
 
-type shaderMainT = {
-  ast: gRootT
-};
+type shaderMainT = gRootT;
 
 type transformer('a) = {
   var: (transformer('a), varExprT) => 'a,
@@ -188,6 +191,16 @@ let fmtTransformer = {
       | And(l, r) => ["(", t.rExpr(t, l), " && ", t.rExpr(t, r), ")"]
       | Or(l, r) => ["(", t.rExpr(t, l), " || ", t.rExpr(t, r), ")"]
       | Xor(l, r) => ["(", t.rExpr(t, l), " ^^ ", t.rExpr(t, r), ")"]
+      | Ternary(l, r1, r2) => ["(", t.rExpr(t, l), " ? ", t.rExpr(t, r1), " : ", t.rExpr(t, r2), ")"]
+      | CustomFun((_, name, _, _), l) =>
+        let args = List.map(x => t.rExpr(t, x), l);
+        let args =
+          List.fold_left(
+            (x, y) => List.concat([x, [",", y]]),
+            [List.hd(args)],
+            List.tl(args)
+          );
+        List.concat([[name, "("], args, [")"]]);
       | BuiltinFun(name, l) =>
         let args = List.map(x => t.rExpr(t, x), l);
         let args =
@@ -253,6 +266,19 @@ let fmtTransformer = {
                     t.rExpr(t, right)
                   ]
                 )
+              | CustomFunDecl((vart, name, argvars, body)) =>
+                let argvars = List.map(x => t.rExpr(t, x), argvars);
+                let body = t.tree(t, body);
+                t.combine(
+                  t,
+                  List.concat([
+                    [glslTypeString(vart), name, "("],
+                    argvars,
+                    [") {", newline, body, newline, "}"]
+                  ])
+                );
+              | Return(right) =>
+                t.combine(t, ["return ", t.rExpr(t, right), ";"])
               | Discard => "discard"
               },
               ";",
@@ -262,13 +288,8 @@ let fmtTransformer = {
         tree
       )
     ),
-  tfun: (t, main) => {
-    let tree = main.ast;
-    t.combine(
-      t,
-      ["void main() {", newline, t.tree(t, tree), "}"]
-    );
-  }
+  tfun: (t, tree) =>
+    t.combine(t, ["void main() {", newline, t.tree(t, tree), "}"])
 };
 
 let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
@@ -382,6 +403,41 @@ let var = (t, name) => wrap(RVar((Variable, t, name)));
 
 let output = (t, name) => wrap(RVar((Output, t, name)));
 
+let gfun = (t, name) => (t, name);
+
+let arg = (t, name) => wrap(RVar((Argument, t, name)));
+
+let floatfun = name => gfun(Float, name);
+
+let vec2fun = name => gfun(Vec2, name);
+
+let vec3fun = name => gfun(Vec3, name);
+
+let vec4fun = name => gfun(Vec4, name);
+
+let mat2fun = name => gfun(Mat2, name);
+
+let mat3fun = name => gfun(Mat3, name);
+
+let mat4fun = name => gfun(Mat4, name);
+
+let floatarg = name => arg(Float, name);
+
+let vec2arg = name => arg(Vec2, name);
+
+let vec3arg = name => arg(Vec3, name);
+
+let vec4arg = name => arg(Vec4, name);
+
+let mat2arg = name => arg(Mat2, name);
+
+let mat3arg = name => arg(Mat3, name);
+
+let mat4arg = name => arg(Mat4, name);
+
+let fundecl = ((funt, name), argtypes, body, args) =>
+  CustomFun((funt, name, argtypes, body), args);
+
 let floatattr = name => attr(Float, name);
 
 let vec2attr = name => attr(Vec2, name);
@@ -440,6 +496,8 @@ let gl_FragColor = builtin(Vec4, "gl_FragColor");
 
 let outColor = output(Vec4, "outColor");
 
+let body = x => x;
+
 module Fragment = {
   module type ElementType = {
     let add: statementT => unit;
@@ -496,8 +554,15 @@ module Fragment = {
     let (||) = (l, r) => Or(l, r);
     let (^^) = (l, r) => Xor(l, r);
     let ( **. ) = (var, st) => RSwizzle(var, st);
+    let ternary = (l, r1, r2) => Ternary(l, r1, r2);
+    let max = l => BuiltinFun("max", l);
+    let min = l => BuiltinFun("min", l);
     let sin = l => BuiltinFun1("sin", l);
     let cos = l => BuiltinFun1("cos", l);
+    let abs = l => BuiltinFun1("abs", l);
+    let floor = l => BuiltinFun1("floor", l);
+    let fract = l => BuiltinFun1("fract", l);
+    let dot = (l, r) => BuiltinFun2("dot", l, r);
     let vec2 = l => BuiltinFun("vec2", l);
     let vec3 = l => BuiltinFun("vec3", l);
     let vec4 = l => BuiltinFun("vec4", l);
@@ -506,6 +571,7 @@ module Fragment = {
     let mat4 = l => BuiltinFun("mat4", l);
     let f = x => ImmediateFloat(x);
     let i = x => ImmediateInt(x);
+    let return = l => add(Return(l));
   };
 };
 
@@ -545,8 +611,8 @@ type programT = {
 
 let getProgram = (uniformBlock, vsmain, fsmain) => {
   /*
-  let uniforms = List.concat([getUniforms(vsmain), getUniforms(fsmain)]);
-  */
+   let uniforms = List.concat([getUniforms(vsmain), getUniforms(fsmain)]);
+   */
   let uf = ((e, _)) => {
     let ((_, x, y), _) = rightToLeft(e);
     (x, y);
@@ -562,4 +628,3 @@ let getProgram = (uniformBlock, vsmain, fsmain) => {
     fragmentShader: getShader(fragmentPrelude, uniforms, varyings, fsmain)
   };
 };
-

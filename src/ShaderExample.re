@@ -34,56 +34,62 @@ let getUniforms = (fg, bg) => [
   (u_time, arg => [|arg.time|])
 ];
 
-let mainVertex = {
-  ast: {
-    open! VertexShader;
-    /* gl_Position is a special variable a vertex shader is responsible for setting */
-    v_uv =@ a_uv;
-    gl_Position
-    =@ projectionMatrix
-    * modelViewMatrix
-    * vec4([position **. XYZ, f(1.0)]);
-    finish();
-  }
-};
+let mainVertex =
+  body(
+    {
+      open! VertexShader;
+      /* gl_Position is a special variable a vertex shader is responsible for setting */
+      v_uv =@ a_uv;
+      gl_Position
+      =@ projectionMatrix
+      * modelViewMatrix
+      * vec4([position **. XYZ, f(1.0)]);
+      finish();
+    }
+  );
 
-let mainFragment = {
-  ast: {
-    open! FragmentShader;
-    let position = vec2var("position");
-    /*
-     position =@ gl_FragCoord **. XY / (resolution **. XY);
-     */
-    let resolution = vec2var("resolution");
-    resolution =@ u_resolution;
-    position =@ v_uv;
-    let color = floatvar("color");
-    color =@ f(0.0);
-    color
-    += (
-      sin(position **. X * cos(u_time / f(15.0)) * f(80.0))
-      + cos(position **. Y * cos(u_time / f(15.0)) * f(10.0))
-    );
-    color
-    += (
-      sin(position **. Y * sin(u_time / f(10.0)) * f(40.0))
-      + cos(position **. X * sin(u_time / f(25.0)) * f(40.0))
-    );
-    color
-    += (
-      sin(position **. X * sin(u_time / f(5.0)) * f(10.0))
-      + sin(position **. Y * sin(u_time / f(35.0)) * f(80.0))
-    );
-    color *= (sin(u_time / f(10.0)) * f(0.5));
-    outColor
-    =@ vec4([
-         vec3([color, color * f(0.5), sin(color + u_time / f(3.0)) * f(0.75)]),
-         f(1.0)
-       ]);
-    outColor += (u_color1 + u_color2);
-    finish();
-  }
-};
+let mainFragment =
+  body(
+    {
+      open! FragmentShader;
+      let position = vec2var("position");
+      /*
+       position =@ gl_FragCoord **. XY / (resolution **. XY);
+       */
+      let resolution = vec2var("resolution");
+      resolution =@ u_resolution;
+      position =@ v_uv;
+      let color = floatvar("color");
+      color =@ f(0.0);
+      color
+      += (
+        sin(position **. X * cos(u_time / f(15.0)) * f(80.0))
+        + cos(position **. Y * cos(u_time / f(15.0)) * f(10.0))
+      );
+      color
+      += (
+        sin(position **. Y * sin(u_time / f(10.0)) * f(40.0))
+        + cos(position **. X * sin(u_time / f(25.0)) * f(40.0))
+      );
+      color
+      += (
+        sin(position **. X * sin(u_time / f(5.0)) * f(10.0))
+        + sin(position **. Y * sin(u_time / f(35.0)) * f(80.0))
+      );
+      color *= (sin(u_time / f(10.0)) * f(0.5));
+      outColor
+      =@ vec4([
+           vec3([
+             color,
+             color * f(0.5),
+             sin(color + u_time / f(3.0)) * f(0.75)
+           ]),
+           f(1.0)
+         ]);
+      outColor += (u_color1 + u_color2);
+      finish();
+    }
+  );
 
 let makeProgramSource = (fg, bg) => {
   let uniformBlock = getUniforms(fg, bg);
