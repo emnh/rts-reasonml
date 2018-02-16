@@ -24,6 +24,26 @@ exception No2D;
 
 exception NoProgram;
 
+let counter = ref(0);
+
+let countInvocations = Memoize.memoize(1, (a) => {
+  counter := counter^ + 1;
+  ("count", a, counter^)
+});
+
+Js.log(countInvocations(0));
+Js.log(countInvocations(1));
+Js.log(countInvocations(2));
+Js.log(countInvocations(3));
+Js.log(countInvocations(0));
+Js.log(countInvocations(0));
+Js.log(countInvocations(0));
+Js.log(countInvocations(0));
+Js.log(DemoCache.countInvocations(countInvocations, 0));
+Js.log(DemoCache.countInvocations(countInvocations, 0));
+Js.log(DemoCache.countInvocations(countInvocations, 0));
+Js.log(DemoCache.countInvocations(countInvocations, 0));
+
 /* canvas/context setup */
 let main = (_) => {
   /* Clear doc in case of hot reloading. Didn't work with dat.gui. */
@@ -45,7 +65,7 @@ let main = (_) => {
       showError("No WebGL2!");
       raise(NoGL);
     };
-  let getShaderProgram = (fg, bg) => {
+  let getShaderProgram = Memoize.memoize(2, (fg, bg) => {
     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
     let vertexShaderSource = programSource.vertexShader;
     let fragmentShaderSource = programSource.fragmentShader;
@@ -71,7 +91,7 @@ let main = (_) => {
       | _ => None
       };
     (uniforms, program);
-  };
+  });
   let run = (time, geometryType, fg, bg) => {
     let geof =
       switch geometryType {

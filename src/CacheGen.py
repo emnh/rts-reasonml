@@ -26,10 +26,12 @@ def getFunArgs(module, data, fname):
     for line in data.splitlines():
         if line.startswith('let %s' % fname):
             args = line.split(" =>")[0].split(" =")[1].strip()
+            if '_' in args:
+                continue
             if not '(' in args:
                 args = '(' + args + ')'
             return args
-    print "couldn't get args of " + module + "." + fname
+    print >> sys.stderr, "couldn't get args of " + module + "." + fname
     return None
 
 def fmtModule(module, content):
@@ -54,6 +56,16 @@ def fmtCacheFun(module, funName, argnames):
     }};
 '''.format(m=module, f=funName, a=argnames)
 
+def isBalanced(x):
+    left = 0
+    right = 0
+    for c in x:
+        if c == '(':
+            left += 1
+        elif c == ')':
+            right += 1
+    return left == right
+
 #print getOut("../lib/bs/Rts.cmi");
 def processModule(module):
     typeData = getTypeOut("../lib/bs/src/%s-Rts.cmi" % module);
@@ -64,15 +76,30 @@ def processModule(module):
         if line.startswith('let') and '=>' in line:
             tokens = line.split(" ")
             funName = tokens[1].rstrip(":")
+            l = line.split('=>')
+            good = False
+            for i in range(1, len(l)):
+                x, y = "".join(l[:i]), "".join(l[i:])
+                #print >> sys.stderr, (l, i, x, y)
+                if isBalanced(x) and isBalanced(y):
+                    good = True
+                    break
+            if not good:
+                print >> sys.stderr, "probably not a function, skipping: " + funName
+                continue
             argnames = getFunArgs(module, data, funName)
             #retType = line.split('=>');
-            content += fmtCacheFun(module, funName, argnames)
+            if argnames != None:
+                content += fmtCacheFun(module, funName, argnames)
     if content != '':
-        print fmtModule(module, content)
+        fd = file(module + 'Cache.re', 'w')
+        #fd.write(fmtModule(module, content))
+        fd.write(content)
+        fd.close()
 
 for fname in glob.glob('*.re'):
     module = fname[:-3]
-    if module == 'Test':
+    if 'Cache' in module:
         continue
     processModule(module)
 
