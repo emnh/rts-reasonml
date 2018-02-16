@@ -20,10 +20,17 @@ type configT =
   | StringConfig(configVarT(string))
   | ColorConfig(configVarT(rgbaT));
 
+let configVars = ref([]);
+
 let createVarCallbacks = ref([]);
 
 let addCreateVarCallBack = f =>
+{
+  /** Call on already created vars **/
+  List.iter(var => f(var), configVars^);
+  /** Add it to the list **/
   createVarCallbacks := [f, ...createVarCallbacks^];
+};
 
 let configVar = (path, defaultValue, getValue, setValue, wrap, ~choices=?, ()) => {
   let pathStr = p => String.concat("/", p);
@@ -58,6 +65,8 @@ let configVar = (path, defaultValue, getValue, setValue, wrap, ~choices=?, ()) =
   var#set(var#get());
   /* Call config variable creation callbacks */
   List.iter(f => f(wrap(var)), createVarCallbacks^);
+  /* Save created vars */
+  configVars := [wrap(var), ...configVars^];
   var;
 };
 

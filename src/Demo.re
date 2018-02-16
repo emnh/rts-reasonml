@@ -133,33 +133,14 @@ let main = (_) => {
   );
   let start = Date.now();
   ConfigUI.init();
-  let backgroundColor =
-    Config.colorConfigVar(
-      ["canvas", "background", "color"],
-      (0, 0, 0, 1.0),
-      ()
-    );
-  let foregroundColor =
-    Config.colorConfigVar(
-      ["canvas", "foreground", "color"],
-      (0, 0, 0, 1.0),
-      ()
-    );
-  let geometryType =
-    Config.stringConfigVar(
-      ["object", "geometry"],
-      "Box",
-      ~choices=Config.Choices([|"Box", "Sphere", "Plane"|]),
-      ()
-    );
   let startIteration = Document.iteration(Document.window);
   let rec loop = () => {
     let t = Date.now() -. start;
     run(
       t /. 1000.0,
-      geometryType#get(),
-      foregroundColor#get(),
-      backgroundColor#get()
+      ConfigVars.geometryType#get(),
+      ConfigVars.foregroundColor#get(),
+      ConfigVars.backgroundColor#get()
     );
     let currentIteration = Document.iteration(Document.window);
     if (currentIteration == startIteration) {
@@ -174,7 +155,6 @@ let main = (_) => {
     };
   };
   loop();
-  Js.log(__LOC__);
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();
