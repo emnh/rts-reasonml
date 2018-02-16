@@ -45,6 +45,9 @@ type t;
           return retval;
         };
         break;
+      default:
+        throw "Unsupported argument count to memoize!";
+        break;
     };
     return g;
   };
@@ -111,6 +114,9 @@ type t;
           cache[cacheId] = retval;
           return retval;
         };
+        break;
+      default:
+        throw "Unsupported argument count to memoize!";
         break;
     };
     return g;
