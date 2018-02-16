@@ -67,7 +67,7 @@ let main = (_) => {
         let vertexShaderSource = programSource.vertexShader;
         let fragmentShaderSource = programSource.fragmentShader;
         Js.log("Vertex shader:");
-        Js.log(vertexShaderSource);
+        Js.log(MyString.lineNumbers(vertexShaderSource));
         let vertexShader =
           WebGL2.createShader(
             gl,
@@ -75,7 +75,7 @@ let main = (_) => {
             vertexShaderSource
           );
         Js.log("Fragment shader:");
-        Js.log(fragmentShaderSource);
+        Js.log(MyString.lineNumbers(fragmentShaderSource));
         let fragmentShader =
           WebGL2.createShader(
             gl,

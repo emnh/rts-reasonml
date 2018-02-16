@@ -87,7 +87,6 @@ and rT =
 and rightExprT = rT
 and statementT =
   | Assignment(leftExprT, rightExprT)
-  | CustomFunDecl(funExprT)
   | DeclAssignment(glslTypeT, leftExprT, rightExprT)
   | Return(rightExprT)
   | Discard
@@ -191,7 +190,15 @@ let fmtTransformer = {
       | And(l, r) => ["(", t.rExpr(t, l), " && ", t.rExpr(t, r), ")"]
       | Or(l, r) => ["(", t.rExpr(t, l), " || ", t.rExpr(t, r), ")"]
       | Xor(l, r) => ["(", t.rExpr(t, l), " ^^ ", t.rExpr(t, r), ")"]
-      | Ternary(l, r1, r2) => ["(", t.rExpr(t, l), " ? ", t.rExpr(t, r1), " : ", t.rExpr(t, r2), ")"]
+      | Ternary(l, r1, r2) => [
+          "(",
+          t.rExpr(t, l),
+          " ? ",
+          t.rExpr(t, r1),
+          " : ",
+          t.rExpr(t, r2),
+          ")"
+        ]
       | CustomFun((_, name, _, _), l) =>
         let args = List.map(x => t.rExpr(t, x), l);
         let args =
@@ -266,17 +273,6 @@ let fmtTransformer = {
                     t.rExpr(t, right)
                   ]
                 )
-              | CustomFunDecl((vart, name, argvars, body)) =>
-                let argvars = List.map(x => t.rExpr(t, x), argvars);
-                let body = t.tree(t, body);
-                t.combine(
-                  t,
-                  List.concat([
-                    [glslTypeString(vart), name, "("],
-                    argvars,
-                    [") {", newline, body, newline, "}"]
-                  ])
-                );
               | Return(right) =>
                 t.combine(t, ["return ", t.rExpr(t, right), ";"])
               | Discard => "discard"
@@ -313,6 +309,25 @@ let getVarOfType = (vart, gf) => {
   ar^;
 };
 
+let getFunctions = gf => {
+  let ar = ref([]);
+  let walkTransformer = {
+    ...fmtTransformer,
+    rExpr: (t, expr) => {
+      switch expr {
+      | CustomFun((a, b, c, body), _) => {
+        ar := [(a, b, c, body), ...ar^];
+        let _ = t.tree(t, body);
+      }
+      | _ => ()
+      };
+      fmtTransformer.rExpr(t, expr);
+    }
+  };
+  let _ = walkTransformer.tfun(walkTransformer, gf);
+  ar^;
+};
+
 let getAttributes = gf => getVarOfType(Attribute, gf);
 
 let getVaryings = gf => getVarOfType(Varying, gf);
@@ -320,6 +335,41 @@ let getVaryings = gf => getVarOfType(Varying, gf);
 let getUniforms = gf => getVarOfType(Uniform, gf);
 
 let getOutputs = gf => getVarOfType(Output, gf);
+
+let formatFunctions = attrs => {
+  let t = fmtTransformer;
+  let fns = ref(SS.empty);
+  let formatFunction = attr => {
+    let (vart, name, argvars, body) = attr;
+    let argvars =
+      List.map(
+        x =>
+          switch x {
+          | RVar((_, vart, name)) =>
+            t.combine(t, [glslTypeString(vart), " ", name])
+          | _ => ""
+          },
+        argvars
+      );
+    let body = t.tree(t, body);
+    let fn = t.combine(
+      t,
+      List.concat([
+        [glslTypeString(vart), " ", name, "("],
+        argvars,
+        [") {", newline, body, newline, "}"]
+      ])
+    );
+    switch (SS.find(fn, fns^)) {
+      | _ => ""
+      | exception Not_found => {
+        fns := SS.add(fn, fns^);
+        fn
+      };
+    };
+  };
+  String.concat(newline, List.map(formatFunction, attrs));
+};
 
 let formatAttributes = attrs => {
   let formatAttribute = attr => {
@@ -596,6 +646,9 @@ let getShader = (prelude, uniforms, varyings, main) =>
   ++ newline
   ++ newline
   ++ formatOutputs(getOutputs(main))
+  ++ newline
+  ++ newline
+  ++ formatFunctions(getFunctions(main))
   ++ newline
   ++ newline
   ++ fmtFun(main);

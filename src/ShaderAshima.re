@@ -45,7 +45,7 @@ let permute = {
 let snoise = {
   let v = vec2arg("v");
   fundecl(
-    vec3fun("snoise"),
+    floatfun("snoise"),
     [v],
     body(
       {
@@ -71,7 +71,7 @@ let snoise = {
              vec2([f(1.0), f(0.0)]),
              vec2([f(0.0), f(1.0)])
            );
-        let x12 = vec2var("x12");
+        let x12 = vec4var("x12");
         x12 =@ x0 **. XYXY + cC **. XXZZ;
         x12 **. XY -= i1;
         /* Permutations */
@@ -112,6 +112,7 @@ let snoise = {
         m *= (f(1.79284291400159) - f(0.85373472095314) * (a0 * a0 + h * h));
         /* Compute final noise value at P */
         let g = vec3var("g");
+        g =@ vec3([f(0.0)]);
         g **. X =@ a0 **. X * (x0 **. X) + h **. X * (x0 **. Y);
         g **. YZ =@ a0 **. YZ * (x12 **. XZ) + h **. YZ * (x12 **. YW);
         return(f(130.0) * dot(m, g));

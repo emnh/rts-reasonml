@@ -87,6 +87,9 @@ let mainFragment =
            f(1.0)
          ]);
       outColor += (u_color1 + u_color2);
+      outColor **. R += ShaderAshima.snoise([v_uv]);
+      outColor **. G += ShaderAshima.snoise([v_uv + f(123.234)]);
+      outColor **. B += ShaderAshima.snoise([v_uv - f(323.234)]);
       finish();
     }
   );
