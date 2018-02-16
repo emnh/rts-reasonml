@@ -283,7 +283,7 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-let testProgram =
+let renderObject =
     (
       gl,
       program,
@@ -291,13 +291,10 @@ let testProgram =
       width,
       height,
       time,
-      fgColor,
-      bgColor,
-      createGeometry,
+      geometry : Three.geometryBuffersT,
       getObjectMatrix,
       getViewMatrices
     ) => {
-  let box: Three.geometryBuffersT = createGeometry();
   let sz = 6.0;
   let obj: Three.objectTransformT =
     getObjectMatrix(
@@ -309,8 +306,8 @@ let testProgram =
         Math.sin(0.73 *. time) *. 2.0 *. Math.pi
       )
     );
-  let positions = box.position;
-  let index = box.index;
+  let positions = geometry.position;
+  let index = geometry.index;
   let positionBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
@@ -333,7 +330,7 @@ let testProgram =
   );
   let uvBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
-  bufferData(gl, getARRAY_BUFFER(gl), box.uv, getSTATIC_DRAW(gl));
+  bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   enableVertexAttribArray(gl, uvAttributeLocation);
   let size = 2;
@@ -369,30 +366,6 @@ let testProgram =
   );
   let viewMatrices: Three.viewTransformT =
     getViewMatrices(obj.matrixWorld, width, height);
-  let (r, g, b, _) = fgColor;
-  let (r2, g2, b2, _) = bgColor;
-  let c = 256.0;
-  let uniformBlock =
-    Float32Array.create(
-      Array.concat([
-        [|
-          time,
-          float_of_int(width),
-          float_of_int(height),
-          float_of_int(r) /. c,
-          float_of_int(g) /. c,
-          float_of_int(b) /. c,
-          1.0,
-          float_of_int(r2) /. c,
-          float_of_int(g2) /. c,
-          float_of_int(b2) /. c,
-          1.0,
-          0.0
-        |],
-        viewMatrices.modelViewMatrix,
-        viewMatrices.projectionMatrix
-      ])
-    );
   let uniformArg: GLSL.uniformInputT = {
     time,
     tick: 0.0,
@@ -414,23 +387,9 @@ let testProgram =
     uniformBlockBindingIndex,
     uniformPerSceneBuffer
   );
-  /*
-    let timeLocation = getUniformLocation(gl, program, "u_time");
-    uniform1f(gl, timeLocation, time);
-    let resolutionLocation = getUniformLocation(gl, program, "u_resolution");
-    uniform2f(gl, resolutionLocation, float_of_int(width), float_of_int(height));
-   */
   let offset = 0;
   let count = Int16Array.length(index);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
-  /*
-     drawArrays(
-       gl,
-       getTRIANGLES(gl),
-       offset,
-       Float32Array.length(positions) / size
-     );
-   */
   drawElements(gl, getTRIANGLES(gl), count, getUNSIGNED_SHORT(gl), offset);
 };

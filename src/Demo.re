@@ -37,10 +37,11 @@ let countInvocations =
 
 countInvocations(0);
 
-let getShaderProgram = gl =>
-  Memoize.memoize(
-    2,
-    (fg, bg) => {
+let getShaderProgram = 
+  Memoize.partialMemoize(
+    3,
+    [|1, 2|],
+    (gl, fg, bg) => {
       let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
       let vertexShaderSource = programSource.vertexShader;
       let fragmentShaderSource = programSource.fragmentShader;
@@ -104,29 +105,33 @@ let setupDocument = () => {
   (canvas, gl);
 };
 
+let geof =
+  Memoize.memoize(1, gt =>
+    (
+      switch gt {
+      | "Box" => Three.createBoxGeometry
+      | "Sphere" => Three.createSphereGeometry
+      | "Plane" => Three.createPlaneGeometry
+      | _ => Three.createBoxGeometry
+      }
+    )
+      ()
+  );
+
 let run = (gl, time) => {
   let geometryType = ConfigVars.geometryType#get();
   let fg = ConfigVars.foregroundColor#get();
   let bg = ConfigVars.backgroundColor#get();
-  let geof =
-    switch geometryType {
-    | "Box" => Three.createBoxGeometry
-    | "Sphere" => Three.createSphereGeometry
-    | "Plane" => Three.createPlaneGeometry
-    | _ => Three.createBoxGeometry
-    };
   switch (getShaderProgram(gl, fg, bg)) {
   | (uniforms, Some(p)) =>
-    WebGL2.testProgram(
+    WebGL2.renderObject(
       gl,
       p,
       uniforms,
       state.window.width,
       state.window.height,
       time,
-      fg,
-      bg,
-      geof,
+      geof(geometryType),
       Three.getObjectMatrix,
       Three.getViewMatrices
     )
@@ -139,7 +144,9 @@ let rec renderLoop = (startTime, canvas, gl, startIteration) => {
   run(gl, t /. 1000.0);
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
-    Document.requestAnimationFrame(() => renderLoop(startTime, canvas, gl, startIteration));
+    Document.requestAnimationFrame(() =>
+      renderLoop(startTime, canvas, gl, startIteration)
+    );
   } else {
     let _ = Document.removeChild(canvas);
     Js.log(
