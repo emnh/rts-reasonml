@@ -123,7 +123,7 @@ external getUniformBlockIndex : (glT, programT, string) => uniformBlockIndexT =
 
 [@bs.send]
 external uniformBlockBinding : (glT, programT, uniformBlockIndexT, int) => unit =
-  "getUniformBlockIndex";
+  "uniformBlockBinding";
 
 [@bs.send] [@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
@@ -285,6 +285,7 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
+/* TODO: Preallocate and refill array */
 let computeUniformBlock =
     (time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
   let uniformArg: GLSL.uniformInputT = {
@@ -332,7 +333,7 @@ let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
   {positionBuffer, uvBuffer, indexBuffer, offset, count};
 };
 
-let renderObject = (gl, program, buffers, uniformBlock) => {
+let createAttributes = (gl, program, buffers) => {
   let vao = createVertexArray(gl);
   bindVertexArray(gl, vao);
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
@@ -367,35 +368,51 @@ let renderObject = (gl, program, buffers, uniformBlock) => {
     stride,
     offset
   );
+  vao;
+};
+
+let getUniformBufferAndLocation =
+  Memoize.partialMemoize2((gl, program) => {
+    let uniformPerSceneBuffer = createBuffer(gl);
+    let uniformPerSceneLocation =
+      getUniformBlockIndex(gl, program, "u_PerScene");
+    (uniformPerSceneBuffer, uniformPerSceneLocation);
+  });
+
+let renderObject = (gl, program, buffers, vao, uniformBlock) => {
   useProgram(gl, program);
   bindVertexArray(gl, vao);
+  /* Upload uniforms */
+  let (uniformPerSceneBuffer, uniformPerSceneLocation) =
+    getUniformBufferAndLocation(gl, program);
+  /*
+   Js.log((uniformPerSceneBuffer, uniformPerSceneLocation));
+   */
   let uniformBlockBindingIndex = 0;
-  let uniformPerSceneLocation =
-    getUniformBlockIndex(gl, program, "u_PerScene");
   uniformBlockBinding(
     gl,
     program,
     uniformPerSceneLocation,
     uniformBlockBindingIndex
   );
-  let uniformPerSceneBuffer = createBuffer(gl);
   bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
   bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getDYNAMIC_DRAW(gl));
   bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
-  /* Render */
   bindBufferBase(
     gl,
     getUNIFORM_BUFFER(gl),
     uniformBlockBindingIndex,
     uniformPerSceneBuffer
   );
+  /* Bind buffers */
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
+  /* Render */
   drawElements(
     gl,
     getTRIANGLES(gl),
     buffers.count,
     getUNSIGNED_SHORT(gl),
-    offset
+    buffers.offset
   );
 };

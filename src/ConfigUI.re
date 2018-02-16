@@ -111,7 +111,6 @@ let registerCreateHandlers = () => {
 let init = () => {
   registerCreateHandlers();
   let datgui = DatGui.create();
-  Document.debug(Document.window, datgui);
   dg := Some(datgui);
 };
 

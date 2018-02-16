@@ -120,7 +120,7 @@ let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
-let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 100, 100);
+let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 10, 10);
 
 let createSphereGeometry = () => {
   let box = protoSphere;
@@ -166,8 +166,7 @@ let getObjectMatrix = (position, scale, rotation) => {
 };
 
 let getCamera =
-  Memoize.memoize(
-    4,
+  Memoize.partialMemoize4(
     (width, height, pos, rot) => {
       let viewAngle = 45.0;
       let aspect = float_of_int(width) /. float_of_int(height);

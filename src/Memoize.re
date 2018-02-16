@@ -1,3 +1,37 @@
-[@bs.val] external memoize : ((int, 'a) => 'a) = "window.memoize";
+type optionsT;
 
-[@bs.val] external partialMemoize : ((int, array(int), 'a) => 'a) = "window.partialMemoize";
+[@bs.val] external memoize : (int, 'a) => 'a = "window.memoize";
+
+[@bs.val]
+external partialMemoize11 :
+  ([@bs.uncurry] ('a => 'r)) => [@bs.uncurry] ('a => 'r) =
+  "window.partialMemoize1";
+
+[@bs.val]
+external partialMemoize22 :
+  ([@bs.uncurry] (('a, 'b) => 'r)) => [@bs.uncurry] (('a, 'b) => 'r) =
+  "window.partialMemoize2";
+
+[@bs.val]
+external partialMemoize33 :
+  ([@bs.uncurry] (('a, 'b, 'c) => 'r)) => [@bs.uncurry] (('a, 'b, 'c) => 'r) =
+  "window.partialMemoize3";
+
+[@bs.val] external partialMemoize1 : 'a => 'a = "window.partialMemoize1";
+
+[@bs.val] external partialMemoize2 : 'a => 'a = "window.partialMemoize2";
+
+[@bs.val] external partialMemoize3 : 'a => 'a = "window.partialMemoize3";
+
+[@bs.val] external partialMemoize4 : 'a => 'a = "window.partialMemoize4";
+
+[@bs.val]
+external partialMemoize44 :
+  ([@bs.uncurry] (('a, 'b, 'c, 'd) => 'r)) =>
+  [@bs.uncurry] (('a, 'b, 'c, 'd) => 'r) =
+  "window.partialMemoize4";
+
+[@bs.set] external memoizeId : ('a, float) => unit = "memoizeId";
+
+/* TODO: Use global identifier instead of Math.random */
+let setMemoizeId = x => memoizeId(x, Math.random());
