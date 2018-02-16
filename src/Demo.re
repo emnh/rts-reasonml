@@ -37,12 +37,39 @@ let countInvocations =
 
 countInvocations(0);
 
-/* canvas/context setup */
-let main = (_) => {
-  /* Clear doc in case of hot reloading. Didn't work with dat.gui. */
-  /*
-   Document.setInnerHTML(Document.body, "");
-   */
+let getShaderProgram = gl =>
+  Memoize.memoize(
+    2,
+    (fg, bg) => {
+      let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+      let vertexShaderSource = programSource.vertexShader;
+      let fragmentShaderSource = programSource.fragmentShader;
+      Js.log("Vertex shader:");
+      Js.log(MyString.lineNumbers(vertexShaderSource));
+      let vertexShader =
+        WebGL2.createShader(
+          gl,
+          WebGL2.getVERTEX_SHADER(gl),
+          vertexShaderSource
+        );
+      Js.log("Fragment shader:");
+      Js.log(MyString.lineNumbers(fragmentShaderSource));
+      let fragmentShader =
+        WebGL2.createShader(
+          gl,
+          WebGL2.getFRAGMENT_SHADER(gl),
+          fragmentShaderSource
+        );
+      let program =
+        switch (vertexShader, fragmentShader) {
+        | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
+        | _ => None
+        };
+      (uniforms, program);
+    }
+  );
+
+let setupDocument = () => {
   Document.setMargin(Document.getStyle(Document.body), "0px");
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
@@ -58,64 +85,6 @@ let main = (_) => {
       showError("No WebGL2!");
       raise(NoGL);
     };
-  let getShaderProgram =
-    Memoize.memoize(
-      2,
-      (fg, bg) => {
-        let (uniforms, programSource) =
-          ShaderExample.makeProgramSource(fg, bg);
-        let vertexShaderSource = programSource.vertexShader;
-        let fragmentShaderSource = programSource.fragmentShader;
-        Js.log("Vertex shader:");
-        Js.log(MyString.lineNumbers(vertexShaderSource));
-        let vertexShader =
-          WebGL2.createShader(
-            gl,
-            WebGL2.getVERTEX_SHADER(gl),
-            vertexShaderSource
-          );
-        Js.log("Fragment shader:");
-        Js.log(MyString.lineNumbers(fragmentShaderSource));
-        let fragmentShader =
-          WebGL2.createShader(
-            gl,
-            WebGL2.getFRAGMENT_SHADER(gl),
-            fragmentShaderSource
-          );
-        let program =
-          switch (vertexShader, fragmentShader) {
-          | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
-          | _ => None
-          };
-        (uniforms, program);
-      }
-    );
-  let run = (time, geometryType, fg, bg) => {
-    let geof =
-      switch geometryType {
-      | "Box" => Three.createBoxGeometry
-      | "Sphere" => Three.createSphereGeometry
-      | "Plane" => Three.createPlaneGeometry
-      | _ => Three.createBoxGeometry
-      };
-    switch (getShaderProgram(fg, bg)) {
-    | (uniforms, Some(p)) =>
-      WebGL2.testProgram(
-        gl,
-        p,
-        uniforms,
-        state.window.width,
-        state.window.height,
-        time,
-        fg,
-        bg,
-        geof,
-        Three.getObjectMatrix,
-        Three.getViewMatrices
-      )
-    | (_, None) => raise(NoProgram)
-    };
-  };
   let setCanvasSize = (_) => {
     let width = Document.getWidth(Document.window);
     let height = Document.getHeight(Document.window);
@@ -131,30 +100,61 @@ let main = (_) => {
     "DOMContentLoaded",
     setCanvasSize
   );
-  let start = Date.now();
   ConfigUI.init();
-  let startIteration = Document.iteration(Document.window);
-  let rec loop = () => {
-    let t = Date.now() -. start;
-    run(
-      t /. 1000.0,
-      ConfigVars.geometryType#get(),
-      ConfigVars.foregroundColor#get(),
-      ConfigVars.backgroundColor#get()
-    );
-    let currentIteration = Document.iteration(Document.window);
-    if (currentIteration == startIteration) {
-      Document.requestAnimationFrame(loop);
-    } else {
-      let _ = Document.removeChild(canvas);
-      Js.log(
-        "exiting render loop "
-        ++ string_of_int(startIteration)
-        ++ " due to hot reload"
-      );
+  (canvas, gl);
+};
+
+let run = (gl, time) => {
+  let geometryType = ConfigVars.geometryType#get();
+  let fg = ConfigVars.foregroundColor#get();
+  let bg = ConfigVars.backgroundColor#get();
+  let geof =
+    switch geometryType {
+    | "Box" => Three.createBoxGeometry
+    | "Sphere" => Three.createSphereGeometry
+    | "Plane" => Three.createPlaneGeometry
+    | _ => Three.createBoxGeometry
     };
+  switch (getShaderProgram(gl, fg, bg)) {
+  | (uniforms, Some(p)) =>
+    WebGL2.testProgram(
+      gl,
+      p,
+      uniforms,
+      state.window.width,
+      state.window.height,
+      time,
+      fg,
+      bg,
+      geof,
+      Three.getObjectMatrix,
+      Three.getViewMatrices
+    )
+  | (_, None) => raise(NoProgram)
   };
-  loop();
+};
+
+let rec renderLoop = (startTime, canvas, gl, startIteration) => {
+  let t = Date.now() -. startTime;
+  run(gl, t /. 1000.0);
+  let currentIteration = Document.iteration(Document.window);
+  if (currentIteration == startIteration) {
+    Document.requestAnimationFrame(() => renderLoop(startTime, canvas, gl, startIteration));
+  } else {
+    let _ = Document.removeChild(canvas);
+    Js.log(
+      "exiting render loop "
+      ++ string_of_int(startIteration)
+      ++ " due to hot reload"
+    );
+  };
+};
+
+let main = (_) => {
+  let (canvas, gl) = setupDocument();
+  let startTime = Date.now();
+  let startIteration = Document.iteration(Document.window);
+  renderLoop(startTime, canvas, gl, startIteration);
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();
