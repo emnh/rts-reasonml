@@ -26,10 +26,16 @@ exception NoProgram;
 
 let counter = ref(0);
 
-let countInvocations = Memoize.memoize(1, (a) => {
-  counter := counter^ + 1;
-  ("count", a, counter^)
-});
+let countInvocations =
+  Memoize.memoize(
+    1,
+    a => {
+      counter := counter^ + 1;
+      ("count", a, counter^);
+    }
+  );
+
+countInvocations(0);
 
 /* canvas/context setup */
 let main = (_) => {
@@ -52,33 +58,38 @@ let main = (_) => {
       showError("No WebGL2!");
       raise(NoGL);
     };
-  let getShaderProgram = Memoize.memoize(2, (fg, bg) => {
-    let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
-    let vertexShaderSource = programSource.vertexShader;
-    let fragmentShaderSource = programSource.fragmentShader;
-    Js.log("Vertex shader:");
-    Js.log(vertexShaderSource);
-    let vertexShader =
-      WebGL2.createShader(
-        gl,
-        WebGL2.getVERTEX_SHADER(gl),
-        vertexShaderSource
-      );
-    Js.log("Fragment shader:");
-    Js.log(fragmentShaderSource);
-    let fragmentShader =
-      WebGL2.createShader(
-        gl,
-        WebGL2.getFRAGMENT_SHADER(gl),
-        fragmentShaderSource
-      );
-    let program =
-      switch (vertexShader, fragmentShader) {
-      | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
-      | _ => None
-      };
-    (uniforms, program);
-  });
+  let getShaderProgram =
+    Memoize.memoize(
+      2,
+      (fg, bg) => {
+        let (uniforms, programSource) =
+          ShaderExample.makeProgramSource(fg, bg);
+        let vertexShaderSource = programSource.vertexShader;
+        let fragmentShaderSource = programSource.fragmentShader;
+        Js.log("Vertex shader:");
+        Js.log(vertexShaderSource);
+        let vertexShader =
+          WebGL2.createShader(
+            gl,
+            WebGL2.getVERTEX_SHADER(gl),
+            vertexShaderSource
+          );
+        Js.log("Fragment shader:");
+        Js.log(fragmentShaderSource);
+        let fragmentShader =
+          WebGL2.createShader(
+            gl,
+            WebGL2.getFRAGMENT_SHADER(gl),
+            fragmentShaderSource
+          );
+        let program =
+          switch (vertexShader, fragmentShader) {
+          | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
+          | _ => None
+          };
+        (uniforms, program);
+      }
+    );
   let run = (time, geometryType, fg, bg) => {
     let geof =
       switch geometryType {
