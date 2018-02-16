@@ -237,6 +237,8 @@ external getUNIFORM_BUFFER : glT => uniformBufferTypeT = "UNIFORM_BUFFER";
 
 [@bs.get] external getSTATIC_DRAW : glT => drawT = "STATIC_DRAW";
 
+[@bs.get] external getDYNAMIC_DRAW : glT => drawT = "DYNAMIC_DRAW";
+
 [@bs.get] external getFLOAT : glT => primitiveT = "FLOAT";
 
 [@bs.get] external getUNSIGNED_SHORT : glT => primitiveT = "UNSIGNED_SHORT";
@@ -283,37 +285,58 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-let renderObject =
-    (
-      gl,
-      program,
-      uniforms,
-      width,
-      height,
-      time,
-      geometry : Three.geometryBuffersT,
-      getObjectMatrix,
-      getViewMatrices
-    ) => {
-  let sz = 6.0;
-  let obj: Three.objectTransformT =
-    getObjectMatrix(
-      (0.0, 0.0, (-20.0)),
-      (sz, sz, sz),
-      (
-        Math.sin(time) *. 2.0 *. Math.pi,
-        Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
-        Math.sin(0.73 *. time) *. 2.0 *. Math.pi
-      )
-    );
+let computeUniformBlock =
+    (time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
+  let uniformArg: GLSL.uniformInputT = {
+    time,
+    tick: 0.0,
+    width,
+    height,
+    modelViewMatrix,
+    projectionMatrix
+  };
+  let l = List.map(((_, f)) => f(uniformArg), uniforms);
+  let uniformBlock = Float32Array.create(Array.concat(l));
+  uniformBlock;
+};
+
+let preRender = (gl, width, height) => {
+  viewport(gl, 0, 0, width, height);
+  enable(gl, getDEPTH_TEST(gl));
+  clearColor(gl, 0, 0, 0, 0);
+  clear(gl, getCOLOR_BUFFER_BIT(gl));
+};
+
+type glBuffersT = {
+  positionBuffer: bufferT,
+  uvBuffer: bufferT,
+  indexBuffer: bufferT,
+  offset: int,
+  count: int
+};
+
+let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
   let positions = geometry.position;
   let index = geometry.index;
   let positionBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
+  let uvBuffer = createBuffer(gl);
+  bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
+  bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
+  let indexBuffer = createBuffer(gl);
+  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
+  bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
+  let offset = 0;
+  let count = Int16Array.length(index);
+  {positionBuffer, uvBuffer, indexBuffer, offset, count};
+};
+
+let renderObject = (gl, program, buffers, uniformBlock) => {
   let vao = createVertexArray(gl);
   bindVertexArray(gl, vao);
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
+  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   enableVertexAttribArray(gl, positionAttributeLocation);
   let size = 3;
   let normalize = Js.Boolean.to_js_boolean(false);
@@ -328,9 +351,7 @@ let renderObject =
     stride,
     offset
   );
-  let uvBuffer = createBuffer(gl);
-  bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
-  bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
+  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   enableVertexAttribArray(gl, uvAttributeLocation);
   let size = 2;
@@ -346,13 +367,6 @@ let renderObject =
     stride,
     offset
   );
-  let indexBuffer = createBuffer(gl);
-  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
-  bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
-  viewport(gl, 0, 0, width, height);
-  enable(gl, getDEPTH_TEST(gl));
-  clearColor(gl, 0, 0, 0, 0);
-  clear(gl, getCOLOR_BUFFER_BIT(gl));
   useProgram(gl, program);
   bindVertexArray(gl, vao);
   let uniformBlockBindingIndex = 0;
@@ -364,21 +378,9 @@ let renderObject =
     uniformPerSceneLocation,
     uniformBlockBindingIndex
   );
-  let viewMatrices: Three.viewTransformT =
-    getViewMatrices(obj.matrixWorld, width, height);
-  let uniformArg: GLSL.uniformInputT = {
-    time,
-    tick: 0.0,
-    width,
-    height,
-    modelViewMatrix: viewMatrices.modelViewMatrix,
-    projectionMatrix: viewMatrices.projectionMatrix
-  };
-  let l = List.map(((_, f)) => f(uniformArg), uniforms);
-  let uniformBlock = Float32Array.create(Array.concat(l));
   let uniformPerSceneBuffer = createBuffer(gl);
   bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
-  bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getSTATIC_DRAW(gl));
+  bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getDYNAMIC_DRAW(gl));
   bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
   /* Render */
   bindBufferBase(
@@ -387,9 +389,13 @@ let renderObject =
     uniformBlockBindingIndex,
     uniformPerSceneBuffer
   );
-  let offset = 0;
-  let count = Int16Array.length(index);
-  bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
-  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
-  drawElements(gl, getTRIANGLES(gl), count, getUNSIGNED_SHORT(gl), offset);
+  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
+  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
+  drawElements(
+    gl,
+    getTRIANGLES(gl),
+    buffers.count,
+    getUNSIGNED_SHORT(gl),
+    offset
+  );
 };

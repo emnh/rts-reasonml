@@ -37,7 +37,7 @@ let countInvocations =
 
 countInvocations(0);
 
-let getShaderProgram = 
+let getShaderProgram =
   Memoize.partialMemoize(
     3,
     [|1, 2|],
@@ -118,23 +118,56 @@ let geof =
       ()
   );
 
+let renderObj = (gl, program, buffers, pos, width, height, time, uniforms) => {
+  let sz = 6.0;
+  let obj: Three.objectTransformT =
+    Three.getObjectMatrix(
+      pos,
+      (sz, sz, sz),
+      (
+        Math.sin(time) *. 2.0 *. Math.pi,
+        Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
+        Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+      )
+    );
+  let viewMatrices: Three.viewTransformT =
+    Three.getViewMatrices(obj.matrixWorld, width, height);
+  let uniformBlock =
+    WebGL2.computeUniformBlock(
+      time,
+      width,
+      height,
+      viewMatrices.modelViewMatrix,
+      viewMatrices.projectionMatrix,
+      uniforms
+    );
+  WebGL2.renderObject(gl, program, buffers, uniformBlock);
+};
+
 let run = (gl, time) => {
   let geometryType = ConfigVars.geometryType#get();
   let fg = ConfigVars.foregroundColor#get();
   let bg = ConfigVars.backgroundColor#get();
+  let width = state.window.width;
+  let height = state.window.height;
+  let geometry = geof(geometryType);
   switch (getShaderProgram(gl, fg, bg)) {
-  | (uniforms, Some(p)) =>
-    WebGL2.renderObject(
-      gl,
-      p,
-      uniforms,
-      state.window.width,
-      state.window.height,
-      time,
-      geof(geometryType),
-      Three.getObjectMatrix,
-      Three.getViewMatrices
-    )
+  | (uniforms, Some(program)) =>
+    WebGL2.preRender(gl, width, height);
+    let buffers = WebGL2.createBuffers(gl, geometry);
+    for (_ in 0 to 100) {
+      let (x, y, z) = (Math.random(), Math.random(), (-20.0));
+      renderObj(
+        gl,
+        program,
+        buffers,
+        (x, y, z),
+        width,
+        height,
+        time,
+        uniforms
+      );
+    };
   | (_, None) => raise(NoProgram)
   };
 };
