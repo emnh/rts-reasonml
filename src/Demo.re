@@ -118,16 +118,17 @@ let geof =
       ()
   );
 
-let renderObj = (gl, program, buffers, pos, width, height, time, uniforms) => {
+let renderObj = (gl, program, buffers, pos, rot, width, height, time, uniforms) => {
   let sz = 6.0;
+  let (rx, ry, rz) = rot;
   let obj: Three.objectTransformT =
     Three.getObjectMatrix(
       pos,
       (sz, sz, sz),
       (
-        Math.sin(time) *. 2.0 *. Math.pi,
-        Math.sin(0.35 *. time) *. 2.0 *. Math.pi,
-        Math.sin(0.73 *. time) *. 2.0 *. Math.pi
+        Math.sin(time) *. 2.0 *. Math.pi +. rx,
+        Math.sin(0.35 *. time) *. 2.0 *. Math.pi +. ry,
+        Math.sin(0.73 *. time) *. 2.0 *. Math.pi +. rz
       )
     );
   let viewMatrices: Three.viewTransformT =
@@ -144,6 +145,16 @@ let renderObj = (gl, program, buffers, pos, width, height, time, uniforms) => {
   WebGL2.renderObject(gl, program, buffers, uniformBlock);
 };
 
+let getPosition = Memoize.memoize(1, (_) => {
+  let (rx, ry, rz) = (Math.random(), Math.random(), -20.0);
+  (rx, ry, rz);
+});
+
+let getRotation = Memoize.memoize(1, (_) => {
+  let (rx, ry, rz) = (Math.random(), Math.random(), Math.random());
+  (rx, ry, rz);
+});
+
 let run = (gl, time) => {
   let geometryType = ConfigVars.geometryType#get();
   let fg = ConfigVars.foregroundColor#get();
@@ -155,13 +166,15 @@ let run = (gl, time) => {
   | (uniforms, Some(program)) =>
     WebGL2.preRender(gl, width, height);
     let buffers = WebGL2.createBuffers(gl, geometry);
-    for (_ in 0 to 100) {
-      let (x, y, z) = (Math.random(), Math.random(), (-20.0));
+    for (i in 0 to 100) {
+      let (x, y, z) = getPosition(i);
+      let (rx, ry, rz) = getRotation(i);
       renderObj(
         gl,
         program,
         buffers,
         (x, y, z),
+        (rx, ry, rz),
         width,
         height,
         time,
