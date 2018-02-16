@@ -31,19 +31,6 @@ let countInvocations = Memoize.memoize(1, (a) => {
   ("count", a, counter^)
 });
 
-Js.log(countInvocations(0));
-Js.log(countInvocations(1));
-Js.log(countInvocations(2));
-Js.log(countInvocations(3));
-Js.log(countInvocations(0));
-Js.log(countInvocations(0));
-Js.log(countInvocations(0));
-Js.log(countInvocations(0));
-Js.log(DemoCache.countInvocations(countInvocations, 0));
-Js.log(DemoCache.countInvocations(countInvocations, 0));
-Js.log(DemoCache.countInvocations(countInvocations, 0));
-Js.log(DemoCache.countInvocations(countInvocations, 0));
-
 /* canvas/context setup */
 let main = (_) => {
   /* Clear doc in case of hot reloading. Didn't work with dat.gui. */
