@@ -21,6 +21,12 @@ let spread =
 let rotationSpread =
   Config.floatConfigVar(["object", "rotationSpread"], Math.pi, ());
 
+let count = 
+  Config.intConfigVar(["object", "count"], 100, ());
+
+let size = 
+  Config.floatConfigVar(["object", "size"], 1.5, ());
+
 let cameraRotationX =
   Config.floatConfigVar(["camera", "rotation", "x"], 0.01, ());
 

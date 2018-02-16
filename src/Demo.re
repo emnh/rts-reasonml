@@ -138,14 +138,14 @@ let renderObj =
 let seedrandom = Math.localSeedRandom();
 
 let getPosition =
-  Memoize.partialMemoize3((_, seed, spread) => {
+  Memoize.partialMemoize3((_, _, spread) => {
     let f = () => (Math.random() -. 0.5) *. 2.0 *. spread;
     let (rx, ry, rz) = (f(), f(), (-20.0));
     (rx, ry, rz);
   });
 
 let getRotation =
-  Memoize.partialMemoize3((_, seed, spread) => {
+  Memoize.partialMemoize3((_, _, spread) => {
     let f = () => Math.random() *. 2.0 *. spread;
     let (rx, ry, rz) = (f(), f(), f());
     (rx, ry, rz);
@@ -157,6 +157,7 @@ let run = (gl, time) => {
   let bg = ConfigVars.backgroundColor#get();
   let width = state.window.width;
   let height = state.window.height;
+  let count = ConfigVars.count#get();
   switch (getShaderProgram(gl, fg, bg)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
@@ -164,12 +165,13 @@ let run = (gl, time) => {
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
     WebGL2.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
-    for (i in 0 to 100) {
+    for (i in 1 to count) {
       let (x, y, z) =
         getPosition(i, ConfigVars.seed#get(), ConfigVars.spread#get());
       let (rx, ry, rz) =
         getRotation(i, ConfigVars.seed#get(), ConfigVars.rotationSpread#get());
-      let sz = 1.0;
+      let sz = ConfigVars.size#get();
+      let iseed = float_of_int(i);
       renderObj(
         gl,
         program,
@@ -180,7 +182,7 @@ let run = (gl, time) => {
         (rx, ry, rz),
         width,
         height,
-        time,
+        time *. (1.0 +. iseed /. float_of_int(count)) +. iseed,
         uniforms
       );
     };
