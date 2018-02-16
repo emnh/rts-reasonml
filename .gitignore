@@ -6,3 +6,4 @@ npm-debug.log
 /node_modules/
 /src/*.bs.js
 /dist
+*.swp
