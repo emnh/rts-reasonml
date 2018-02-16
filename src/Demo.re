@@ -95,6 +95,7 @@ let main = (_) => {
       switch geometryType {
       | "Box" => Three.createBoxGeometry
       | "Sphere" => Three.createSphereGeometry
+      | "Plane" => Three.createPlaneGeometry
       | _ => Three.createBoxGeometry
       };
     switch (getShaderProgram(fg, bg)) {
@@ -148,7 +149,7 @@ let main = (_) => {
     Config.stringConfigVar(
       ["object", "geometry"],
       "Box",
-      ~choices=Config.Choices([|"Box", "Sphere"|]),
+      ~choices=Config.Choices([|"Box", "Sphere", "Plane"|]),
       ()
     );
   let startIteration = Document.iteration(Document.window);

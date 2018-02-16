@@ -6,6 +6,8 @@ type boxT = geometryT;
 
 type sphereT = geometryT;
 
+type planeT = geometryT;
+
 type meshT;
 
 type attributesT;
@@ -27,6 +29,10 @@ external createBoxBufferGeometry : (float, float, float, int, int, int) => boxT 
 [@bs.new] [@bs.module "three"]
 external createSphereBufferGeometry : (float, int, int) => sphereT =
   "SphereBufferGeometry";
+
+[@bs.new] [@bs.module "three"]
+external createPlaneBufferGeometry : (float, float, int, int) => planeT =
+  "PlaneBufferGeometry";
 
 [@bs.new] [@bs.module "three"]
 external createBasicMaterial : unit => materialT = "MeshBasicMaterial";
@@ -90,12 +96,10 @@ external updateCameraMatrixWorld : cameraT => unit = "updateMatrixWorld";
 type geometryBuffersT = {
   position: Float32Array.t,
   uv: Float32Array.t,
-  index: Int16Array.t,
+  index: Int16Array.t
 };
 
-type objectTransformT = {
-  matrixWorld: matrix4T
-};
+type objectTransformT = {matrixWorld: matrix4T};
 
 type viewTransformT = {
   modelViewMatrix: array(float),
@@ -103,17 +107,21 @@ type viewTransformT = {
 };
 
 let protoBox = createBoxBufferGeometry(1.0, 1.0, 1.0, 1, 1, 1);
+
 let protoBoxMaterial = createBasicMaterial();
+
 let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
+
+let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
 
 let createSphereGeometry = () => {
   let box = protoSphere;
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box)),
+    index: getInt16Array(getIndex(box))
   };
 };
 
@@ -122,7 +130,16 @@ let createBoxGeometry = () => {
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box)),
+    index: getInt16Array(getIndex(box))
+  };
+};
+
+let createPlaneGeometry = () => {
+  let box = protoPlane;
+  {
+    position: getFloat32Array(getPosition(getAttributes(box))),
+    uv: getFloat32Array(getUV(getAttributes(box))),
+    index: getInt16Array(getIndex(box))
   };
 };
 
