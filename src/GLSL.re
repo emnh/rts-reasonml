@@ -29,7 +29,8 @@ type glslTypeT =
   | Vec4
   | Mat2
   | Mat3
-  | Mat4;
+  | Mat4
+  | Sampler2D;
 
 type varT =
   | Builtin
@@ -88,6 +89,8 @@ and rightExprT = rT
 and statementT =
   | Assignment(leftExprT, rightExprT)
   | DeclAssignment(glslTypeT, leftExprT, rightExprT)
+  | IfStatement(rightExprT, gRootT)
+  | IfElseStatement(rightExprT, gRootT, gRootT)
   | Return(rightExprT)
   | Discard
 and gRootT = list(statementT);
@@ -110,6 +113,7 @@ let glslTypeString = t =>
   | Mat2 => "mat2"
   | Mat3 => "mat3"
   | Mat4 => "mat4"
+  | Sampler2D => "sampler2D"
   };
 
 type uniformInputT = {
@@ -275,6 +279,31 @@ let fmtTransformer = {
                 )
               | Return(right) =>
                 t.combine(t, ["return ", t.rExpr(t, right), ";"])
+              | IfStatement(l, body) =>
+                let body = t.tree(t, body);
+                t.combine(
+                  t,
+                  ["if (", t.rExpr(t, l), ") {", newline, body, newline, "}"]
+                );
+              | IfElseStatement(l, b1, b2) =>
+                let b1 = t.tree(t, b1);
+                let b2 = t.tree(t, b2);
+                t.combine(
+                  t,
+                  [
+                    "if (",
+                    t.rExpr(t, l),
+                    ") {",
+                    newline,
+                    b1,
+                    newline,
+                    "} else {",
+                    newline,
+                    b2,
+                    newline,
+                    "}"
+                  ]
+                );
               | Discard => "discard"
               },
               ";",
@@ -315,10 +344,10 @@ let getFunctions = gf => {
     ...fmtTransformer,
     rExpr: (t, expr) => {
       switch expr {
-      | CustomFun((a, b, c, body), _) => {
+      | CustomFun((a, b, c, body), _) =>
         ar := [(a, b, c, body), ...ar^];
         let _ = t.tree(t, body);
-      }
+        ();
       | _ => ()
       };
       fmtTransformer.rExpr(t, expr);
@@ -352,20 +381,20 @@ let formatFunctions = attrs => {
         argvars
       );
     let body = t.tree(t, body);
-    let fn = t.combine(
-      t,
-      List.concat([
-        [glslTypeString(vart), " ", name, "("],
-        argvars,
-        [") {", newline, body, newline, "}"]
-      ])
-    );
+    let fn =
+      t.combine(
+        t,
+        List.concat([
+          [glslTypeString(vart), " ", name, "("],
+          argvars,
+          [") {", newline, body, newline, "}"]
+        ])
+      );
     switch (SS.find(fn, fns^)) {
-      | _ => ""
-      | exception Not_found => {
-        fns := SS.add(fn, fns^);
-        fn
-      };
+    | _ => ""
+    | exception Not_found =>
+      fns := SS.add(fn, fns^);
+      fn;
     };
   };
   String.concat(newline, List.map(formatFunction, attrs));
@@ -530,6 +559,8 @@ let mat3uniform = name => uniform(Mat3, name);
 
 let mat4uniform = name => uniform(Mat4, name);
 
+let sampler2Duniform = name => uniform(Sampler2D, name);
+
 let floatvar = name => var(Float, name);
 
 let vec2var = name => var(Vec2, name);
@@ -552,10 +583,13 @@ module Fragment = {
   module type ElementType = {
     let add: statementT => unit;
     let finish: unit => list(statementT);
+    let push: unit => unit;
+    let pop: unit => list(statementT);
     let hasVar: string => bool;
     let addVar: string => unit;
   };
   module ElementModule: ElementType = {
+    let arStack = ref([]);
     let ar = ref([]);
     let vars = ref(SS.empty);
     let add = x => {
@@ -567,6 +601,16 @@ module Fragment = {
       ar := [];
       vars := SS.empty;
       value;
+    };
+    let push = () => {
+      arStack := [ar^, ...arStack^];
+      ar := [];
+    };
+    let pop = () => {
+      let ret = finish();
+      ar := List.hd(arStack^);
+      arStack := List.tl(arStack^);
+      ret;
     };
     let hasVar = var =>
       switch (SS.find(var, vars^)) {
@@ -607,18 +651,26 @@ module Fragment = {
     let ternary = (l, r1, r2) => Ternary(l, r1, r2);
     let max = l => BuiltinFun("max", l);
     let min = l => BuiltinFun("min", l);
+    let sqrt = l => BuiltinFun1("sqrt", l);
     let sin = l => BuiltinFun1("sin", l);
     let cos = l => BuiltinFun1("cos", l);
     let abs = l => BuiltinFun1("abs", l);
+    let exp = (l) => BuiltinFun1("exp", l);
+    let length = l => BuiltinFun1("length", l);
     let floor = l => BuiltinFun1("floor", l);
     let fract = l => BuiltinFun1("fract", l);
+    let pow = (l, r) => BuiltinFun2("pow", l, r);
     let dot = (l, r) => BuiltinFun2("dot", l, r);
+    let texture = (l, r) => BuiltinFun2("texture", l, r);
+    let refract = (l, r1, r2) => BuiltinFun3("refract", l, r1, r2);
     let vec2 = l => BuiltinFun("vec2", l);
     let vec3 = l => BuiltinFun("vec3", l);
     let vec4 = l => BuiltinFun("vec4", l);
     let mat2 = l => BuiltinFun("mat2", l);
     let mat3 = l => BuiltinFun("mat3", l);
     let mat4 = l => BuiltinFun("mat4", l);
+    let ifstmt = (l, b) => add(IfStatement(l, b));
+    let ifelsestmt = (l, b1, b2) => add(IfElseStatement(l, b1, b2));
     let f = x => ImmediateFloat(x);
     let i = x => ImmediateInt(x);
     let return = l => add(Return(l));
