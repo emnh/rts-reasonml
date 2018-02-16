@@ -12,6 +12,15 @@ let backgroundColor =
 let foregroundColor =
   Config.colorConfigVar(["object", "color2"], (0, 0, 0, 1.0), ());
 
+let seed = 
+  Config.stringConfigVar(["object", "seed"], "hello", ());
+
+let spread =
+  Config.floatConfigVar(["object", "spread"], 2.01, ());
+
+let rotationSpread =
+  Config.floatConfigVar(["object", "rotationSpread"], Math.pi, ());
+
 let cameraRotationX =
   Config.floatConfigVar(["camera", "rotation", "x"], 0.01, ());
 

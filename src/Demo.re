@@ -24,7 +24,7 @@ exception No2D;
 
 exception NoProgram;
 
-let getShaderProgram = 
+let getShaderProgram =
   Memoize.partialMemoize3((gl, fg, bg) => {
     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
     let vertexShaderSource = programSource.vertexShader;
@@ -109,13 +109,12 @@ let getGeometryAndBuffers =
   });
 
 let renderObj =
-    (gl, program, buffers, vao, pos, rot, width, height, time, uniforms) => {
-  let sz = 6.0;
+    (gl, program, buffers, vao, size, pos, rot, width, height, time, uniforms) => {
   let (rx, ry, rz) = rot;
   let obj: Three.objectTransformT =
     Three.getObjectMatrix(
       pos,
-      (sz, sz, sz),
+      size,
       (
         Math.sin(time) *. 2.0 *. Math.pi +. rx,
         Math.sin(0.35 *. time) *. 2.0 *. Math.pi +. ry,
@@ -136,15 +135,19 @@ let renderObj =
   WebGL2.renderObject(gl, program, buffers, vao, uniformBlock);
 };
 
+let seedrandom = Math.localSeedRandom();
+
 let getPosition =
-  Memoize.partialMemoize1((_) => {
-    let (rx, ry, rz) = (Math.random(), Math.random(), (-20.0));
+  Memoize.partialMemoize3((_, seed, spread) => {
+    let f = () => (Math.random() -. 0.5) *. 2.0 *. spread;
+    let (rx, ry, rz) = (f(), f(), (-20.0));
     (rx, ry, rz);
   });
 
 let getRotation =
-  Memoize.partialMemoize1((_) => {
-    let (rx, ry, rz) = (Math.random(), Math.random(), Math.random());
+  Memoize.partialMemoize3((_, seed, spread) => {
+    let f = () => Math.random() *. 2.0 *. spread;
+    let (rx, ry, rz) = (f(), f(), f());
     (rx, ry, rz);
   });
 
@@ -160,14 +163,19 @@ let run = (gl, time) => {
     Document.debug(Document.window, gl);
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
     WebGL2.preRender(gl, width, height);
-    for (i in 0 to 1000) {
-      let (x, y, z) = getPosition(i);
-      let (rx, ry, rz) = getRotation(i);
+    Math.globalSeedRandom(ConfigVars.seed#get());
+    for (i in 0 to 100) {
+      let (x, y, z) =
+        getPosition(i, ConfigVars.seed#get(), ConfigVars.spread#get());
+      let (rx, ry, rz) =
+        getRotation(i, ConfigVars.seed#get(), ConfigVars.rotationSpread#get());
+      let sz = 1.0;
       renderObj(
         gl,
         program,
         buffers,
         vao,
+        (sz, sz, sz),
         (x, y, z),
         (rx, ry, rz),
         width,

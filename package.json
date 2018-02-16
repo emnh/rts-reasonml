@@ -27,6 +27,7 @@
     "glsl-transpiler": "^1.5.7",
     "glslify": "^6.1.0",
     "glslx": "^0.1.26",
+    "seedrandom": "^2.4.3",
     "three": "^0.89.0"
   }
 }

@@ -167,7 +167,7 @@ var cacheDefault = {
   };
 
   function memoize3(cache, f, a, b, c) {
-    var args = [a, b];
+    var args = [a, b, c];
     var cacheId = JSON.stringify(args);
     var retval = cache.get(cacheId);
     if (typeof retval === 'undefined') {
@@ -178,7 +178,7 @@ var cacheDefault = {
   };
 
   function memoize4(cache, f, a, b, c, d) {
-    var args = [a, b];
+    var args = [a, b, c, d];
     var cacheId = JSON.stringify(args);
     var retval = cache.get(cacheId);
     if (typeof retval === 'undefined') {
