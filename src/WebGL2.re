@@ -287,6 +287,7 @@ let testProgram =
     (
       gl,
       program,
+      uniforms,
       width,
       height,
       time,
@@ -391,6 +392,16 @@ let testProgram =
         viewMatrices.projectionMatrix
       ])
     );
+  let uniformArg: GLSL.uniformInputT = {
+    time,
+    tick: 0.0,
+    width,
+    height,
+    modelViewMatrix: viewMatrices.modelViewMatrix,
+    projectionMatrix: viewMatrices.projectionMatrix
+  };
+  let l = List.map(((_, f)) => f(uniformArg), uniforms);
+  let uniformBlock = Float32Array.create(Array.concat(l));
   let uniformPerSceneBuffer = createBuffer(gl);
   bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
   bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getSTATIC_DRAW(gl));

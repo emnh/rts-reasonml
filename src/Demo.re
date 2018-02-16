@@ -45,27 +45,33 @@ let main = (_) => {
       showError("No WebGL2!");
       raise(NoGL);
     };
-  Js.log("Vertex shader:");
-  Js.log(ShaderExample.vertexShader);
-  let vertexShader =
-    WebGL2.createShader(
-      gl,
-      WebGL2.getVERTEX_SHADER(gl),
-      ShaderExample.vertexShader
-    );
-  Js.log("Fragment shader:");
-  Js.log(ShaderExample.fragmentShader);
-  let fragmentShader =
-    WebGL2.createShader(
-      gl,
-      WebGL2.getFRAGMENT_SHADER(gl),
-      ShaderExample.fragmentShader
-    );
-  let program =
-    switch (vertexShader, fragmentShader) {
-    | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
-    | _ => None
-    };
+  let getShaderProgram = (fg, bg) => {
+    let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+    let vertexShaderSource = programSource.vertexShader;
+    let fragmentShaderSource = programSource.fragmentShader;
+    Js.log("Vertex shader:");
+    Js.log(vertexShaderSource);
+    let vertexShader =
+      WebGL2.createShader(
+        gl,
+        WebGL2.getVERTEX_SHADER(gl),
+        vertexShaderSource
+      );
+    Js.log("Fragment shader:");
+    Js.log(fragmentShaderSource);
+    let fragmentShader =
+      WebGL2.createShader(
+        gl,
+        WebGL2.getFRAGMENT_SHADER(gl),
+        fragmentShaderSource
+      );
+    let program =
+      switch (vertexShader, fragmentShader) {
+      | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
+      | _ => None
+      };
+    (uniforms, program);
+  };
   let run = (time, geometryType, fg, bg) => {
     let geof =
       switch geometryType {
@@ -73,11 +79,12 @@ let main = (_) => {
       | "Sphere" => Three.createSphereGeometry
       | _ => Three.createBoxGeometry
       };
-    switch program {
-    | Some(p) =>
+    switch (getShaderProgram(fg, bg)) {
+    | (uniforms, Some(p)) =>
       WebGL2.testProgram(
         gl,
         p,
+        uniforms,
         state.window.width,
         state.window.height,
         time,
@@ -87,7 +94,7 @@ let main = (_) => {
         Three.getObjectMatrix,
         Three.getViewMatrices
       )
-    | None => raise(NoProgram)
+    | (_, None) => raise(NoProgram)
     };
   };
   let setCanvasSize = (_) => {

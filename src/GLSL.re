@@ -108,6 +108,21 @@ let glslTypeString = t =>
   | Mat4 => "mat4"
   };
 
+type uniformInputT = {
+  time: float,
+  tick: float,
+  width: int,
+  height: int,
+  modelViewMatrix: array(float),
+  projectionMatrix: array(float)
+};
+
+type uniformBlockT = list((rT, uniformInputT => array(float)));
+
+type shaderMainT = {
+  ast: gRootT
+};
+
 type transformer('a) = {
   var: (transformer('a), varExprT) => 'a,
   combine: (transformer('a), list('a)) => 'a,
@@ -115,7 +130,7 @@ type transformer('a) = {
   lExpr: (transformer('a), leftExprT) => 'a,
   rExpr: (transformer('a), rightExprT) => 'a,
   tree: (transformer('a), list(statementT)) => 'a,
-  tfun: (transformer('a), (glslTypeT, string, unit => list(statementT))) => 'a
+  tfun: (transformer('a), shaderMainT) => 'a
 };
 
 let combine = (_, l) => List.fold_left((++), "", l);
@@ -247,12 +262,11 @@ let fmtTransformer = {
         tree
       )
     ),
-  tfun: (t, gf) => {
-    let (tt, name, astf) = gf;
-    let tree = astf();
+  tfun: (t, main) => {
+    let tree = main.ast;
     t.combine(
       t,
-      [glslTypeString(tt), " ", name, "() {", newline, t.tree(t, tree), "}"]
+      ["void main() {", newline, t.tree(t, tree), "}"]
     );
   }
 };
@@ -315,7 +329,7 @@ let formatUniforms = attrs => {
   };
   "layout(std140) uniform u_PerScene {"
   ++ newline
-  ++ String.concat(newline, orderVars(formatUniform, attrs))
+  ++ String.concat(newline, List.map(formatUniform, attrs)) /*orderVars(formatUniform, attrs))*/
   ++ newline
   ++ "};";
 };
@@ -367,8 +381,6 @@ let uniform = (t, name) => wrap(RVar((Uniform, t, name)));
 let var = (t, name) => wrap(RVar((Variable, t, name)));
 
 let output = (t, name) => wrap(RVar((Output, t, name)));
-
-let gfun = (t, name, ast) => (t, name, ast);
 
 let floatattr = name => attr(Float, name);
 
@@ -531,8 +543,15 @@ type programT = {
   fragmentShader: string
 };
 
-let getProgram = (vsmain, fsmain) => {
+let getProgram = (uniformBlock, vsmain, fsmain) => {
+  /*
   let uniforms = List.concat([getUniforms(vsmain), getUniforms(fsmain)]);
+  */
+  let uf = ((e, _)) => {
+    let ((_, x, y), _) = rightToLeft(e);
+    (x, y);
+  };
+  let uniforms = List.map(uf, uniformBlock);
   let varyings = List.concat([getVaryings(vsmain), getVaryings(fsmain)]);
   {
     attributes: getAttributes(vsmain),
@@ -543,3 +562,4 @@ let getProgram = (vsmain, fsmain) => {
     fragmentShader: getShader(fragmentPrelude, uniforms, varyings, fsmain)
   };
 };
+
