@@ -4,10 +4,10 @@ type t;
   {|
   window.memoize = function(argCount, f) {
     var cache = {};
-    var g;
+    var gSubMemoize;
     switch (argCount) {
       case 0:
-        g = function() {
+        gSubMemoize = function() {
           var cacheId = JSON.stringify(arguments);
           var retval;
           if (cacheId in cache) {
@@ -20,7 +20,7 @@ type t;
         };
         break;
       case 1:
-        g = function(a) {
+        gSubMemoize = function(a) {
           var cacheId = JSON.stringify(arguments);
           var retval;
           if (cacheId in cache) {
@@ -33,7 +33,7 @@ type t;
         };
         break;
       case 2:
-        g = function(a, b) {
+        gSubMemoize = function(a, b) {
           var cacheId = JSON.stringify(arguments);
           var retval;
           if (cacheId in cache) {
@@ -49,7 +49,7 @@ type t;
         throw "Unsupported argument count to memoize!";
         break;
     };
-    return g;
+    return gSubMemoize;
   };
   
   window.partialMemoize = function(argCount, argIndices, f) {
@@ -61,10 +61,10 @@ type t;
       }
       return JSON.stringify(newArgs);
     };
-    var g;
+    var gSubMemoize;
     switch (argCount) {
       case 0:
-        g = function() {
+        gSubMemoize = function() {
           var cacheId = getArgs(arguments);
           var retval;
           if (cacheId in cache) {
@@ -77,7 +77,7 @@ type t;
         };
         break;
       case 1:
-        g = function(a) {
+        gSubMemoize = function(a) {
           var cacheId = getArgs(arguments);
           var retval;
           if (cacheId in cache) {
@@ -90,7 +90,7 @@ type t;
         };
         break;
       case 2:
-        g = function(a, b) {
+        gSubMemoize = function(a, b) {
           var cacheId = getArgs(arguments);
           var retval;
           if (cacheId in cache) {
@@ -103,7 +103,7 @@ type t;
         };
         break;
       case 3:
-        g = function(a, b, c) {
+        gSubMemoize = function(a, b, c) {
           var cacheId = getArgs(arguments);
           var retval;
           if (cacheId in cache) {
@@ -119,7 +119,7 @@ type t;
         throw "Unsupported argument count to memoize!";
         break;
     };
-    return g;
+    return gSubMemoize;
   };
 
 

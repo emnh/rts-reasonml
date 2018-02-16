@@ -159,12 +159,17 @@ let getObjectMatrix = (position, scale, rotation) => {
   };
 };
 
-let getViewMatrices = (matrixWorld, width, height) => {
+let getCamera = Memoize.memoize(2, (width, height) => {
   let viewAngle = 45.0;
   let aspect = float_of_int(width) /. float_of_int(height);
   let near = 0.1;
   let far = 10000.0;
   let camera = createPerspectiveCamera(viewAngle, aspect, near, far);
+  camera;
+});
+
+let getViewMatrices = (matrixWorld, width, height) => {
+  let camera = getCamera(width, height);
   updateCameraMatrixWorld(camera);
   let modelMatrix = cloneMatrix4(matrixWorld);
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));
