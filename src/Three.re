@@ -90,6 +90,12 @@ external setPosition : (meshT, float, float, float) => unit = "set";
 [@bs.send] [@bs.scope "rotation"]
 external setRotation : (meshT, float, float, float) => unit = "set";
 
+[@bs.send] [@bs.scope "position"]
+external setCameraPosition : (cameraT, float, float, float) => unit = "set";
+
+[@bs.send] [@bs.scope "rotation"]
+external setCameraRotation : (cameraT, float, float, float) => unit = "set";
+
 [@bs.send]
 external updateCameraMatrixWorld : cameraT => unit = "updateMatrixWorld";
 
@@ -159,17 +165,35 @@ let getObjectMatrix = (position, scale, rotation) => {
   };
 };
 
-let getCamera = Memoize.memoize(2, (width, height) => {
-  let viewAngle = 45.0;
-  let aspect = float_of_int(width) /. float_of_int(height);
-  let near = 0.1;
-  let far = 10000.0;
-  let camera = createPerspectiveCamera(viewAngle, aspect, near, far);
-  camera;
-});
+let getCamera =
+  Memoize.memoize(
+    4,
+    (width, height, pos, rot) => {
+      let viewAngle = 45.0;
+      let aspect = float_of_int(width) /. float_of_int(height);
+      let near = 0.1;
+      let far = 10000.0;
+      let camera = createPerspectiveCamera(viewAngle, aspect, near, far);
+      let (x, y, z) = pos;
+      let (rx, ry, rz) = rot;
+      setCameraPosition(camera, x, y, z);
+      setCameraRotation(camera, rx, ry, rz);
+      camera;
+    }
+  );
 
 let getViewMatrices = (matrixWorld, width, height) => {
-  let camera = getCamera(width, height);
+  let pos = (
+    ConfigVars.cameraX#get(),
+    ConfigVars.cameraY#get(),
+    ConfigVars.cameraZ#get()
+  );
+  let rot = (
+    ConfigVars.cameraRotationX#get(),
+    ConfigVars.cameraRotationY#get(),
+    ConfigVars.cameraRotationZ#get()
+  );
+  let camera = getCamera(width, height, pos, rot);
   updateCameraMatrixWorld(camera);
   let modelMatrix = cloneMatrix4(matrixWorld);
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));

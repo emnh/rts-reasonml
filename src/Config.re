@@ -27,7 +27,7 @@ let createVarCallbacks = ref([]);
 let addCreateVarCallBack = f =>
 {
   /** Call on already created vars **/
-  List.iter(var => f(var), configVars^);
+  List.iter(var => f(var), List.rev(configVars^));
   /** Add it to the list **/
   createVarCallbacks := [f, ...createVarCallbacks^];
 };

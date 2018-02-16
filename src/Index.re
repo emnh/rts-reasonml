@@ -45,6 +45,32 @@ type t;
           return retval;
         };
         break;
+      case 3:
+        gSubMemoize = function(a, b, c) {
+          var cacheId = JSON.stringify(arguments);
+          var retval;
+          if (cacheId in cache) {
+            return cache[cacheId];
+          } else {
+            retval = f(a, b, c);
+          }
+          cache[cacheId] = retval;
+          return retval;
+        };
+        break;
+      case 4:
+        gSubMemoize = function(a, b, c, d) {
+          var cacheId = JSON.stringify(arguments);
+          var retval;
+          if (cacheId in cache) {
+            return cache[cacheId];
+          } else {
+            retval = f(a, b, c, d);
+          }
+          cache[cacheId] = retval;
+          return retval;
+        };
+        break;
       default:
         throw "Unsupported argument count to memoize!";
         break;
