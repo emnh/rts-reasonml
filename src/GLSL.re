@@ -490,9 +490,8 @@ module Fragment = {
     let (>) = (l, r) => GreaterThan(l, r);
     let (<=) = (l, r) => LessThanOrEqual(l, r);
     let (>=) = (l, r) => GreaterThanOrEqual(l, r);
-    /* Using @ suffix due to a bug in bsc when generating .rei files */
-    let (==@) = (l, r) => Equal(l, r);
-    let (!=@) = (l, r) => NotEqual(l, r);
+    let (==) = (l, r) => Equal(l, r);
+    let (!=) = (l, r) => NotEqual(l, r);
     let (&&) = (l, r) => And(l, r);
     let (||) = (l, r) => Or(l, r);
     let (^^) = (l, r) => Xor(l, r);

@@ -5,8 +5,8 @@ import glob
 import subprocess
 
 def getTypeOut(fname):
-    bsc = subprocess.Popen(["../node_modules/.bin/bsc", "-bs-re-out", fname], shell=False, stdout=subprocess.PIPE)
-    refmt = subprocess.Popen(["/usr/bin/refmt", "-i", "true", "-w", "10000"], shell=False, stdin=bsc.stdout, stdout=subprocess.PIPE)
+    bsc = subprocess.Popen(["../node_modules/.bin/bsc", fname], shell=False, stdout=subprocess.PIPE)
+    refmt = subprocess.Popen(["/usr/bin/refmt", "--parse=ml", "-i", "true", "-w", "10000"], shell=False, stdin=bsc.stdout, stdout=subprocess.PIPE)
     data = refmt.communicate()[0]
     ret = refmt.returncode
     ret2 = bsc.returncode
@@ -22,13 +22,14 @@ def getOut(fname):
         print >> sys.stderr, 'refmt error on ' + fname
     return data
 
-def getFunArgs(data, fname):
+def getFunArgs(module, data, fname):
     for line in data.splitlines():
         if line.startswith('let %s' % fname):
             args = line.split(" =>")[0].split(" =")[1].strip()
             if not '(' in args:
                 args = '(' + args + ')'
             return args
+    print "couldn't get args of " + module + "." + fname
     return None
 
 def fmtModule(module, content):
@@ -63,7 +64,7 @@ def processModule(module):
         if line.startswith('let') and '=>' in line:
             tokens = line.split(" ")
             funName = tokens[1].rstrip(":")
-            argnames = getFunArgs(data, funName)
+            argnames = getFunArgs(module, data, funName)
             #retType = line.split('=>');
             content += fmtCacheFun(module, funName, argnames)
     if content != '':
