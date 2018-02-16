@@ -114,7 +114,7 @@ let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
-let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
+let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 100, 100);
 
 let createSphereGeometry = () => {
   let box = protoSphere;

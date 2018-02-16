@@ -298,10 +298,11 @@ let testProgram =
       getViewMatrices
     ) => {
   let box: Three.geometryBuffersT = createGeometry();
+  let sz = 6.0;
   let obj: Three.objectTransformT =
     getObjectMatrix(
-      (0.0, 0.0, (-10.0)),
-      (1.0, 1.0, 1.0),
+      (0.0, 0.0, (-20.0)),
+      (sz, sz, sz),
       (
         Math.sin(time) *. 2.0 *. Math.pi,
         Math.sin(0.35 *. time) *. 2.0 *. Math.pi,

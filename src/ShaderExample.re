@@ -5,11 +5,11 @@ let a_uv = vec2attr("a_uv");
 
 let v_uv = vec2varying("v_uv");
 
-let position = vec4attr("a_position");
+let a_position = vec4attr("a_position");
 
-let modelViewMatrix = mat4uniform("modelViewMatrix");
+let a_modelViewMatrix = mat4uniform("modelViewMatrix");
 
-let projectionMatrix = mat4uniform("projectionMatrix");
+let a_projectionMatrix = mat4uniform("projectionMatrix");
 
 let u_color1 = vec4uniform("u_color1");
 
@@ -26,8 +26,8 @@ let fmtColor = color => {
 };
 
 let getUniforms = (fg, bg) => [
-  (modelViewMatrix, arg => arg.modelViewMatrix),
-  (projectionMatrix, arg => arg.projectionMatrix),
+  (a_modelViewMatrix, arg => arg.modelViewMatrix),
+  (a_projectionMatrix, arg => arg.projectionMatrix),
   (u_color1, (_) => fmtColor(fg)),
   (u_color2, (_) => fmtColor(bg)),
   (u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|]),
@@ -40,9 +40,12 @@ let mainVertex =
       open! VertexShader;
       /* gl_Position is a special variable a vertex shader is responsible for setting */
       v_uv =@ a_uv;
+      let position = vec3var("position");
+      position =@ a_position **. XYZ;
+      position **. Z =@ ShaderAshima.snoise([a_position **. XY + f(2.0) * u_time]) * f(0.2);
       gl_Position
-      =@ projectionMatrix
-      * modelViewMatrix
+      =@ a_projectionMatrix
+      * a_modelViewMatrix
       * vec4([position **. XYZ, f(1.0)]);
       finish();
     }
