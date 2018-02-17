@@ -47,6 +47,7 @@ include GLSLSwizzleFormat;
 
 type glslVariantTypeT =
   [
+    | `Untyped
     | `Void
     | `Int
     | `Float
@@ -63,9 +64,9 @@ type glslVariantTypeUBT('a) = [< glslVariantTypeT] as 'a;
 
 type glslVariantTypeLBT('a) = [> glslVariantTypeT] as 'a;
 
-type nodeType('a) = 'a => 'b
+type nodeType('a, 'b) = 'a => 'b
 constraint 'a = glslVariantTypeUBT('a)
-constraint 'b = glslVariantTypeLBT('a);
+constraint 'b = glslVariantTypeLBT('b);
 
 type leftExprT =
   | Var(varExprT)
@@ -74,121 +75,117 @@ and lT = leftExprT
 /* list(rT) in funExprT is too wide,
  * but it makes it easy to use vars as arguments and
  * as right expressions interchangeably */
-and funExprT('a, 'b) = (glslTypeT, string, list(trT('a, 'b)), gRootT('a, 'b))
+and funExprT = (glslTypeT, string, list(rT), gRootT)
 /* rT: Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
-and rT('a, 'b) =
+and rT =
   /* | TypeError */
   | RVar(varExprT)
-  | RSwizzle(trT('a, 'b), swizzleT)
+  | RSwizzle(rT, swizzleT)
   | ImmediateFloat(float)
   | ImmediateInt(int)
-  | Inc(trT('a, 'b))
-  | Dec(trT('a, 'b))
-  | PreInc(trT('a, 'b))
-  | PreDec(trT('a, 'b))
-  | Not(trT('a, 'b))
-  /* | PlusMinus(trT('a,'b)) */
-  | Mul(trT('a, 'b), trT('a, 'b))
-  | Div(trT('a, 'b), trT('a, 'b))
-  | Plus(trT('a, 'b), trT('a, 'b))
-  | Minus(trT('a, 'b), trT('a, 'b))
-  | LessThan(trT('a, 'b), trT('a, 'b))
-  | GreaterThan(trT('a, 'b), trT('a, 'b))
-  | LessThanOrEqual(trT('a, 'b), trT('a, 'b))
-  | GreaterThanOrEqual(trT('a, 'b), trT('a, 'b))
-  | Equal(trT('a, 'b), trT('a, 'b))
-  | NotEqual(trT('a, 'b), trT('a, 'b))
-  | And(trT('a, 'b), trT('a, 'b))
-  | Or(trT('a, 'b), trT('a, 'b))
-  | Xor(trT('a, 'b), trT('a, 'b))
-  | Ternary(trT('a, 'b), trT('a, 'b), trT('a, 'b))
-  | BuiltinFun(string, list(trT('a, 'b)))
-  | BuiltinFun1(string, trT('a, 'b))
-  | BuiltinFun2(string, trT('a, 'b), trT('a, 'b))
-  | BuiltinFun3(string, trT('a, 'b), trT('a, 'b), trT('a, 'b))
-  | BuiltinFun4(string, trT('a, 'b), trT('a, 'b), trT('a, 'b), trT('a, 'b))
-  /*| Texture(trT([ | `Sampler2D | `Vec2]), trT([ | `Sampler2D | `Vec2]))*/
-  | CustomFun(funExprT('a, 'b), list(trT('a, 'b)))
-and rightExprT('a, 'b) = trT('a, 'b)
-and trT('a, 'b) = ('a, rT('a, 'b))
-and statementT('a, 'b) =
-  | Assignment(lT, trT('a, 'b))
-  | DeclAssignment(glslTypeT, lT, trT('a, 'b))
-  | IfStatement(trT('a, 'b), gRootT('a, 'b))
-  | IfElseStatement(trT('a, 'b), gRootT('a, 'b), gRootT('a, 'b))
-  | Return(trT('a, 'b))
+  | Inc(rT)
+  | Dec(rT)
+  | PreInc(rT)
+  | PreDec(rT)
+  | Not(rT)
+  /* | PlusMinus(rT('a,'b)) */
+  | Mul(rT, rT)
+  | Div(rT, rT)
+  | Plus(rT, rT)
+  | Minus(rT, rT)
+  | LessThan(rT, rT)
+  | GreaterThan(rT, rT)
+  | LessThanOrEqual(rT, rT)
+  | GreaterThanOrEqual(rT, rT)
+  | Equal(rT, rT)
+  | NotEqual(rT, rT)
+  | And(rT, rT)
+  | Or(rT, rT)
+  | Xor(rT, rT)
+  | Ternary(rT, rT, rT)
+  | BuiltinFun(string, list(rT))
+  | BuiltinFun1(string, rT)
+  | BuiltinFun2(string, rT, rT)
+  | BuiltinFun3(string, rT, rT, rT)
+  | BuiltinFun4(string, rT, rT, rT, rT)
+  /*| Texture(rT([ | `Sampler2D | `Vec2]), rT([ | `Sampler2D | `Vec2]))*/
+  | CustomFun(funExprT, list(rT))
+and rightExprT = rT
+and trT('a) =
+  | Typed('a, rT)
+  | Untyped(rT)
+and statementT =
+  | Assignment(lT, rT)
+  | DeclAssignment(glslTypeT, lT, rT)
+  | IfStatement(rT, gRootT)
+  | IfElseStatement(rT, gRootT, gRootT)
+  | Return(rT)
   | Discard
-and gRootT('a, 'b) = list(statementT('a, 'b));
+and gRootT = list(statementT);
 
 /*
- type cfun1('a, 'b) = 'a => trT('b);
+ type cfun1 = 'a => trT('b);
 
- type cfun2('a, 'b, 'c) = ('a, 'b) => trT('c);
+ type cfun2('a, 'b, 'c) =  => trT('c);
  */
+let unused = x => x;
+
 let genericexprlist = (l, e) =>
   switch (List.hd(l)) {
-  | (`Float, _) => (`Float, e)
-  | (`Vec2, _) => (`Vec2, e)
-  | (`Vec3, _) => (`Vec3, e)
-  | (`Vec4, _) => (`Vec4, e)
+  | Typed(`Float, _) => Typed(`Float, unused(e))
+  | Typed(`Vec2, _) => Typed(`Vec2, unused(e))
+  | Typed(`Vec3, _) => Typed(`Vec3, unused(e))
+  | Typed(`Vec4, _) => Typed(`Vec4, unused(e))
+  | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
 let genericexpr1 = (l, e) =>
   switch l {
-  | (`Float, _) => (`Float, e)
-  | (`Vec2, _) => (`Vec2, e)
-  | (`Vec3, _) => (`Vec3, e)
-  | (`Vec4, _) => (`Vec4, e)
+  | Typed(`Float, _) => Typed(`Float, unused(e))
+  | Typed(`Vec2, _) => Typed(`Vec2, unused(e))
+  | Typed(`Vec3, _) => Typed(`Vec3, unused(e))
+  | Typed(`Vec4, _) => Typed(`Vec4, unused(e))
+  | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
 let genericexpr1float = (l, e) =>
   switch l {
-  | (`Float, _) => (`Float, e)
-  | (`Vec2, _) => (`Float, e)
-  | (`Vec3, _) => (`Float, e)
-  | (`Vec4, _) => (`Float, e)
+  | Typed(`Float, _) => Typed(`Float, unused(e))
+  | Typed(`Vec2, _) => Typed(`Float, unused(e))
+  | Typed(`Vec3, _) => Typed(`Float, unused(e))
+  | Typed(`Vec4, _) => Typed(`Float, unused(e))
+  | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
 let genericmath2 = (l, r, e) =>
   switch (l, r) {
-  | ((`Float, _), (`Float, _)) => (`Float, e)
-  | ((`Vec2, _), (`Vec2, _)) => (`Vec2, e)
-  | ((`Vec3, _), (`Vec3, _)) => (`Vec3, e)
-  | ((`Vec4, _), (`Vec4, _)) => (`Vec4, e)
-  | ((`Mat2, _), (`Mat2, _)) => (`Mat2, e)
-  | ((`Mat3, _), (`Mat3, _)) => (`Mat3, e)
-  | ((`Mat4, _), (`Mat4, _)) => (`Mat4, e)
+  | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
+  | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
+  | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
+  | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
+  | (Typed(`Mat2, _), Typed(`Mat2, _)) => Typed(`Mat2, unused(e))
+  | (Typed(`Mat3, _), Typed(`Mat3, _)) => Typed(`Mat3, unused(e))
+  | (Typed(`Mat4, _), Typed(`Mat4, _)) => Typed(`Mat4, unused(e))
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 
 let genericexpr2 = (l, r, e) =>
   switch (l, r) {
-  | ((`Float, _), (`Float, _)) => (`Float, e)
-  | ((`Vec2, _), (`Vec2, _)) => (`Vec2, e)
-  | ((`Vec3, _), (`Vec3, _)) => (`Vec3, e)
-  | ((`Vec4, _), (`Vec4, _)) => (`Vec4, e)
+  | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
+  | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
+  | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
+  | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 
 let genericexpr2float = (l, r, e) =>
   switch (l, r) {
-  | ((`Float, _), (`Float, _)) => (`Float, e)
-  | ((`Vec2, _), (`Vec2, _)) => (`Float, e)
-  | ((`Vec3, _), (`Vec3, _)) => (`Float, e)
-  | ((`Vec4, _), (`Vec4, _)) => (`Float, e)
+  | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
+  | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Float, unused(e))
+  | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Float, unused(e))
+  | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Float, unused(e))
   | _ => raise(GLSLTypeError("type mismatch"))
   };
-
-/*let genericfun1: cfun2('a, 'b, 'c) = */
-let genericfun1 = (s, l) =>
-  switch l {
-  | (`Float, _) => (`Float, BuiltinFun1(s, l))
-  | (`Vec2, _) => (`Vec2, BuiltinFun1(s, l))
-  | (`Vec3, _) => (`Vec3, BuiltinFun1(s, l))
-  | (`Vec4, _) => (`Vec4, BuiltinFun1(s, l))
-  };
-
-let sing = l => genericfun1("sin", l);
 
 /*
  type nodeT =
@@ -221,19 +218,19 @@ type uniformInputT = {
   projectionMatrix: array(float)
 };
 
-type uniformBlockT = list((rT(unit, unit), uniformInputT => array(float)));
+type uniformBlockT = list((rT, uniformInputT => array(float)));
 
-type shaderMainT('a, 'b) = gRootT('a, 'b);
+type shaderMainT = gRootT;
 
 /* TODO: should probably be an object */
-type transformer('a, 'b, 'c) = {
-  var: (transformer('a, 'b, 'c), varExprT) => 'a,
-  combine: (transformer('a, 'b, 'c), list('a)) => 'a,
-  rexprCombine: (transformer('a, 'b, 'c), list('a)) => 'a,
-  lExpr: (transformer('a, 'b, 'c), lT) => 'a,
-  rExpr: (transformer('a, 'b, 'c), trT('b, 'c)) => 'a,
-  tree: (transformer('a, 'b, 'c), list(statementT('b, 'c))) => 'a,
-  tfun: (transformer('a, 'b, 'c), shaderMainT('b, 'c)) => 'a
+type transformer('a) = {
+  var: (transformer('a), varExprT) => 'a,
+  combine: (transformer('a), list('a)) => 'a,
+  rexprCombine: (transformer('a), list('a)) => 'a,
+  lExpr: (transformer('a), lT) => 'a,
+  rExpr: (transformer('a), rT) => 'a,
+  tree: (transformer('a), list(statementT)) => 'a,
+  tfun: (transformer('a), shaderMainT) => 'a
 };
 
 let combine = (_, l) => List.fold_left((++), "", l);
@@ -253,8 +250,7 @@ let fmtTransformer = {
       | Swizzle((_, _, name), swizzle) => [name, ".", fmtSwizzle(swizzle)]
       }
     ),
-  rExpr: (t, expr) => {
-    let (_, expr) = expr;
+  rExpr: (t, expr) =>
     t.rexprCombine(
       t,
       switch expr {
@@ -359,8 +355,7 @@ let fmtTransformer = {
           ")"
         ]
       }
-    );
-  },
+    ),
   tree: (t, tree) =>
     t.combine(
       t,
@@ -450,8 +445,7 @@ let getFunctions = gf => {
   let walkTransformer = {
     ...fmtTransformer,
     rExpr: (t, expr) => {
-      let (_, expr2) = expr;
-      switch expr2 {
+      switch expr {
       | CustomFun((a, b, c, body), _) =>
         ar := [(a, b, c, body), ...ar^];
         let _ = t.tree(t, body);
@@ -474,10 +468,10 @@ let getUniforms = gf => getVarOfType(Uniform, gf);
 let getOutputs = gf => getVarOfType(Output, gf);
 
 /*
- type fft('a) = list((glslTypeT, SS.elt, list(trT('a,'b)), gRootT('a))) => string;
+ type fft = list((glslTypeT, SS.elt, list(trT('a,'b)), gRootT)) => string;
 
- type fftinner('a) =
-   ((glslTypeT, SS.elt, list(rT('a)), list(statementT('a)))) => SS.elt;
+ type fftinner =
+   ((glslTypeT, SS.elt, list(rT), list(statementT))) => SS.elt;
    */
 let formatFunctions = attrs => {
   let t = fmtTransformer;
@@ -488,7 +482,7 @@ let formatFunctions = attrs => {
       List.map(
         x =>
           switch x {
-          | (_, RVar((_, vart, name))) =>
+          | RVar((_, vart, name)) =>
             t.combine(t, [glslTypeString(vart), " ", name])
           | _ => ""
           },
@@ -590,10 +584,9 @@ type programT = {
 };
 
 let rightToLeft = right => {
-  let (_, right) = right;
   switch right {
   | RVar(x) => (x, Var(x))
-  | RSwizzle((_, RVar(x)), s) => (x, Swizzle(x, s))
+  | RSwizzle(RVar(x), s) => (x, Swizzle(x, s))
   | _ => raise(GLSLTypeError("invalid left hand side"))
   };
 };
@@ -655,7 +648,7 @@ let wrap = x => {
       }
     | _ => raise(GLSLTypeError("type mismatch"))
     };
-  (gt, x);
+  Typed(gt, x);
 };
 
 let attr = (t, name) => wrap(RVar((Attribute, t, name)));
@@ -817,134 +810,142 @@ let g2 = genericexpr2;
 let glist = genericexprlist;
 
 /*
- type assignType('a, 'b) = (trT('a,'b), trT('b)) => unit
- constraint 'a = glslVariantTypeUBT('a)
+ type assignType = (trT('a,'b), trT('b)) => unit
+ constraint 'a = glslVariantTypeUBT
  constraint 'b = glslVariantTypeUBT('b);
  */
-let (=@) = (l, r) => add(assign(hasVar, addVar, l, r));
+let u = te =>
+  switch te {
+  | Typed(_, e) => e
+  | Untyped(e) => e
+  };
 
-let (++) = l => g1(l, Inc(l));
+let (=@) = (l, r) => add(assign(hasVar, addVar, u(l), u(r)));
 
-let (--) = l => g1(l, Dec(l));
+let (++) = l => g1(l, Inc(u(l)));
 
-let (+++) = l => g1(l, PreInc(l));
+let (--) = l => g1(l, Dec(u(l)));
 
-let (---) = l => g1(l, PreDec(l));
+let (+++) = l => g1(l, PreInc(u(l)));
 
-let (!) = l => g1(l, Not(l));
+let (---) = l => g1(l, PreDec(u(l)));
 
-let ( * ) = (l, r) => gm2(l, r, Mul(l, r));
+let (!) = l => g1(l, Not(u(l)));
+
+let ( * ) = (l, r) => gm2(l, r, Mul(u(l), u(r)));
 
 let ( *= ) = (l, r) => l =@ l * r;
 
-let (/) = (l, r) => gm2(l, r, Div(l, r));
+let (/) = (l, r) => gm2(l, r, Div(u(l), u(r)));
 
 let (/=) = (l, r) => l =@ l / r;
 
-let (+) = (l, r) => gm2(l, r, Plus(l, r));
+let (+) = (l, r) => gm2(l, r, Plus(u(l), u(r)));
 
 let (+=) = (l, r) => l =@ l + r;
 
-let (-) = (l, r) => gm2(l, r, Minus(l, r));
+let (-) = (l, r) => gm2(l, r, Minus(u(l), u(r)));
 
 let (-=) = (l, r) => l =@ l - r;
 
-let (<) = (l, r) => g2(l, r, LessThan(l, r));
+let (<) = (l, r) => g2(l, r, LessThan(u(l), u(r)));
 
-let (>) = (l, r) => g2(l, r, GreaterThan(l, r));
+let (>) = (l, r) => g2(l, r, GreaterThan(u(l), u(r)));
 
-let (<=) = (l, r) => g2(l, r, LessThanOrEqual(l, r));
+let (<=) = (l, r) => g2(l, r, LessThanOrEqual(u(l), u(r)));
 
-let (>=) = (l, r) => g2(l, r, GreaterThanOrEqual(l, r));
+let (>=) = (l, r) => g2(l, r, GreaterThanOrEqual(u(l), u(r)));
 
-let (==) = (l, r) => g2(l, r, Equal(l, r));
+let (==) = (l, r) => g2(l, r, Equal(u(l), u(r)));
 
-let (!=) = (l, r) => g2(l, r, NotEqual(l, r));
+let (!=) = (l, r) => g2(l, r, NotEqual(u(l), u(r)));
 
-let (&&) = (l, r) => g2(l, r, And(l, r));
+let (&&) = (l, r) => g2(l, r, And(u(l), u(r)));
 
-let (||) = (l, r) => g2(l, r, Or(l, r));
+let (||) = (l, r) => g2(l, r, Or(u(l), u(r)));
 
-let (^^) = (l, r) => g2(l, r, Xor(l, r));
+let (^^) = (l, r) => g2(l, r, Xor(u(l), u(r)));
 
 let ( **. ) = (var, st) => RSwizzle(var, st);
 
-let ternary = (l, r1, r2) => Ternary(l, r1, r2);
+let ternary = (l, r1, r2) => Ternary(u(l), u(r1), u(r2));
 
-let max = l => glist(l, BuiltinFun("max", l));
+let max = l => glist(l, BuiltinFun("max", List.map(u, l)));
 
-let min = l => glist(l, BuiltinFun("min", l));
+let min = l => glist(l, BuiltinFun("min", List.map(u, l)));
 
-let sqrt = l => g1(l, BuiltinFun1("sqrt", l));
+let sqrt = l => g1(l, BuiltinFun1("sqrt", u(l)));
 
-let sin = l => g1(l, BuiltinFun1("sin", l));
+let sin = l => g1(l, BuiltinFun1("sin", u(l)));
 
-let cos = l => g1(l, BuiltinFun1("cos", l));
+let cos = l => g1(l, BuiltinFun1("cos", u(l)));
 
-let abs = l => g1(l, BuiltinFun1("abs", l));
+let abs = l => g1(l, BuiltinFun1("abs", u(l)));
 
-let exp = l => g1(l, BuiltinFun1("exp", l));
+let exp = l => g1(l, BuiltinFun1("exp", u(l)));
 
-let length = l => genericexpr1float(l, BuiltinFun1("length", l));
+let length = l => genericexpr1float(l, BuiltinFun1("length", u(l)));
 
-let floor = l => g1(l, BuiltinFun1("floor", l));
+let floor = l => g1(l, BuiltinFun1("floor", u(l)));
 
-let fract = l => g1(l, BuiltinFun1("fract", l));
+let fract = l => g1(l, BuiltinFun1("fract", u(l)));
 
-let pow = (l, r) => g2(l, r, BuiltinFun2("pow", l, r));
+let pow = (l, r) => g2(l, r, BuiltinFun2("pow", u(l), u(r)));
 
-let dot = (l, r) => genericexpr2float(l, r, BuiltinFun2("dot", l, r));
+let dot = (l, r) => genericexpr2float(l, r, BuiltinFun2("dot", u(l), u(r)));
 
 let texture = (l, r) =>
   /* TODO: fix types as in commented line */
-  (`Vec4, BuiltinFun2("texture", l, r));
+  Typed(`Vec4, BuiltinFun2("texture", u(l), u(r)));
 
 /*switch (l, r) {
-    /* | ((`Sampler2D, _), (`Vec2, _)) => (`Vec4, Texture(l, r))*/
-    | ((`Sampler2D | `Vec2, _), (`Sampler2D | `Vec2, _)) => (
+    /* | (Typed(`Sampler2D, _), Typed(`Vec2, _)) => Typed(`Vec4, Texture(l, r))*/
+    | (Typed(`Sampler2D | `Vec2, _), Typed(`Sampler2D | `Vec2, _)) => (
       `Vec4,
       Texture(l, r)
     )
   };*/
 let refract = (l, r1, r2) => {
-  let e = BuiltinFun3("refract", l, r1, r2);
+  let e = BuiltinFun3("refract", u(l), u(r1), u(r2));
   switch (l, r1, r2) {
-  | ((`Float, _), (`Float, _), (`Float, _)) => (`Float, e)
-  | ((`Vec2, _), (`Vec2, _), (`Float, _)) => (`Vec2, e)
-  | ((`Vec3, _), (`Vec3, _), (`Float, _)) => (`Vec3, e)
-  | ((`Vec4, _), (`Vec4, _), (`Float, _)) => (`Vec4, e)
+  | (Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, e)
+  | (Typed(`Vec2, _), Typed(`Vec2, _), Typed(`Float, _)) => Typed(`Vec2, e)
+  | (Typed(`Vec3, _), Typed(`Vec3, _), Typed(`Float, _)) => Typed(`Vec3, e)
+  | (Typed(`Vec4, _), Typed(`Vec4, _), Typed(`Float, _)) => Typed(`Vec4, e)
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 };
 
-/*let vec2: cfun1('a, 'b) =*/
-let vec2 = l =>
+/*let vec2: cfun1 =*/
+let vec2 = l => {
+  let e = Typed(`Vec2, BuiltinFun("vec2", List.map(u, l)));
   switch l {
-  | [(`Float, _)] => (`Vec2, BuiltinFun("vec2", l))
-  | [(`Float, _), (`Float, _)] => (`Vec2, BuiltinFun("vec2", l))
-  | [(`Vec2, _)] => (`Vec2, BuiltinFun("vec2", l))
+  | [Typed(`Float, _)] => e
+  | [Typed(`Float, _), Typed(`Float, _)] => e
+  | [Typed(`Vec2, _)] => e
   | _ => raise(GLSLTypeError("type mismatch"))
   };
+};
 
 let vec3 = l => {
-  let ret = (`Vec3, BuiltinFun("vec3", l));
+  let ret = Typed(`Vec3, BuiltinFun("vec3", List.map(u, l)));
   switch l {
-  | [(`Float, _)] => ret
-  | [(`Float, _), (`Float, _), (`Float, _)] => ret
-  | [(`Vec2, _), (`Float, _)] => ret
-  | [(`Vec3, _)] => ret
+  | [Typed(`Float, _)] => ret
+  | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
+  | [Typed(`Vec2, _), Typed(`Float, _)] => ret
+  | [Typed(`Vec3, _)] => ret
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 };
 
 let vec4 = l => {
-  let ret = (`Vec4, BuiltinFun("vec4", l));
+  let ret = Typed(`Vec4, BuiltinFun("vec4", List.map(u, l)));
   switch l {
-  | [(`Float, _)] => ret
-  | [(`Float, _), (`Float, _), (`Float, _), (`Float, _)] => ret
-  | [(`Vec2, _), (`Vec2, _)] => ret
-  | [(`Vec3, _), (`Float, _)] => ret
-  | [(`Vec4, _)] => ret
+  | [Typed(`Float, _)] => ret
+  | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
+  | [Typed(`Vec2, _), Typed(`Vec2, _)] => ret
+  | [Typed(`Vec3, _), Typed(`Float, _)] => ret
+  | [Typed(`Vec4, _)] => ret
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 };
@@ -960,10 +961,10 @@ let ifstmt = (l, b) => add(IfStatement(l, b));
 
 let ifelsestmt = (l, b1, b2) => add(IfElseStatement(l, b1, b2));
 
-/*let f: cfun1('a, 'b) = x => (`Float, ImmediateFloat(x));*/
-let f = x => (`Float, ImmediateFloat(x));
+/*let f: cfun1 = x => Typed(`Float, ImmediateFloat(x));*/
+let f = x => Typed(`Float, ImmediateFloat(x));
 
-let i = x => (`Int, ImmediateInt(x));
+let i = x => Typed(`Int, ImmediateInt(x));
 
 let return = l => add(Return(l));
 
@@ -1004,9 +1005,9 @@ let i1 = nvec2init(0.0, 0.0);
 
 let i2 = f(0.0);
 
-let a = sing(i1);
+let a = sin(i1);
 
-let b = sing(i2);
+let b = sin(i2);
 
 let c = vec2var("c");
 
