@@ -23,11 +23,11 @@ let causticTex = sampler2Duniform("causticTex");
 let water = sampler2Duniform("water");
 
 let helperFunctions = {
-  let cIOR_AIR = f(1.0);
-  let cIOR_WATER = f(1.333);
-  let abovewaterColor = vec3([f(0.25), f(1.0), f(1.25)]);
-  let underwaterColor = vec3([f(0.4), f(0.9), f(1.0)]);
-  let poolHeight = f(1.0);
+  let cIOR_AIR = const(floatif(1.0));
+  let cIOR_WATER = const(floatif(1.333));
+  let abovewaterColor = const(vec3i3f(0.25, 1.0, 1.25));
+  let underwaterColor = const(vec3i3f(0.4, 0.9, 1.0));
+  let poolHeight = const(floatif(1.0));
   let origin = vec3arg("origin");
   let ray = vec3arg("ray");
   let cubeMin = vec3arg("cubeMin");
@@ -60,14 +60,10 @@ let helperFunctions = {
       vec2fun("intersectSphere"),
       [origin, ray, sphereCenter, sphereRadius],
       {
-        let toSphere = vec3var("toSphere");
-        toSphere =@ origin - sphereCenter;
-        let a = floatvar("a");
-        a =@ dot(ray, ray);
-        let b = floatvar("b");
-        b =@ f(2.0) * dot(toSphere, ray);
-        let c = floatvar("c");
-        c =@ dot(toSphere, toSphere) - sphereRadius * sphereRadius;
+        let toSphere = vec3i1(origin - sphereCenter);
+        let a = floati1(dot(ray, ray));
+        let b = floati1(f(2.0) * dot(toSphere, ray));
+        let c = floati1(dot(toSphere, toSphere) - sphereRadius * sphereRadius);
         let discriminant = floatvar("discriminant");
         discriminant =@ b * b - f(4.0) * a * c;
         ifstmt(
