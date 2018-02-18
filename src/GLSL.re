@@ -47,7 +47,6 @@ include GLSLSwizzleFormat;
 
 type glslVariantTypeT =
   [
-    | `Untyped
     | `Void
     | `Int
     | `Float
@@ -157,17 +156,28 @@ let genericexpr1float = (l, e) =>
   | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
-let genericmath2 = (l, r, e) =>
-  switch (l, r) {
-  | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
-  | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
-  | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
-  | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
-  | (Typed(`Mat2, _), Typed(`Mat2, _)) => Typed(`Mat2, unused(e))
-  | (Typed(`Mat3, _), Typed(`Mat3, _)) => Typed(`Mat3, unused(e))
-  | (Typed(`Mat4, _), Typed(`Mat4, _)) => Typed(`Mat4, unused(e))
-  | _ => raise(GLSLTypeError("type mismatch"))
-  };
+type gm2T('a) =
+  [< | `Float | `Vec2 | `Vec3 | `Vec4 | `Mat2 | `Mat3 | `Mat4] as 'a;
+
+type gm2fT('a, 'b, 'c) = (trT('a), trT('b), 'c) => trT('a);
+/*
+constraint 'a = gm2T('a)
+constraint 'b = gm2T('b);
+*/
+
+let genericmath2: gm2fT('a, 'b, 'c) =
+  (l, r, e) =>
+    switch (l, r) {
+    | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
+    | (Typed(`Vec2, _), Typed(`Float, _)) => Typed(`Vec2, unused(e))
+    | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
+    | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
+    | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
+    | (Typed(`Mat2, _), Typed(`Mat2, _)) => Typed(`Mat2, unused(e))
+    | (Typed(`Mat3, _), Typed(`Mat3, _)) => Typed(`Mat3, unused(e))
+    | (Typed(`Mat4, _), Typed(`Mat4, _)) => Typed(`Mat4, unused(e))
+    | _ => raise(GLSLTypeError("type mismatch"))
+    };
 
 let genericexpr2 = (l, r, e) =>
   switch (l, r) {
@@ -583,13 +593,12 @@ type programT = {
   fragmentShader: string
 };
 
-let rightToLeft = right => {
+let rightToLeft = right =>
   switch right {
   | RVar(x) => (x, Var(x))
   | RSwizzle(RVar(x), s) => (x, Swizzle(x, s))
   | _ => raise(GLSLTypeError("invalid left hand side"))
   };
-};
 
 let getProgram = (uniformBlock, vsmain, fsmain) => {
   /*
@@ -649,6 +658,29 @@ let wrap = x => {
     | _ => raise(GLSLTypeError("type mismatch"))
     };
   Typed(gt, x);
+};
+
+let unwrap = x => {
+  let (t, e) =
+    switch x {
+    | Typed(vart, e) => (
+        switch vart {
+        | `Void => Void
+        | `Int => Int
+        | `Float => Float
+        | `Vec2 => Vec2
+        | `Vec3 => Vec3
+        | `Vec4 => Vec4
+        | `Mat2 => Mat2
+        | `Mat3 => Mat3
+        | `Mat4 => Mat4
+        | `Sampler2D => Sampler2D
+        },
+        e
+      )
+    | Untyped(_) => raise(GLSLTypeError("untyped expression"))
+    };
+  Typed(t, e);
 };
 
 let attr = (t, name) => wrap(RVar((Attribute, t, name)));
@@ -749,6 +781,8 @@ let vec2var = name => var(Vec2, name);
 let vec3var = name => var(Vec3, name);
 
 let vec4var = name => var(Vec4, name);
+
+let mat4var = name => var(Mat4, name);
 
 let gl_Position = builtin(Vec4, "gl_Position");
 
@@ -1004,6 +1038,8 @@ let nvec2init = (l, r) => vec2([f(l), f(r)]);
 let i1 = nvec2init(0.0, 0.0);
 
 let i2 = f(0.0);
+
+let d = mat4var("amat");
 
 let a = sin(i1);
 

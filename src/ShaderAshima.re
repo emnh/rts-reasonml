@@ -8,7 +8,7 @@
  //               https://github.com/ashima/webgl-noise
  //               https://github.com/stegu/webgl-noise
  */
-open GLSL;
+open! GLSL;
 
 let (mod289_2, mod289_3) = {
   let x2 = vec2arg("x");
@@ -16,7 +16,6 @@ let (mod289_2, mod289_3) = {
   let mod289_body = x =>
     body(
       {
-        open! VertexShader;
         return(x - floor(x * (f(1.0) / f(289.0))) * f(289.0));
         finish();
       }
@@ -34,7 +33,6 @@ let permute = {
     [x],
     body(
       {
-        open! VertexShader;
         return(mod289_3([(x * f(34.0) + f(1.0)) * x]));
         finish();
       }
@@ -49,7 +47,6 @@ let snoise = {
     [v],
     body(
       {
-        open! VertexShader;
         let cC = vec4var("C");
         cC
         =@ vec4([
