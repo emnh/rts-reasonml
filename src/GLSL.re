@@ -34,12 +34,13 @@ type glslTypeT =
 
 type varT =
   | Builtin
-  | Attribute
+  | Attr
   | Uniform
   | Varying
-  | Variable
+  | Var
   | Output
-  | Argument;
+  | Arg
+  | Fun;
 
 type varExprT = (varT, glslTypeT, string);
 
@@ -76,6 +77,12 @@ and lT = leftExprT
  * as right expressions interchangeably */
 and funExprT = (glslTypeT, string, list(rT), gRootT)
 /* rT: Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
+/*
+ and generalMath1T('a) =
+   | GeneralMathBuiltinFun2GenTypeGenType(string, grT('a), grT('a))
+ and generalMath2T('a) =
+   | GeneralMathBuiltinFun2GenTypeFloat(string, grT('a), grT([ | `Float]))
+   */
 and rT =
   /* | TypeError */
   | RVar(varExprT)
@@ -107,11 +114,17 @@ and rT =
   | BuiltinFun2(string, rT, rT)
   | BuiltinFun3(string, rT, rT, rT)
   | BuiltinFun4(string, rT, rT, rT, rT)
+  /*
+   | GeneralMath1(generalMath1T(glslVariantTypeT))
+   | GeneralMath2(generalMath2T(glslVariantTypeT))
+   */
+  /* | GenericMathFun2(string, rT([| `Vec2 ]), rT) */
   /*| Texture(rT([ | `Sampler2D | `Vec2]), rT([ | `Sampler2D | `Vec2]))*/
   | CustomFun(funExprT, list(rT))
+and grT('a) = rT
 and rightExprT = rT
 and trT('a) =
-  | Typed('a, rT)
+  | Typed('a, grT('a))
   | Untyped(rT)
 and statementT =
   | Assignment(lT, rT)
@@ -128,6 +141,19 @@ and gRootT = list(statementT);
  type cfun2('a, 'b, 'c) =  => trT('c);
  */
 let unused = x => x;
+
+let u = te =>
+  switch te {
+  | Typed(_, e) => e
+  | Untyped(e) => e
+  };
+
+let getType = x => {
+  switch x {
+    | Typed(t, _) => t
+    | _ => raise(GLSLTypeError("type mismatch"))
+  };
+};
 
 let genericexprlist = (l, e) =>
   switch (List.hd(l)) {
@@ -160,25 +186,31 @@ type gm2T('a) =
   [< | `Float | `Vec2 | `Vec3 | `Vec4 | `Mat2 | `Mat3 | `Mat4] as 'a;
 
 type gm2fT('a, 'b, 'c) = (trT('a), trT('b), 'c) => trT('a);
+
 /*
-constraint 'a = gm2T('a)
-constraint 'b = gm2T('b);
-*/
+ constraint 'a = gm2T('a)
+ constraint 'b = gm2T('b);
+ */
+/*let genericmath2: gm2fT('a, 'b, 'c) =*/
+let genericmath2 = (l, r, e) =>
+  switch (l, r) {
+  | (Typed(_ as a, _), Typed(`Float, _)) => Typed(a, unused(e))
+  | (Typed(_ as a, _), Typed(_, _)) => Typed(a, unused(e))
+  | _ => raise(GLSLTypeError("type mismatch"))
+  };
 
-let genericmath2: gm2fT('a, 'b, 'c) =
-  (l, r, e) =>
-    switch (l, r) {
-    | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
-    | (Typed(`Vec2, _), Typed(`Float, _)) => Typed(`Vec2, unused(e))
-    | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
-    | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
-    | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
-    | (Typed(`Mat2, _), Typed(`Mat2, _)) => Typed(`Mat2, unused(e))
-    | (Typed(`Mat3, _), Typed(`Mat3, _)) => Typed(`Mat3, unused(e))
-    | (Typed(`Mat4, _), Typed(`Mat4, _)) => Typed(`Mat4, unused(e))
-    | _ => raise(GLSLTypeError("type mismatch"))
-    };
-
+/*
+ switch (l, r) {
+ | (Typed(`Float as a, _), Typed(`Float, _)) => Typed(a, unused(e))
+ | (Typed(`Vec2 as a, _), Typed(`Vec2, _)) => Typed(a, unused(e))
+ | (Typed(`Vec3 as a, _), Typed(`Vec3, _)) => Typed(a, unused(e))
+ | (Typed(`Vec4 as a, _), Typed(`Vec4, _)) => Typed(a, unused(e))
+ | (Typed(`Mat2 as a, _), Typed(`Mat2, _)) => Typed(a, unused(e))
+ | (Typed(`Mat3 as a, _), Typed(`Mat3, _)) => Typed(a, unused(e))
+ | (Typed(`Mat4 as a, _), Typed(`Mat4, _)) => Typed(a, unused(e))
+ | _ => raise(GLSLTypeError("type mismatch"))
+ };
+ */
 let genericexpr2 = (l, r, e) =>
   switch (l, r) {
   | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
@@ -469,7 +501,7 @@ let getFunctions = gf => {
   ar^;
 };
 
-let getAttributes = gf => getVarOfType(Attribute, gf);
+let getAttributes = gf => getVarOfType(Attr, gf);
 
 let getVaryings = gf => getVarOfType(Varying, gf);
 
@@ -622,10 +654,10 @@ let getProgram = (uniformBlock, vsmain, fsmain) => {
 
 let assign = (hasVar, addVar, dest, src) => {
   let ((vart, glslt, name), left) = rightToLeft(dest);
-  if (hasVar(name) || vart != Variable) {
+  if (hasVar(name) || vart != Var) {
     Assignment(left, src);
   } else {
-    if (vart == Variable) {
+    if (vart == Var) {
       addVar(name);
     };
     DeclAssignment(glslt, left, src);
@@ -639,26 +671,26 @@ let genSym = () => {
   "v_" ++ string_of_int(symCounter^);
 };
 
-let wrap = x => {
-  let gt =
-    switch x {
-    | RVar((_, vart, _)) =>
-      switch vart {
-      | Void => `Void
-      | Int => `Int
-      | Float => `Float
-      | Vec2 => `Vec2
-      | Vec3 => `Vec3
-      | Vec4 => `Vec4
-      | Mat2 => `Mat2
-      | Mat3 => `Mat3
-      | Mat4 => `Mat4
-      | Sampler2D => `Sampler2D
-      }
-    | _ => raise(GLSLTypeError("type mismatch"))
-    };
+let wrap = (gt, x) =>
+  /*
+   let gt =
+     switch x {
+     | RVar((_, vart, _)) =>
+       switch vart {
+       | Void => `Void
+       | Int => `Int
+       | Float => `Float
+       | Vec2 => `Vec2
+       | Vec3 => `Vec3
+       | Vec4 => `Vec4
+       | Mat2 => `Mat2
+       | Mat3 => `Mat3
+       | Mat4 => `Mat4
+       | Sampler2D => `Sampler2D
+       }
+     | _ => raise(GLSLTypeError("type mismatch"))
+     };*/
   Typed(gt, x);
-};
 
 let unwrap = x => {
   let (t, e) =
@@ -683,114 +715,140 @@ let unwrap = x => {
   Typed(t, e);
 };
 
-let attr = (t, name) => wrap(RVar((Attribute, t, name)));
+let fundecl = (_fun, argtypes, body, args) => {
+  let (funt, adtfunt, name) =
+    switch _fun {
+    | Typed(variantt, RVar((Fun, vart, name))) => (variantt, vart, name)
+    | _ => raise(GLSLTypeError("type mismatch"))
+    };
+  Typed(
+    funt,
+    CustomFun((adtfunt, name, List.map(u, argtypes), body), List.map(u, args))
+  );
+};
 
-let varying = (t, name) => wrap(RVar((Varying, t, name)));
+/* Begin auto-generated by GLSLFunGen.py */
+let floatfun = name => Typed(`Float, RVar((Fun, Float, name)));
 
-let builtin = (t, name) => wrap(RVar((Builtin, t, name)));
+let floatattr = name => Typed(`Float, RVar((Attr, Float, name)));
 
-let uniform = (t, name) => wrap(RVar((Uniform, t, name)));
+let floatvarying = name => Typed(`Float, RVar((Varying, Float, name)));
 
-let var = (t, name) => wrap(RVar((Variable, t, name)));
+let floatbuiltin = name => Typed(`Float, RVar((Builtin, Float, name)));
 
-let output = (t, name) => wrap(RVar((Output, t, name)));
+let floatuniform = name => Typed(`Float, RVar((Uniform, Float, name)));
 
-let gfun = (t, name) => (t, name);
+let floatvar = name => Typed(`Float, RVar((Var, Float, name)));
 
-let arg = (t, name) => wrap(RVar((Argument, t, name)));
+let floatoutput = name => Typed(`Float, RVar((Output, Float, name)));
 
-let floatfun = name => gfun(Float, name);
+let floatarg = name => Typed(`Float, RVar((Arg, Float, name)));
 
-let vec2fun = name => gfun(Vec2, name);
+let vec2fun = name => Typed(`Vec2, RVar((Fun, Vec2, name)));
 
-let vec3fun = name => gfun(Vec3, name);
+let vec2attr = name => Typed(`Vec2, RVar((Attr, Vec2, name)));
 
-let vec4fun = name => gfun(Vec4, name);
+let vec2varying = name => Typed(`Vec2, RVar((Varying, Vec2, name)));
 
-let mat2fun = name => gfun(Mat2, name);
+let vec2builtin = name => Typed(`Vec2, RVar((Builtin, Vec2, name)));
 
-let mat3fun = name => gfun(Mat3, name);
+let vec2uniform = name => Typed(`Vec2, RVar((Uniform, Vec2, name)));
 
-let mat4fun = name => gfun(Mat4, name);
+let vec2var = name => Typed(`Vec2, RVar((Var, Vec2, name)));
 
-let floatarg = name => arg(Float, name);
+let vec2output = name => Typed(`Vec2, RVar((Output, Vec2, name)));
 
-let vec2arg = name => arg(Vec2, name);
+let vec2arg = name => Typed(`Vec2, RVar((Arg, Vec2, name)));
 
-let vec3arg = name => arg(Vec3, name);
+let vec3fun = name => Typed(`Vec3, RVar((Fun, Vec3, name)));
 
-let vec4arg = name => arg(Vec4, name);
+let vec3attr = name => Typed(`Vec3, RVar((Attr, Vec3, name)));
 
-let mat2arg = name => arg(Mat2, name);
+let vec3varying = name => Typed(`Vec3, RVar((Varying, Vec3, name)));
 
-let mat3arg = name => arg(Mat3, name);
+let vec3builtin = name => Typed(`Vec3, RVar((Builtin, Vec3, name)));
 
-let mat4arg = name => arg(Mat4, name);
+let vec3uniform = name => Typed(`Vec3, RVar((Uniform, Vec3, name)));
 
-let fundecl = ((funt, name), argtypes, body, args) =>
-  CustomFun((funt, name, argtypes, body), args);
+let vec3var = name => Typed(`Vec3, RVar((Var, Vec3, name)));
 
-let floatattr = name => attr(Float, name);
+let vec3output = name => Typed(`Vec3, RVar((Output, Vec3, name)));
 
-let vec2attr = name => attr(Vec2, name);
+let vec3arg = name => Typed(`Vec3, RVar((Arg, Vec3, name)));
 
-let vec3attr = name => attr(Vec3, name);
+let vec4fun = name => Typed(`Vec4, RVar((Fun, Vec4, name)));
 
-let vec4attr = name => attr(Vec4, name);
+let vec4attr = name => Typed(`Vec4, RVar((Attr, Vec4, name)));
 
-let mat2attr = name => attr(Mat2, name);
+let vec4varying = name => Typed(`Vec4, RVar((Varying, Vec4, name)));
 
-let mat3attr = name => attr(Mat3, name);
+let vec4builtin = name => Typed(`Vec4, RVar((Builtin, Vec4, name)));
 
-let mat4attr = name => attr(Mat4, name);
+let vec4uniform = name => Typed(`Vec4, RVar((Uniform, Vec4, name)));
 
-let floatvarying = name => varying(Float, name);
+let vec4var = name => Typed(`Vec4, RVar((Var, Vec4, name)));
 
-let vec2varying = name => varying(Vec2, name);
+let vec4output = name => Typed(`Vec4, RVar((Output, Vec4, name)));
 
-let vec3varying = name => varying(Vec3, name);
+let vec4arg = name => Typed(`Vec4, RVar((Arg, Vec4, name)));
 
-let vec4varying = name => varying(Vec4, name);
+let mat2fun = name => Typed(`Mat2, RVar((Fun, Mat2, name)));
 
-let mat2varying = name => varying(Mat2, name);
+let mat2attr = name => Typed(`Mat2, RVar((Attr, Mat2, name)));
 
-let mat3varying = name => varying(Mat3, name);
+let mat2varying = name => Typed(`Mat2, RVar((Varying, Mat2, name)));
 
-let mat4varying = name => varying(Mat4, name);
+let mat2builtin = name => Typed(`Mat2, RVar((Builtin, Mat2, name)));
 
-let floatuniform = name => uniform(Float, name);
+let mat2uniform = name => Typed(`Mat2, RVar((Uniform, Mat2, name)));
 
-let vec2uniform = name => uniform(Vec2, name);
+let mat2var = name => Typed(`Mat2, RVar((Var, Mat2, name)));
 
-let vec3uniform = name => uniform(Vec3, name);
+let mat2output = name => Typed(`Mat2, RVar((Output, Mat2, name)));
 
-let vec4uniform = name => uniform(Vec4, name);
+let mat2arg = name => Typed(`Mat2, RVar((Arg, Mat2, name)));
 
-let mat2uniform = name => uniform(Mat2, name);
+let mat3fun = name => Typed(`Mat3, RVar((Fun, Mat3, name)));
 
-let mat3uniform = name => uniform(Mat3, name);
+let mat3attr = name => Typed(`Mat3, RVar((Attr, Mat3, name)));
 
-let mat4uniform = name => uniform(Mat4, name);
+let mat3varying = name => Typed(`Mat3, RVar((Varying, Mat3, name)));
 
-let sampler2Duniform = name => uniform(Sampler2D, name);
+let mat3builtin = name => Typed(`Mat3, RVar((Builtin, Mat3, name)));
 
-let floatvar = name => var(Float, name);
+let mat3uniform = name => Typed(`Mat3, RVar((Uniform, Mat3, name)));
 
-let vec2var = name => var(Vec2, name);
+let mat3var = name => Typed(`Mat3, RVar((Var, Mat3, name)));
 
-let vec3var = name => var(Vec3, name);
+let mat3output = name => Typed(`Mat3, RVar((Output, Mat3, name)));
 
-let vec4var = name => var(Vec4, name);
+let mat3arg = name => Typed(`Mat3, RVar((Arg, Mat3, name)));
 
-let mat4var = name => var(Mat4, name);
+let mat4fun = name => Typed(`Mat4, RVar((Fun, Mat4, name)));
 
-let gl_Position = builtin(Vec4, "gl_Position");
+let mat4attr = name => Typed(`Mat4, RVar((Attr, Mat4, name)));
 
-let gl_FragCoord = builtin(Vec4, "gl_FragCoord");
+let mat4varying = name => Typed(`Mat4, RVar((Varying, Mat4, name)));
 
-let gl_FragColor = builtin(Vec4, "gl_FragColor");
+let mat4builtin = name => Typed(`Mat4, RVar((Builtin, Mat4, name)));
 
-let outColor = output(Vec4, "outColor");
+let mat4uniform = name => Typed(`Mat4, RVar((Uniform, Mat4, name)));
+
+let mat4var = name => Typed(`Mat4, RVar((Var, Mat4, name)));
+
+let mat4output = name => Typed(`Mat4, RVar((Output, Mat4, name)));
+
+let mat4arg = name => Typed(`Mat4, RVar((Arg, Mat4, name)));
+
+/* End auto-generated by GLSLFunGen.py */
+
+let gl_Position = vec4builtin("gl_Position");
+
+let gl_FragCoord = vec4builtin("gl_FragCoord");
+
+let gl_FragColor = vec4builtin("gl_FragColor");
+
+let outColor = vec4output("outColor");
 
 let body = x => x;
 
@@ -848,12 +906,6 @@ let glist = genericexprlist;
  constraint 'a = glslVariantTypeUBT
  constraint 'b = glslVariantTypeUBT('b);
  */
-let u = te =>
-  switch te {
-  | Typed(_, e) => e
-  | Untyped(e) => e
-  };
-
 let (=@) = (l, r) => add(assign(hasVar, addVar, u(l), u(r)));
 
 let (++) = l => g1(l, Inc(u(l)));
@@ -900,9 +952,14 @@ let (||) = (l, r) => g2(l, r, Or(u(l), u(r)));
 
 let (^^) = (l, r) => g2(l, r, Xor(u(l), u(r)));
 
-let ( **. ) = (var, st) => RSwizzle(var, st);
+let ( **. ) = (var, st) => {
+  let (swizzletype, swizzle, validator) = st;
+  let ret = Typed(swizzletype, RSwizzle(u(var), swizzle));
+  validator(getType(var));
+  ret
+};
 
-let ternary = (l, r1, r2) => Ternary(u(l), u(r1), u(r2));
+let ternary : ('a, 'b, 'b) => 'b = (l, r1, r2) => Typed(getType(r1), Ternary(u(l), u(r1), u(r2)));
 
 let max = l => glist(l, BuiltinFun("max", List.map(u, l)));
 
@@ -961,16 +1018,17 @@ let vec2 = l => {
   };
 };
 
-let vec3 = l => {
-  let ret = Typed(`Vec3, BuiltinFun("vec3", List.map(u, l)));
-  switch l {
-  | [Typed(`Float, _)] => ret
-  | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
-  | [Typed(`Vec2, _), Typed(`Float, _)] => ret
-  | [Typed(`Vec3, _)] => ret
-  | _ => raise(GLSLTypeError("type mismatch"))
+let vec3: list(trT([< | `Float | `Vec2 | `Vec3])) => 'a =
+  l => {
+    let ret = Typed(`Vec3, BuiltinFun("vec3", List.map(u, l)));
+    switch l {
+    | [Typed(`Float, _)] => ret
+    | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
+    | [Typed(`Vec2, _), Typed(`Float, _)] => ret
+    | [Typed(`Vec3, _)] => ret
+    | _ => raise(GLSLTypeError("type mismatch"))
+    };
   };
-};
 
 let vec4 = l => {
   let ret = Typed(`Vec4, BuiltinFun("vec4", List.map(u, l)));
@@ -995,12 +1053,13 @@ let ifstmt = (l, b) => add(IfStatement(l, b));
 
 let ifelsestmt = (l, b1, b2) => add(IfElseStatement(l, b1, b2));
 
-/*let f: cfun1 = x => Typed(`Float, ImmediateFloat(x));*/
+/* let f = x => Typed(`Float, ImmediateFloat(x)); */
+/* let f: float => trT([ | `Float]) = x => Typed(`Float, ImmediateFloat(x)); */
 let f = x => Typed(`Float, ImmediateFloat(x));
 
 let i = x => Typed(`Int, ImmediateInt(x));
 
-let return = l => add(Return(l));
+let return = l => add(Return(u(l)));
 
 /* float var declaration and initialization */
 let floatif = a => {

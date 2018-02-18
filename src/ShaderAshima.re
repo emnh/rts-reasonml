@@ -57,14 +57,14 @@ let snoise = {
            ]); /* 1.0 / 41.0 */
         /* First corner */
         let i = vec2var("i");
-        i =@ floor(v + dot(v, cC **. YY));
+        i =@ floor(v + dot(v, cC **. _yy));
         let x0 = vec2var("x0");
-        x0 =@ v - i + dot(i, cC **. XX);
+        x0 =@ v - i + dot(i, cC **. _xx);
         /* Other corners */
         let i1 = vec2var("i1");
         i1
         =@ ternary(
-             x0 **. X > x0 **. Y,
+             x0 **. _x > x0 **. _y,
              vec2([f(1.0), f(0.0)]),
              vec2([f(0.0), f(1.0)])
            );
