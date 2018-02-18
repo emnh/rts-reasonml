@@ -49,12 +49,12 @@ let snoise = {
       {
         let cC = vec4var("C");
         cC
-        =@ vec4([
+        =@ vec44f(
              f(0.211324865405187), /* (3.0-sqrt(3.0))/6.0 */
              f(0.366025403784439), /* 0.5*(sqrt(3.0)-1.0) */
              f(-0.577350269189626), /* -1.0 + 2.0 * C.x */
              f(0.024390243902439)
-           ]); /* 1.0 / 41.0 */
+           ); /* 1.0 / 41.0 */
         /* First corner */
         let i = vec2var("i");
         i =@ floor(v + dot(v, cC **. _yy));
@@ -65,21 +65,21 @@ let snoise = {
         i1
         =@ ternary(
              x0 **. _x > x0 **. _y,
-             vec2([f(1.0), f(0.0)]),
-             vec2([f(0.0), f(1.0)])
+             vec22f(f(1.0), f(0.0)),
+             vec22f(f(0.0), f(1.0))
            );
         let x12 = vec4var("x12");
-        x12 =@ x0 **. XYXY + cC **. XXZZ;
-        x12 **. XY -= i1;
+        x12 =@ x0 **. _xyxy + cC **. _xxzz;
+        x12 **. _xy -= i1;
         /* Permutations */
         i =@ mod289_2([i]); /* Avoid truncation effects in permutation */
         let p = vec3var("p");
         p
         =@ permute([
-             permute([i **. Y + vec3([f(0.0), i1 **. Y, f(1.0)])])
+             permute([i **. _y + vec33f(f(0.0), i1 **. _y, f(1.0))])
              + i
-             **. X
-             + vec3([f(0.0), i1 **. X, f(1.0)])
+             **. _x
+             + vec33f(f(0.0), i1 **. _x, f(1.0))
            ]);
         let m = vec3var("m");
         m

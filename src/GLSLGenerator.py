@@ -71,7 +71,14 @@ def getType(x):
         return "Vec4"
 
 def getTypeFun(x):
-    return "accept" + str(len(x))
+    if 'w' in x or 'a' in x:
+        return "accept4"
+    elif 'z' in x or 'b' in x:
+        return "accept3"
+    elif 'y' in x or 'z' in x:
+        return "accept2"
+    else:
+        return "accept1"
 
 fd = file('GLSLSwizzleFormat.re', 'w')
 fd.write(

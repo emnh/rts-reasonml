@@ -6,9 +6,7 @@
  * Ported to ReasonML by Eivind Magnus Hvidevold
  * Released under the MIT license
  */
-open GLSL;
-
-open! VertexShader;
+open! GLSL;
 
 let light = vec3uniform("light");
 
