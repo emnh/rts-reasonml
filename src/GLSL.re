@@ -210,20 +210,25 @@ let genericmath2 = (l, r: trT(glslVariantTypeUBT('a)), e) =>
  | _ => raise(GLSLTypeError("type mismatch"))
  };
  */
-let genericexpr2 = (l, r, e) =>
-  switch (l, r) {
-  | (Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, unused(e))
-  | (Typed(`Vec2, _), Typed(`Vec2, _)) => Typed(`Vec2, unused(e))
-  | (Typed(`Vec3, _), Typed(`Vec3, _)) => Typed(`Vec3, unused(e))
-  | (Typed(`Vec4, _), Typed(`Vec4, _)) => Typed(`Vec4, unused(e))
-  | _ => raise(GLSLTypeError("type mismatch"))
-  };
+type genTypeUBT('a) = [< | `Float | `Vec2 | `Vec3 | `Vec4] as 'a;
 
-let genericexpr2float = (l, r, e) =>
-  switch (l, r) {
-  | (Typed(_ as a, _), Typed(`Float, _)) => Typed(a, unused(e))
-  | _ => raise(GLSLTypeError("type mismatch"))
-  };
+type genTypeT('a) = trT('a) constraint 'a = genTypeUBT('a);
+
+/* TODO: Only accept `Float to `Vec4 */
+let genericexpr2: (genTypeT('a), genTypeT('a), 'b) => genTypeT('a) =
+  (l, r, e) =>
+    switch (l, r) {
+    | (Typed(_ as a, _), Typed(_, _)) => Typed(a, unused(e))
+    | _ => raise(GLSLTypeError("type mismatch"))
+    };
+
+/* TODO: Only accept `Float to `Vec4 */
+let genericexpr2float: ('a, 'a, 'b) => 'c =
+  (l, r, e) =>
+    switch (l, r) {
+    | (Typed(_, _), Typed(_, _)) => Typed(`Float, unused(e))
+    | _ => raise(GLSLTypeError("type mismatch"))
+    };
 
 /*
  type nodeT =
@@ -1088,7 +1093,13 @@ let vec22f = (x: trT([ | `Float]), y: trT([ | `Float])) =>
 let vec33f = (x: trT([ | `Float]), y: trT([ | `Float]), z: trT([ | `Float])) =>
   Typed(`Vec3, BuiltinFun("vec3", List.map(u, [x, y, z])));
 
-let vec44f = (x: trT([ | `Float]), y: trT([ | `Float]), z: trT([ | `Float]), w: trT([ | `Float ])) =>
+let vec44f =
+    (
+      x: trT([ | `Float]),
+      y: trT([ | `Float]),
+      z: trT([ | `Float]),
+      w: trT([ | `Float])
+    ) =>
   Typed(`Vec3, BuiltinFun("vec3", List.map(u, [x, y, z, w])));
 
 let vec4 = l => {

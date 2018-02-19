@@ -98,6 +98,6 @@ let accept4 : [< `Vec4] => unit = (_) => ();
 %s
 ''' % (
     "\n".join(['  | %s => "%s" ' % (x.upper(), x.lower()) for x in allperms]),
-    "\n".join(['  let _%s = (`%s, %s, %s);' % (x.lower(), getType(x), x.upper(), getTypeFun(x)) for x in allperms])))
+    "\n".join(['  let _%s = (`%s : [ | `%s ], %s, %s);' % (x.lower(), getType(x), getType(x), x.upper(), getTypeFun(x)) for x in allperms])))
 
 fd.close()
