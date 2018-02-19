@@ -1,233 +1,264 @@
 /*
+ * https://gist.github.com/Octachron/4e833a22844fd90cd6d15b0af927dab0
+ * Thanks to Octachron for all his help! :)
+ *
  * Resources:
  *
- * Tagless final style:
- * http://okmij.org/ftp/tagless-final/index.html
+ * The + in type parameter:
+ * https://blog.janestreet.com/a-and-a/
  *
- * Strange Haskell type adventure:
- * https://aphyr.com/posts/342-typing-the-technical-interview
- */
-exception TypeError(string);
-
+ * The & in variant types:
+ * https://www.math.nagoya-u.ac.jp/~garrigue/papers/variant-reuse.pdf
+ * */
 type scalar = float;
 
-type z = pri | Z;
+type one('a) = [ | `one('a)];
 
-type s('a) = pri | S;
+type z('a) = [ | `zero('a)];
+
+type two('a) = [ | `two('a)];
+
+type three('a) = [ | `three('a)];
+
+type four('a) = [ | `four('a)];
+
+let map2 = (f, x, y) =>
+  Array.init(min(Array.length(x), Array.length(y)), n => f(x[n], y[n]));
+
+type any('a, 'b, 'c) =
+  [< | `zero('b) &('a) | `one('b) &('a) | `two('b) &('a)] as 'c;
+
+/** (x,y,z,_ ) product computes the rank of x * y and
+    put the result inside z */
+type product('a, 'b, 'c, 'parameters) =
+  [<
+    | `zero
+        ('b)
+        &(
+          [<
+            | `zero('c) &(z('p1))
+            | `one('c) &(one('p1))
+            | `two('c) &(two('p1))
+          ]
+        )
+    | `one
+        ('b)
+        &(
+          [<
+            | `zero('c) &(one('p1))
+            | `one('c) &(one('p1))
+            | `two('c) &(one('p1))
+          ]
+        )
+    | `two
+        ('b)
+        &(
+          [<
+            | `zero('c) &(two('p1))
+            | `one('c) &(one('p1))
+            | `two('c) &(two('p1))
+          ]
+        )
+  ] as 'a
+constraint 'parameters = ('p1, 'p2, 'p3);
+
+/** (x,y,z,_ ) sum computes the rank of x + y and
+    put the result inside z */
+type sum('a, 'b, 'c, 'parameters) =
+  [<
+    | `zero
+        ('b)
+        &(
+          [<
+            | `zero('c) &(z('p1))
+            | `one('c) &(one('p1))
+            | `two('c) &(two('p1))
+          ]
+        )
+    | `one('b) &([< | `zero('c) &(one('p1)) | `one('c) &(one('p1))])
+    | `two('b) &([< | `zero('c) &(two('p1)) | `two('c) &(two('p1))])
+  ] as 'a
+constraint 'parameters = ('p1, 'p2, 'p3);
+
+exception Unexpected_matrix_dimension;
+
+exception Unexpected_ranks(int, int);
+
+module Phantom: {
+  type t(+'dim, +'rank);
+  type scalar(+'x) = t('a, z('b)) constraint 'x = ('a, 'b);
+  type vec2(+'x) = t(two('a), one('b)) constraint 'x = ('a, 'b);
+  type vec3(+'x) = t(three('a), one('b)) constraint 'x = ('a, 'b);
+  type vec4(+'x) = t(four('a), one('b)) constraint 'x = ('a, 'b);
+  type mat2(+'x) = t(two('a), two('b)) constraint 'x = ('a, 'b);
+  type mat3(+'x) = t(three('a), two('b)) constraint 'x = ('a, 'b);
+  type mat4(+'x) = t(four('a), two('b)) constraint 'x = ('a, 'b);
+  let scalar: float => scalar(_);
+  let vec2: (float, float) => vec2(_);
+  let vec3: (float, float, float) => vec3(_);
+  let vec4: (float, float, float, float) => vec4(_);
+  let mat2: (vec2(_), vec2(_)) => mat2(_);
+  let mat3: (vec3(_), vec3(_), vec3(_)) => mat3(_);
+  let mat4: (vec4(_), vec4(_), vec4(_), vec4(_)) => mat4(_);
+  let (+):
+    (t('a, sum('rank1, 'rank2, 'rank3, _)), t('a, 'rank2)) => t('a, 'rank3);
+  let ( * ):
+    (t('dim, product('rank1, 'rank2, 'rank3, _)), t('dim, 'rank2)) =>
+    t('dim, 'rank3);
+  let floor: scalar(_) => int;
+} = {
+  type t(+'dim, +'rank) = {
+    rank: int,
+    data: array(float)
+  };
+  type scalar(+'x) = t('a, z('b)) constraint 'x = ('a, 'b);
+  type vec2(+'x) = t(two('a), one('b)) constraint 'x = ('a, 'b);
+  type vec3(+'x) = t(three('a), one('b)) constraint 'x = ('a, 'b);
+  type vec4(+'x) = t(four('a), one('b)) constraint 'x = ('a, 'b);
+  type mat2(+'x) = t(two('a), two('b)) constraint 'x = ('a, 'b);
+  type mat3(+'x) = t(three('a), two('b)) constraint 'x = ('a, 'b);
+  type mat4(+'x) = t(four('a), two('b)) constraint 'x = ('a, 'b);
+  let scalar = x => {rank: 0, data: [|x|]};
+  let vec2 = (x, y) => {rank: 1, data: [|x, y|]};
+  let vec3 = (x, y, z) => {rank: 1, data: [|x, y, z|]};
+  let vec4 = (x, y, z, t) => {rank: 1, data: [|x, y, z, t|]};
+  let mat2 = ({data: a, _}, {data: b, _}) => {
+    rank: 2,
+    data: [|a[0], a[1], b[0], b[1]|]
+  };
+  let mat3 = ({data: a, _}, {data: b, _}, {data: c, _}) => {
+    rank: 2,
+    data: [|a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]|]
+  };
+  let mat4 = ({data: a, _}, {data: b, _}, {data: c, _}, {data: d, _}) => {
+    rank: 2,
+    data: [|
+      a[0],
+      a[1],
+      a[2],
+      a[3],
+      b[0],
+      b[1],
+      b[2],
+      b[3],
+      c[0],
+      c[1],
+      c[2],
+      c[3],
+      d[0],
+      d[1],
+      d[2],
+      d[3]
+    |]
+  };
+  let map = (f, x) => {...x, data: Array.map(f, x.data)};
+  let smap = (f, x, y) => map(f(x.data[0]), y);
+  let dim = a =>
+    switch (Array.length(a.data)) {
+    | 4 => 2
+    | 9 => 3
+    | 16 => 4
+    | _ => raise(Unexpected_matrix_dimension)
+    };
+  let ( * ) = (a, b) =>
+    switch (a.rank, b.rank) {
+    | (0, _) => smap(( *. ), a, b)
+    | (_, 0) => smap(( *. ), b, a)
+    | (1, 1) => {rank: 1, data: map2(( *. ), a.data, b.data)}
+    | (1, 2)
+    | (2, 1) =>
+      let dim = Array.length(a.data);
+      let (a, b, s1, s2) =
+        if (a.rank == 1) {
+          (a.data, b.data, dim, 1);
+        } else {
+          (b.data, a.data, 1, dim);
+        };
+      let sum = i => {
+        let s = ref(0.)
+        and ij = ref(i * s1);
+        for (j in 0 to dim) {
+          s := a[j] *. b[ij^] +. s^;
+          ij := s2 + ij^;
+        };
+        s^;
+      };
+      {rank: 1, data: Array.init(dim, sum)};
+    | (2, 2) =>
+      let dim = dim(a);
+      let a = a.data
+      and b = b.data;
+      let sum = (i, j) => {
+        let s = ref(0.);
+        for (k in 0 to dim) {
+          s := a[i * dim + k] *. b[k * dim + j] +. s^;
+        };
+        s^;
+      };
+      let data = Array.init(Array.length(a), n => sum(n / dim, n mod dim));
+      {rank: 2, data};
+    | (x, y) => raise([@implicit_arity] Unexpected_ranks(x, y))
+    };
+  let (+) = (a, b) =>
+    if (a.rank == 0) {
+      smap((+.), a, b);
+    } else if (b.rank == 0) {
+      smap((+.), b, a);
+    } else {
+      {...a, data: map2((+.), a.data, b.data)};
+    };
+  let floor = a => int_of_float(a.data[0]);
+};
+
+open! Phantom;
+
+let v = vec2(0., 1.);
+
+let m = mat2(v, v);
+
+let x = m * m;
+
+let z = v * m;
+
+let w = vec3(0., 0., 1.);
+
+let w' = w + scalar(0.);
+
+let s = scalar(0.);
+
+let w = v + vec2(1., 1.);
+
+let v' = s + v;
+
+let v'' = s * v;
+
+let v''' = v' * v'';
 
 /*
- type pbool = | True | False;
+ let error = vec3(0., 0., 1.) + vec2(1., 0.);
+
+ let error2 = vec3(0., 0., 1.) * vec2(1., 0.);
  */
-/*
- module type Or {
-   type b1;
-   type b2;
-   type b;
-
-   let get : (b1, b2) => b;
- };
-
- type ptrue;
- type pfalse;
-
- module type PBool {
-   type a = | True | False;
- };
-
- module Or = (B1 : PBool, B2 : PBool) => {
-   type a = switch (B1.a, B2.a) {
-     | (True, True) => ptrue;
-   };
- };
- */
-type vec2 = {
-  x: float,
-  y: float
+let tests = {
+  let s = scalar(0.);
+  let v2 = vec2(0.0, 1.0);
+  let v3 = vec3(0.0, 1.0, 2.0);
+  let v4 = vec4(0.0, 1.0, 2.0, 3.0);
+  let m2 = mat2(v2, v2);
+  let m3 = mat3(v3, v3, v3);
+  let m4 = mat4(v4, v4, v4, v4);
+  let s' = s + s;
+  let v2' = v2 + s;
+  let v2'' = s + v2;
+  let e2 = v2' == v2'';
+  let v3' = v3 + s;
+  let v3'' = s + v3;
+  let e3 = v3 == v3'';
+  let v4' = s + v4;
+  let v4'' = v4 + s;
+  let e4 = v4' == v4'';
+  let m2' = (m2 + m2 + s) * v2;
+  let m3' = (m3 + m3 + s) * v3;
+  let m4' = (m4 + m4 + s) * v4;
+  ();
 };
-
-type vec3 = {
-  x: float,
-  y: float,
-  z: float
-};
-
-type vec4 = {
-  x: float,
-  y: float,
-  z: float,
-  w: float
-};
-
-type p0 = z;
-
-type p1 = s(z);
-
-type p2 = s(s(z));
-
-type s0 = [ | `Scalar];
-
-type s1 = [ | `Scalar | `VecMat];
-
-type s0b('a) = [< s0] as 'a;
-
-type s1b('a) = [< s1] as 'a;
-
-type t(_, _, _, 'a) =
-  | Scalar(scalar): t('any_dim, 'any_left_rank, 'any_right_rank, s0b('a))
-  | Vec2(vec2): t(s(z), p1, p0, s1b('a))
-  | Vec3(vec3): t(s(s(z)), p1, p0, s1b('a))
-  | Vec4(vec4): t(s(s(s(z))), p1, p0, s1b('a))
-  | Mat2(vec2, vec2): t(s(z), p1, p1, s1b('a))
-  | Mat3(vec3, vec3, vec3): t(s(s(z)), p1, p1, s1b('a))
-  | Mat4(vec4, vec4, vec4, vec4): t(s(s(s(z))), p1, p1, s1b('a));
-
-/*
-  * If yes, what you can do is adding a type parameter for the rank and model
-  * the matrix as (rank 2, dim n) and then allow multiplication when dimension
-  * matches, but addition only when both dimension and rank match(edited)
- if you don't want to broaden vectors to diagonal matrix, or other form of
- broadening
-  * */
-let broadcastOp =
-    (
-      op,
-      type dim,
-      type left_rank,
-      type right_rank,
-      type isScalar,
-      x: t(dim, left_rank, right_rank, isScalar),
-      y: t(dim, left_rank, right_rank, isScalar)
-    )
-    : t(dim, left_rank, right_rank, isScalar) => {
-  let vec2plus = (a: vec2, b: vec2) => {x: op(a.x, b.x), y: op(a.y, b.y)};
-  let vec3plus = (a: vec3, b: vec3) => {
-    x: op(a.x, b.x),
-    y: op(a.y, b.y),
-    z: op(a.z, b.z)
-  };
-  let vec4plus = (a: vec4, b: vec4) => {
-    x: op(a.x, b.x),
-    y: op(a.y, b.y),
-    z: op(a.z, b.z),
-    w: op(a.w, b.w)
-  };
-  let vec2splus = ({x, y}: vec2, s) => {x: op(x, s), y: op(y, s)};
-  let vec3splus = ({x, y, z}: vec3, s) => {
-    x: op(x, s),
-    y: op(y, s),
-    z: op(z, s)
-  };
-  let vec4splus = ({x, y, z, w}: vec4, s) => {
-    x: op(x, s),
-    y: op(y, s),
-    z: op(z, s),
-    w: op(w, w)
-  };
-  switch (x, y) {
-  | (Scalar(a), Scalar(b)) => Scalar(op(a, b))
-  | (Scalar(s), Vec2(a)) => Vec2(vec2splus(a, s))
-  | (Scalar(s), Vec3(a)) => Vec3(vec3splus(a, s))
-  | (Scalar(s), Vec4(a)) => Vec4(vec4splus(a, s))
-  | (Scalar(s), Mat2(a, b)) => Mat2(vec2splus(a, s), vec2splus(b, s))
-  | (Scalar(s), Mat3(a, b, c)) =>
-    Mat3(vec3splus(a, s), vec3splus(b, s), vec3splus(c, s))
-  | (Scalar(s), Mat4(a, b, c, d)) =>
-    Mat4(vec4splus(a, s), vec4splus(b, s), vec4splus(c, s), vec4splus(d, s))
-  | (Mat2(a, b), Scalar(s)) => Mat2(vec2splus(a, s), vec2splus(b, s))
-  | (Mat3(a, b, c), Scalar(s)) =>
-    Mat3(vec3splus(a, s), vec3splus(b, s), vec3splus(c, s))
-  | (Mat4(a, b, c, d), Scalar(s)) =>
-    Mat4(vec4splus(a, s), vec4splus(b, s), vec4splus(c, s), vec4splus(d, s))
-  | (Vec2(a), Scalar(s)) => Vec2(vec2splus(a, s))
-  | (Vec3(a), Scalar(s)) => Vec3(vec3splus(a, s))
-  | (Vec4(a), Scalar(s)) => Vec4(vec4splus(a, s))
-  | (Vec2(a), Vec2(b)) => Vec2(vec2plus(a, b))
-  | (Vec3(a), Vec3(b)) => Vec3(vec3plus(a, b))
-  | (Vec4(a), Vec4(b)) => Vec4(vec4plus(a, b))
-  | (Mat2(a, b), Mat2(c, d)) => Mat2(vec2plus(a, c), vec2plus(b, d))
-  | (Mat3(a, b, c), Mat3(d, e, f)) =>
-    Mat3(vec3plus(a, d), vec3plus(b, e), vec3plus(c, f))
-  | (Mat4(a, b, c, d), Mat4(e, f, g, h)) =>
-    Mat4(vec4plus(a, e), vec4plus(b, f), vec4plus(c, g), vec4plus(d, h))
-  };
-};
-
-let (+) = broadcastOp((+.));
-
-let (-) = broadcastOp((-.));
-
-let ( * ) = broadcastOp(( *. ));
-
-let (/) = broadcastOp((/.));
-
-/*
- type cs('a, 'b) = 'a constraint 'a = s('b);
- */
-let ( ** ) =
-    (
-      type dim,
-      type left_rank,
-      type inner_rank,
-      type right_rank,
-      x: t(dim, left_rank, inner_rank, s1),
-      y: t(dim, inner_rank, right_rank, s1)
-    )
-    : t(dim, left_rank, right_rank, s1) =>
-  switch (x, y) {
-  | (Mat2(_, _), Vec2(e)) => Vec2(e)
-  | (Mat2(_, _), Mat2(a, b)) => Mat2(a, b)
-  | (Mat3(_, _, _), Vec3(e)) => Vec3(e)
-  | (Mat3(_, _, _), Mat3(a, b, c)) => Mat3(a, b, c)
-  | (Mat4(_, _, _, _), Vec4(e)) => Vec4(e)
-  | (Mat4(_, _, _, _), Mat4(a, b, c, d)) => Mat4(a, b, c, d)
-  /* (1, 0) * (0, r) => (1, r) but there is no type with (0, r) except the forbidden scalar */
-  | (Vec2(_), _) => raise(TypeError("cannot happen"))
-  | (Vec3(_), _) => raise(TypeError("cannot happen"))
-  | (Vec4(_), _) => raise(TypeError("cannot happen"))
-  /*
-   | _ => raise(TypeError("type mismatch"))
-   | (Scalar(a), Scalar(b)) => Scalar(a *. b)
-   | (Scalar(s), Vec2(a)) => Vec2(a)
-   | (Scalar(s), Vec3(a)) => Vec3(vec3splus(a, s))
-   | (Scalar(s), Vec4(a)) => Vec4(vec4splus(a, s))
-   | (Scalar(s), Mat2(a, b)) => Mat2(vec2splus(a, s), vec2splus(b, s))
-   | (Scalar(s), Mat3(a, b, c)) =>
-     Mat3(vec3splus(a, s), vec3splus(b, s), vec3splus(c, s))
-   | (Scalar(s), Mat4(a, b, c, d)) =>
-     Mat4(vec4splus(a, s), vec4splus(b, s), vec4splus(c, s), vec4splus(d, s))
-   | (Mat2(a, b), Scalar(s)) => Mat2(vec2splus(a, s), vec2splus(b, s))
-   | (Mat3(a, b, c), Scalar(s)) =>
-     Mat3(vec3splus(a, s), vec3splus(b, s), vec3splus(c, s))
-   | (Mat4(a, b, c, d), Scalar(s)) =>
-     Mat4(vec4splus(a, s), vec4splus(b, s), vec4splus(c, s), vec4splus(d, s))
-   | (Vec2(a), Scalar(s)) => Vec2(vec2splus(a, s))
-   | (Vec3(a), Scalar(s)) => Vec3(vec3splus(a, s))
-   | (Vec4(a), Scalar(s)) => Vec4(vec4splus(a, s))
-   | (Vec2(a), Vec2(b)) => Vec2(vec2plus(a, b))
-   | (Vec3(a), Vec3(b)) => Vec3(vec3plus(a, b))
-   | (Vec4(a), Vec4(b)) => Vec4(vec4plus(a, b))
-   | (Mat2(a, b), Mat2(c, d)) => Mat2(vec2plus(a, c), vec2plus(b, d))
-   | (Mat3(a, b, c), Mat3(d, e, f)) =>
-     Mat3(vec3plus(a, d), vec3plus(b, e), vec3plus(c, f))
-   | (Mat4(a, b, c, d), Mat4(e, f, g, h)) =>
-     Mat4(vec4plus(a, e), vec4plus(b, f), vec4plus(c, g), vec4plus(d, h))
-     */
-  };
-
-let x = Scalar(1.) + Scalar(2.);
-
-let o = Vec2({x: 1.0, y: 1.0}) + x;
-
-let y = Vec2({x: 1.0, y: 1.0}) + Scalar(2.);
-
-let yy = Vec2({x: 1.0, y: 1.0}) * Scalar(2.);
-
-let z = Scalar(2.0) + Vec2({x: 1.0, y: 1.0});
-
-/*
-let shouldNotFail = Vec3({x: 1.0, y: 1.0, z: 1.0}) + Scalar(2.);
-
-let typeError1 = Scalar(1.) ** Scalar(2.);
-
-let typeError2 = Vec2({x: 1.0, y: 1.0}) ** Vec2({x: 1.0, y: 1.0});
-*/
