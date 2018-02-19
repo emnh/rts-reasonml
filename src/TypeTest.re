@@ -1,4 +1,10 @@
 /*
+ * Resources:
+ *
+ * Tagless final style:
+ * http://okmij.org/ftp/tagless-final/index.html
+ *
+ * Strange Haskell type adventure:
  * https://aphyr.com/posts/342-typing-the-technical-interview
  */
 exception TypeError(string);
