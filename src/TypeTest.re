@@ -224,8 +224,10 @@ let yy = Vec2({x: 1.0, y: 1.0}) * Scalar(2.);
 
 let z = Scalar(2.0) + Vec2({x: 1.0, y: 1.0});
 
-let w = Vec3({x: 1.0, y: 1.0, z: 1.0}) + Scalar(2.);
+/*
+let shouldNotFail = Vec3({x: 1.0, y: 1.0, z: 1.0}) + Scalar(2.);
 
 let typeError1 = Scalar(1.) ** Scalar(2.);
 
 let typeError2 = Vec2({x: 1.0, y: 1.0}) ** Vec2({x: 1.0, y: 1.0});
+*/

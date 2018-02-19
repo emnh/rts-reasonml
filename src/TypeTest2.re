@@ -33,15 +33,15 @@ type any('a, 'b, 'c) =
 type product('a, 'b, 'c, 'parameters) =
   [<
     | `zero
-        ('b /* scalar broadcasting */)
+        ('b)
         &(
           [<
             | `zero('c) &(z('p1))
             | `one('c) &(one('p1))
             | `two('c) &(two('p1))
           ]
-        ) /* scalar broadcasting */ /* scalar broadcasting */
-    | `one /* scalar broadcasting */
+        )
+    | `one
         ('b)
         &(
           [<
@@ -49,8 +49,8 @@ type product('a, 'b, 'c, 'parameters) =
             | `one('c) &(one('p1))
             | `two('c) &(one('p1))
           ]
-        ) /* scalar broadcasting */
-    | `two /* scalar broadcasting */ /* scalar broadcasting */
+        )
+    | `two
         ('b)
         &(
           [<
@@ -67,21 +67,16 @@ constraint 'parameters = ('p1, 'p2, 'p3);
 type sum('a, 'b, 'c, 'parameters) =
   [<
     | `zero
-        ('b /* scalar broadcasting */)
+        ('b)
         &(
           [<
             | `zero('c) &(z('p1))
             | `one('c) &(one('p1))
             | `two('c) &(two('p1))
           ]
-        ) /* scalar broadcasting */ /* scalar broadcasting */
-    | `one /* scalar broadcasting */
-        ('b)
-        &(
-          [< | `zero('c) &(one('p1)) | `one('c) &(one('p1))]
-        ) /* scalar broadcasting */
-    | `two /* scalar broadcasting */ /* scalar broadcasting */
-        ('b) &([< | `zero('c) &(two('p1)) | `two('c) &(two('p1))])
+        )
+    | `one('b) &([< | `zero('c) &(one('p1)) | `one('c) &(one('p1))])
+    | `two('b) &([< | `zero('c) &(two('p1)) | `two('c) &(two('p1))])
   ] as 'a
 constraint 'parameters = ('p1, 'p2, 'p3);
 
@@ -240,7 +235,30 @@ let v'' = s * v;
 let v''' = v' * v'';
 
 /*
-let error = vec3(0., 0., 1.) + vec2(1., 0.);
+ let error = vec3(0., 0., 1.) + vec2(1., 0.);
 
-let error2 = vec3(0., 0., 1.) * vec2(1., 0.);
-*/
+ let error2 = vec3(0., 0., 1.) * vec2(1., 0.);
+ */
+let tests = {
+  let s = scalar(0.);
+  let v2 = vec2(0.0, 1.0);
+  let v3 = vec3(0.0, 1.0, 2.0);
+  let v4 = vec4(0.0, 1.0, 2.0, 3.0);
+  let m2 = mat2(v2, v2);
+  let m3 = mat3(v3, v3, v3);
+  let m4 = mat4(v4, v4, v4, v4);
+  let s' = s + s;
+  let v2' = v2 + s;
+  let v2'' = s + v2;
+  let e2 = v2' == v2'';
+  let v3' = v3 + s;
+  let v3'' = s + v3;
+  let e3 = v3 == v3'';
+  let v4' = s + v4;
+  let v4'' = v4 + s;
+  let e4 = v4' == v4'';
+  let m2' = (m2 + m2 + s) * v2;
+  let m3' = (m3 + m3 + s) * v3;
+  let m4' = (m4 + m4 + s) * v4;
+  ();
+};
