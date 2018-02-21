@@ -152,6 +152,7 @@ let broadcastOp =
   };
 };
 
+/*
 let (+) = broadcastOp((+.));
 
 let (-) = broadcastOp((-.));
@@ -159,6 +160,7 @@ let (-) = broadcastOp((-.));
 let ( * ) = broadcastOp(( *. ));
 
 let (/) = broadcastOp((/.));
+*/
 
 /*
  type cs('a, 'b) = 'a constraint 'a = s('b);
@@ -214,6 +216,7 @@ let ( ** ) =
      */
   };
 
+/*
 let x = Scalar(1.) + Scalar(2.);
 
 let o = Vec2({x: 1.0, y: 1.0}) + x;
@@ -223,6 +226,7 @@ let y = Vec2({x: 1.0, y: 1.0}) + Scalar(2.);
 let yy = Vec2({x: 1.0, y: 1.0}) * Scalar(2.);
 
 let z = Scalar(2.0) + Vec2({x: 1.0, y: 1.0});
+*/
 
 /*
 let shouldNotFail = Vec3({x: 1.0, y: 1.0, z: 1.0}) + Scalar(2.);

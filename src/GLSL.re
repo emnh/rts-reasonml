@@ -77,12 +77,6 @@ and lT = leftExprT
  * as right expressions interchangeably */
 and funExprT = (glslTypeT, string, list(rT), gRootT)
 /* rT: Translated from https://github.com/kovasb/gamma/blob/master/src/gamma/ast.cljs */
-/*
- and generalMath1T('a) =
-   | GeneralMathBuiltinFun2GenTypeGenType(string, grT('a), grT('a))
- and generalMath2T('a) =
-   | GeneralMathBuiltinFun2GenTypeFloat(string, grT('a), grT([ | `Float]))
-   */
 and rT =
   /* | TypeError */
   | RVar(varExprT)
@@ -114,11 +108,6 @@ and rT =
   | BuiltinFun2(string, rT, rT)
   | BuiltinFun3(string, rT, rT, rT)
   | BuiltinFun4(string, rT, rT, rT, rT)
-  /*
-   | GeneralMath1(generalMath1T(glslVariantTypeT))
-   | GeneralMath2(generalMath2T(glslVariantTypeT))
-   */
-  /* | GenericMathFun2(string, rT([| `Vec2 ]), rT) */
   /*| Texture(rT([ | `Sampler2D | `Vec2]), rT([ | `Sampler2D | `Vec2]))*/
   | CustomFun(funExprT, list(rT))
 and grT('a) = rT

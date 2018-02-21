@@ -9,6 +9,9 @@
  *
  * The & in variant types:
  * https://www.math.nagoya-u.ac.jp/~garrigue/papers/variant-reuse.pdf
+ *
+ * Compositions of 4 (for vec4 constructor):
+ * https://www.wolframalpha.com/input/?i=compositions+of+4
  * */
 type scalar = float;
 
@@ -80,6 +83,24 @@ type sum('a, 'b, 'c, 'parameters) =
   ] as 'a
 constraint 'parameters = ('p1, 'p2, 'p3);
 
+/** (x,y,z,_ ) compose computes the dim of vec2(x, y) and
+    put the result inside z */
+type compose2('a, 'b, 'c, 'parameters) =
+  [<
+    | `zero
+        ('b)
+        &(
+          [<
+            | `zero('c) &(two('p1))
+            | `one('c) &(one('p1))
+            | `two('c) &(two('p1))
+          ]
+        )
+    | `one('b) &([< | `zero('c) &(one('p1)) | `one('c) &(one('p1))])
+    | `two('b) &([< | `zero('c) &(two('p1)) | `two('c) &(two('p1))])
+  ] as 'a
+constraint 'parameters = ('p1, 'p2, 'p3);
+
 exception Unexpected_matrix_dimension;
 
 exception Unexpected_ranks(int, int);
@@ -106,6 +127,15 @@ module Phantom: {
     (t('dim, product('rank1, 'rank2, 'rank3, _)), t('dim, 'rank2)) =>
     t('dim, 'rank3);
   let floor: scalar(_) => int;
+  /*
+  type scalarOrVectorRank('a) = [< | `zero('a) | `one('a)];
+  let vec2c:
+    (
+      t(compose2('dim1, 'dim2, two('a), _), scalarOrVectorRank('b)),
+      t('dim2, scalarOrVectorRank('c))
+    ) =>
+    t('dim3, scalarOrVectorRank('d));
+    */
 } = {
   type t(+'dim, +'rank) = {
     rank: int,
