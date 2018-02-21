@@ -4,7 +4,8 @@
   "name": "rts",
   "version": "0.1.0",
   "sources": [
-    "src"
+    "src",
+    "phantom_algebra/src"
   ],
   "package-specs": {
     "module": "commonjs",

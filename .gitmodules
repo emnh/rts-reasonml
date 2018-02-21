@@ -1,0 +1,3 @@
+[submodule "phantom_algebra"]
+	path = phantom_algebra
+	url = https://github.com/emnh/phantom_algebra
