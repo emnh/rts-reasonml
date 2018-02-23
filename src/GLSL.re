@@ -143,7 +143,53 @@ let getType = x =>
   | _ => raise(GLSLTypeError("type mismatch"))
   };
 
-let genericexprlist = (l, e) =>
+module PhantomAlgebra = Core;
+
+type t('a, 'b) = PhantomAlgebra.t('a, 'b);
+
+type genType2T('a, 'b, 'c) = [< | `zero('b) &('a) | `one('b) &('a)] as 'c
+constraint 'a = 'b;
+
+let protoScalar = PhantomAlgebra.scalar(1.0);
+
+let protoVec2 = PhantomAlgebra.vec2(1.0, 1.0);
+
+let protoVec3 = PhantomAlgebra.vec3(1.0, 1.0, 1.0);
+
+let protoVec4 = PhantomAlgebra.vec4(1.0, 1.0, 1.0, 1.0);
+
+let genericexprlist:
+  (list(trT(t('dim, genType2T('rank1, 'rank1, 'rank3)))), 'a) =>
+  trT(t('dim, 'rank3)) =
+  (_, e) => Typed(protoScalar, e);
+
+let genericexpr1:
+  (trT(t('dim, genType2T('rank1, 'rank1, 'rank3))), 'a) => trT(t('dim, 'rank3)) =
+  (l, e) => Typed(getType(l), unused(e));
+
+let genericexpr1float:
+  (trT(t('dim, genType2T('rank1, 'rank1, 'rank3))), 'a) => trT(t('dim, 'rank3)) =
+  (_, e) => Typed(protoScalar, unused(e));
+
+let genericexpr2:
+  (
+    trT(t('dim, genType2T('rank1, 'rank2, 'rank3))),
+    trT(t('dim, 'rank2)),
+    'a
+  ) =>
+  trT(t('dim, 'rank3)) =
+  (l, _, e) => Typed(getType(l), e);
+
+let genericexpr2float:
+  (
+    trT(t('dim, genType2T('rank1, 'rank2, 'rank3))),
+    trT(t('dim, 'rank2)),
+    'a
+  ) =>
+  trT(t('dim, 'rank3)) =
+  (_, _, e) => Typed(PhantomAlgebra.scalar(0.0), e);
+
+let oldgenericexprlist = (l, e) =>
   switch (List.hd(l)) {
   | Typed(`Float, _) => Typed(`Float, unused(e))
   | Typed(`Vec2, _) => Typed(`Vec2, unused(e))
@@ -152,7 +198,7 @@ let genericexprlist = (l, e) =>
   | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
-let genericexpr1 = (l, e) =>
+let oldgenericexpr1 = (l, e) =>
   switch l {
   | Typed(`Float, _) => Typed(`Float, unused(e))
   | Typed(`Vec2, _) => Typed(`Vec2, unused(e))
@@ -161,7 +207,7 @@ let genericexpr1 = (l, e) =>
   | Untyped(_) => raise(GLSLTypeError("type mismatch"))
   };
 
-let genericexpr1float = (l, e) =>
+let oldgenericexpr1float = (l, e) =>
   switch l {
   | Typed(`Float, _) => Typed(`Float, unused(e))
   | Typed(`Vec2, _) => Typed(`Float, unused(e))
@@ -204,7 +250,7 @@ type genTypeUBT('a) = [< | `Float | `Vec2 | `Vec3 | `Vec4] as 'a;
 type genTypeT('a) = trT('a) constraint 'a = genTypeUBT('a);
 
 /* TODO: Only accept `Float to `Vec4 */
-let genericexpr2: (genTypeT('a), genTypeT('a), 'b) => genTypeT('a) =
+let oldgenericexpr2: (genTypeT('a), genTypeT('a), 'b) => genTypeT('a) =
   (l, r, e) =>
     switch (l, r) {
     | (Typed(_ as a, _), Typed(_, _)) => Typed(a, unused(e))
@@ -212,7 +258,7 @@ let genericexpr2: (genTypeT('a), genTypeT('a), 'b) => genTypeT('a) =
     };
 
 /* TODO: Only accept `Float to `Vec4 */
-let genericexpr2float: ('a, 'a, 'b) => 'c =
+let oldgenericexpr2float: ('a, 'a, 'b) => 'c =
   (l, r, e) =>
     switch (l, r) {
     | (Typed(_, _), Typed(_, _)) => Typed(`Float, unused(e))
@@ -938,8 +984,6 @@ let addVar = var => {
   ();
 };
 
-let gm2 = genericmath2;
-
 let g1 = genericexpr1;
 
 let g2 = genericexpr2;
@@ -963,19 +1007,23 @@ let (---) = l => g1(l, PreDec(u(l)));
 
 let (!) = l => g1(l, Not(u(l)));
 
-let ( * ) = (l, r) => gm2(l, r, Mul(u(l), u(r)));
+let ( * ) = (l, r) =>
+  Typed(PhantomAlgebra.( * )(getType(l), getType(r)), Mul(u(l), u(r)));
 
 let ( *= ) = (l, r) => l =@ l * r;
 
-let (/) = (l, r) => gm2(l, r, Div(u(l), u(r)));
+let (/) = (l, r) =>
+  Typed(PhantomAlgebra.(/)(getType(l), getType(r)), Div(u(l), u(r)));
 
 let (/=) = (l, r) => l =@ l / r;
 
-let (+) = (l, r) => gm2(l, r, Plus(u(l), u(r)));
+let (+) = (l, r) =>
+  Typed(PhantomAlgebra.(+)(getType(l), getType(r)), Plus(u(l), u(r)));
 
 let (+=) = (l, r) => l =@ l + r;
 
-let (-) = (l, r) => gm2(l, r, Minus(u(l), u(r)));
+let (-) = (l, r) =>
+  Typed(PhantomAlgebra.(-)(getType(l), getType(r)), Minus(u(l), u(r)));
 
 let (-=) = (l, r) => l =@ l - r;
 
@@ -1042,67 +1090,74 @@ let texture = (l, r) =>
       Texture(l, r)
     )
   };*/
-let refract = (l, r1, r2) => {
-  let e = BuiltinFun3("refract", u(l), u(r1), u(r2));
-  switch (l, r1, r2) {
-  | (Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)) => Typed(`Float, e)
-  | (Typed(`Vec2, _), Typed(`Vec2, _), Typed(`Float, _)) => Typed(`Vec2, e)
-  | (Typed(`Vec3, _), Typed(`Vec3, _), Typed(`Float, _)) => Typed(`Vec3, e)
-  | (Typed(`Vec4, _), Typed(`Vec4, _), Typed(`Float, _)) => Typed(`Vec4, e)
-  | _ => raise(GLSLTypeError("type mismatch"))
+let refract:
+  (
+    trT(t('dim, genType2T('rank1, 'rank2, 'rank4))),
+    trT(t('dim, genType2T('rank2, 'rank3, 'rank4))),
+    trT(t('dim, genType2T('rank3, 'rank1, 'rank4)))
+  ) =>
+  trT(t('dim, 'rank4)) =
+  (l, r1, r2) => {
+    let e = BuiltinFun3("refract", u(l), u(r1), u(r2));
+    Typed(getType(l), e);
   };
-};
 
 /*let vec2: cfun1 =*/
-let vec2 = l => {
-  let e = Typed(`Vec2, BuiltinFun("vec2", List.map(u, l)));
-  switch l {
-  | [Typed(`Float, _)] => e
-  | [Typed(`Float, _), Typed(`Float, _)] => e
-  | [Typed(`Vec2, _)] => e
-  | _ => raise(GLSLTypeError("type mismatch"))
-  };
-};
+/*
+ let vec2 = l => {
+   let e = BuiltinFun("vec2", List.map(u, l));
+   Typed(protoVec2, e);
+ };
 
-let vec3: list(trT([< | `Float | `Vec2 | `Vec3])) => 'a =
-  l => {
-    let ret = Typed(`Vec3, BuiltinFun("vec3", List.map(u, l)));
-    switch l {
-    | [Typed(`Float, _)] => ret
-    | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
-    | [Typed(`Vec2, _), Typed(`Float, _)] => ret
-    | [Typed(`Vec3, _)] => ret
-    | _ => raise(GLSLTypeError("type mismatch"))
-    };
-  };
+ let vec3: list(trT([< | `Float | `Vec2 | `Vec3])) => 'a =
+   l => {
+     let ret = Typed(`Vec3, BuiltinFun("vec3", List.map(u, l)));
+     switch l {
+     | [Typed(`Float, _)] => ret
+     | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
+     | [Typed(`Vec2, _), Typed(`Float, _)] => ret
+     | [Typed(`Vec3, _)] => ret
+     | _ => raise(GLSLTypeError("type mismatch"))
+     };
+   };
+   */
+let vec21f = (x: trT(PhantomAlgebra.scalar('a))) =>
+  Typed(protoVec2, BuiltinFun("vec2", List.map(u, [x])));
 
-let vec22f = (x: trT([ | `Float]), y: trT([ | `Float])) =>
-  Typed(`Vec2, BuiltinFun("vec2", List.map(u, [x, y])));
+let vec22f =
+    (x: trT(PhantomAlgebra.scalar('a)), y: trT(PhantomAlgebra.scalar('a))) =>
+  Typed(protoVec2, BuiltinFun("vec2", List.map(u, [x, y])));
 
-let vec33f = (x: trT([ | `Float]), y: trT([ | `Float]), z: trT([ | `Float])) =>
-  Typed(`Vec3, BuiltinFun("vec3", List.map(u, [x, y, z])));
+let vec33f =
+    (
+      x: trT(PhantomAlgebra.scalar('a)),
+      y: trT(PhantomAlgebra.scalar('a)),
+      z: trT(PhantomAlgebra.scalar('a))
+    ) =>
+  Typed(protoVec3, BuiltinFun("vec3", List.map(u, [x, y, z])));
 
 let vec44f =
     (
-      x: trT([ | `Float]),
-      y: trT([ | `Float]),
-      z: trT([ | `Float]),
-      w: trT([ | `Float])
+      x: trT(PhantomAlgebra.scalar('a)),
+      y: trT(PhantomAlgebra.scalar('a)),
+      z: trT(PhantomAlgebra.scalar('a)),
+      w: trT(PhantomAlgebra.scalar('a))
     ) =>
-  Typed(`Vec3, BuiltinFun("vec3", List.map(u, [x, y, z, w])));
+  Typed(protoVec4, BuiltinFun("vec3", List.map(u, [x, y, z, w])));
 
-let vec4 = l => {
-  let ret = Typed(`Vec4, BuiltinFun("vec4", List.map(u, l)));
-  switch l {
-  | [Typed(`Float, _)] => ret
-  | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
-  | [Typed(`Vec2, _), Typed(`Vec2, _)] => ret
-  | [Typed(`Vec3, _), Typed(`Float, _)] => ret
-  | [Typed(`Vec4, _)] => ret
-  | _ => raise(GLSLTypeError("type mismatch"))
-  };
-};
-
+/*
+ let vec4 = l => {
+   let ret = Typed(`Vec4, BuiltinFun("vec4", List.map(u, l)));
+   switch l {
+   | [Typed(`Float, _)] => ret
+   | [Typed(`Float, _), Typed(`Float, _), Typed(`Float, _), Typed(`Float, _)] => ret
+   | [Typed(`Vec2, _), Typed(`Vec2, _)] => ret
+   | [Typed(`Vec3, _), Typed(`Float, _)] => ret
+   | [Typed(`Vec4, _)] => ret
+   | _ => raise(GLSLTypeError("type mismatch"))
+   };
+ };
+ */
 /*
  let mat2 = l => BuiltinFun("mat2", l);
 
@@ -1115,7 +1170,8 @@ let ifstmt = (l, b) => add(IfStatement(l, b));
 let ifelsestmt = (l, b1, b2) => add(IfElseStatement(l, b1, b2));
 
 /* let f = x => Typed(`Float, ImmediateFloat(x)); */
-let f: float => trT([ | `Float]) = x => Typed(`Float, ImmediateFloat(x));
+/* let f: float => trT([ | `Float]) = x => Typed(`Float, ImmediateFloat(x)); */
+let f = x => Typed(protoScalar, ImmediateFloat(x));
 
 /* let f = x => Typed(`Float, ImmediateFloat(x)); */
 let i = x => Typed(`Int, ImmediateInt(x));
@@ -1167,8 +1223,8 @@ let b = sin(i2);
 
 let c = vec2var("c");
 
-let tmp = vec2([b]);
+let tmp = vec21f(b);
 
-c =@ vec2([b]);
+c =@ vec21f(b);
 
 c =@ tmp;
