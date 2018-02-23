@@ -1,5 +1,5 @@
 /* One specific shader */
-open GLSL;
+open! GLSL;
 
 let a_uv = vec2attr("a_uv");
 
@@ -26,27 +26,32 @@ let fmtColor = color => {
 };
 
 let getUniforms = (fg, bg) => [
-  (a_modelViewMatrix, arg => arg.modelViewMatrix),
-  (a_projectionMatrix, arg => arg.projectionMatrix),
-  (u_color1, (_) => fmtColor(fg)),
-  (u_color2, (_) => fmtColor(bg)),
-  (u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|]),
-  (u_time, arg => [|arg.time|])
+  (untyped(a_modelViewMatrix), arg => arg.modelViewMatrix),
+  (untyped(a_projectionMatrix), arg => arg.projectionMatrix),
+  (untyped(u_color1), (_) => fmtColor(fg)),
+  (untyped(u_color2), (_) => fmtColor(bg)),
+  (
+    untyped(u_resolution),
+    arg => [|float_of_int(arg.width), float_of_int(arg.height)|]
+  ),
+  (untyped(u_time), arg => [|arg.time|])
 ];
 
 let mainVertex =
   body(
     {
-      open! VertexShader;
       /* gl_Position is a special variable a vertex shader is responsible for setting */
       v_uv =@ a_uv;
       let position = vec3var("position");
-      position =@ a_position **. XYZ;
-      position **. Z =@ ShaderAshima.snoise([a_position **. XY + f(2.0) * u_time]) * f(0.2);
+      position =@ a_position **. xyz';
+      position
+      **. z'
+      =@ ShaderAshima.snoise([a_position **. xy' + f(2.0) * u_time])
+      * f(0.2);
       gl_Position
       =@ a_projectionMatrix
       * a_modelViewMatrix
-      * vec4([position **. XYZ, f(1.0)]);
+      * vec4(position **. xyz' |+| f(1.0));
       finish();
     }
   );
@@ -54,7 +59,6 @@ let mainVertex =
 let mainFragment =
   body(
     {
-      open! FragmentShader;
       let position = vec2var("position");
       /*
        position =@ gl_FragCoord **. XY / (resolution **. XY);
@@ -66,33 +70,33 @@ let mainFragment =
       color =@ f(0.0);
       color
       += (
-        sin(position **. X * cos(u_time / f(15.0)) * f(80.0))
-        + cos(position **. Y * cos(u_time / f(15.0)) * f(10.0))
+        sin(position **. x' * cos(u_time / f(15.0)) * f(80.0))
+        + cos(position **. y' * cos(u_time / f(15.0)) * f(10.0))
       );
       color
       += (
-        sin(position **. Y * sin(u_time / f(10.0)) * f(40.0))
-        + cos(position **. X * sin(u_time / f(25.0)) * f(40.0))
+        sin(position **. y' * sin(u_time / f(10.0)) * f(40.0))
+        + cos(position **. x' * sin(u_time / f(25.0)) * f(40.0))
       );
       color
       += (
-        sin(position **. X * sin(u_time / f(5.0)) * f(10.0))
-        + sin(position **. Y * sin(u_time / f(35.0)) * f(80.0))
+        sin(position **. x' * sin(u_time / f(5.0)) * f(10.0))
+        + sin(position **. y' * sin(u_time / f(35.0)) * f(80.0))
       );
       color *= (sin(u_time / f(10.0)) * f(0.5));
       outColor
-      =@ vec4([
-           vec3([
+      =@ vec4(
+           vec33f(
              color,
              color * f(0.5),
              sin(color + u_time / f(3.0)) * f(0.75)
-           ]),
-           f(1.0)
-         ]);
+           )
+           |+| f(1.0)
+         );
       outColor += (u_color1 + u_color2);
-      outColor **. R += ShaderAshima.snoise([v_uv]);
-      outColor **. G += ShaderAshima.snoise([v_uv + f(123.234)]);
-      outColor **. B += ShaderAshima.snoise([v_uv - f(323.234)]);
+      outColor **. r' += ShaderAshima.snoise([v_uv]);
+      outColor **. g' += ShaderAshima.snoise([v_uv + f(123.234)]);
+      outColor **. b' += ShaderAshima.snoise([v_uv - f(323.234)]);
       finish();
     }
   );

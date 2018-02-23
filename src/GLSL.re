@@ -103,6 +103,7 @@ and rT =
   | Or(rT, rT)
   | Xor(rT, rT)
   | Ternary(rT, rT, rT)
+  | Concat(rT, rT)
   | BuiltinFun(string, list(rT))
   | BuiltinFun1(string, rT)
   | BuiltinFun2(string, rT, rT)
@@ -136,6 +137,8 @@ let u = te =>
   | Typed(_, e) => e
   | Untyped(e) => e
   };
+
+let untyped = u;
 
 let getType = x =>
   switch x {
@@ -357,6 +360,7 @@ let fmtTransformer = {
           t.rExpr(t, r2),
           ")"
         ]
+      | Concat(l, r) => [t.rExpr(t, l), ", ", t.rExpr(t, r)]
       | CustomFun((_, name, _, _), l) =>
         let args = List.map(x => t.rExpr(t, x), l);
         let args =
@@ -869,9 +873,9 @@ let outColor = vec4output("outColor");
 
 let body = x => x;
 
-let arStack : ref(list(list(statementT))) = ref([]);
+let arStack: ref(list(list(statementT))) = ref([]);
 
-let ar : ref(list(statementT)) = ref([]);
+let ar: ref(list(statementT)) = ref([]);
 
 let vars = ref(SS.empty);
 
@@ -1065,6 +1069,12 @@ let vec33f =
     ) =>
   Typed(protoVec3, BuiltinFun("vec3", List.map(u, [x, y, z])));
 
+let (|+|) = (x, y) =>
+  Typed(PhantomAlgebra.(|+|)(getType(x), getType(y)), Concat(u(x), u(y)));
+
+let vec4 = (x: trT(PhantomAlgebra.vec4('a))) =>
+  Typed(protoVec4, BuiltinFun("vec4", List.map(u, [x])));
+
 let vec44f =
     (
       x: trT(PhantomAlgebra.scalar('a)),
@@ -1072,7 +1082,7 @@ let vec44f =
       z: trT(PhantomAlgebra.scalar('a)),
       w: trT(PhantomAlgebra.scalar('a))
     ) =>
-  Typed(protoVec4, BuiltinFun("vec3", List.map(u, [x, y, z, w])));
+  Typed(protoVec4, BuiltinFun("vec4", List.map(u, [x, y, z, w])));
 
 /*
  let vec4 = l => {
