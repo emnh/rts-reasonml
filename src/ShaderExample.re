@@ -7,9 +7,9 @@ let v_uv = vec2varying("v_uv");
 
 let a_position = vec4attr("a_position");
 
-let a_modelViewMatrix = mat4uniform("modelViewMatrix");
+let u_modelViewMatrix = mat4uniform("modelViewMatrix");
 
-let a_projectionMatrix = mat4uniform("projectionMatrix");
+let u_projectionMatrix = mat4uniform("projectionMatrix");
 
 let u_color1 = vec4uniform("u_color1");
 
@@ -26,8 +26,8 @@ let fmtColor = color => {
 };
 
 let getUniforms = (fg, bg) => [
-  (untyped(a_modelViewMatrix), arg => arg.modelViewMatrix),
-  (untyped(a_projectionMatrix), arg => arg.projectionMatrix),
+  (untyped(u_modelViewMatrix), arg => arg.modelViewMatrix),
+  (untyped(u_projectionMatrix), arg => arg.projectionMatrix),
   (untyped(u_color1), (_) => fmtColor(fg)),
   (untyped(u_color2), (_) => fmtColor(bg)),
   (
@@ -49,8 +49,8 @@ let mainVertex =
       =@ ShaderAshima.snoise([a_position **. xy' + f(2.0) * u_time])
       * f(0.2);
       gl_Position
-      =@ a_projectionMatrix
-      * a_modelViewMatrix
+      =@ u_projectionMatrix
+      * u_modelViewMatrix
       * vec4(position **. xyz' |+| f(1.0));
       finish();
     }

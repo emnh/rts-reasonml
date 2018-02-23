@@ -8,6 +8,8 @@
  */
 open! GLSL;
 
+/*
+
 let light = vec3uniform("light");
 
 let sphereCenter = vec3uniform("sphereCenter");
@@ -293,6 +295,15 @@ let helperFunctions = {
     );
   ();
 };
+
+END OF COMMENT
+*/
+
+
+
+
+
+
 /*
    }\
  ';

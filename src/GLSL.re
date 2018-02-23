@@ -431,7 +431,7 @@ let fmtTransformer = {
               indent,
               switch stmt {
               | Assignment(left, right) =>
-                t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)])
+                t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)]);
               | DeclAssignment(vart, left, right) =>
                 t.combine(
                   t,
@@ -873,9 +873,9 @@ let outColor = vec4output("outColor");
 
 let body = x => x;
 
-let arStack: ref(list(list(statementT))) = ref([]);
+let arStack = ref([]);
 
-let ar: ref(list(statementT)) = ref([]);
+let ar = ref([]);
 
 let vars = ref(SS.empty);
 
