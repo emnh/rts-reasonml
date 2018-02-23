@@ -10,23 +10,54 @@
  */
 open! GLSL;
 
-let (mod289_2, mod289_3) = {
-  let x2 = vec2arg("x");
-  let x3 = vec3arg("x");
-  let mod289_body = x =>
+/*
+ let (mod289_2, mod289_3) = {
+   let x2 = vec2arg("x");
+   let x3 = vec3arg("x");
+   let mod289_body = x =>
+     body(
+       {
+         return(x - floor(x * (f(1.0) / f(289.0))) * f(289.0));
+         finish();
+       }
+     );
+   (
+     fundecl(vec2fun("mod289"), [x2], mod289_body(x2)),
+     fundecl(vec3fun("mod289"), [x3], mod289_body(x3))
+   );
+ };
+ */
+let x2 = vec2arg("x");
+
+let x3 = vec3arg("x");
+
+let mod289_2 = x =>
+  fundecl(
+    vec2fun("mod289"),
+    [x2],
     body(
       {
-        return(x - floor(x * (f(1.0) / f(289.0))) * f(289.0));
+        return(x2 - floor(x2 * (f(1.0) / f(289.0))) * f(289.0));
         finish();
       }
-    );
-  (
-    fundecl(vec2fun("mod289"), [x2], mod289_body(x2)),
-    fundecl(vec3fun("mod289"), [x3], mod289_body(x3))
+    ),
+    x
   );
-};
 
-let permute = {
+let mod289_3 = x =>
+  fundecl(
+    vec3fun("mod289"),
+    [x3],
+    body(
+      {
+        return(x3 - floor(x3 * (f(1.0) / f(289.0))) * f(289.0));
+        finish();
+      }
+    ),
+    x
+  );
+
+let permute = args => {
   let x = vec3arg("x");
   fundecl(
     vec3fun("permute"),
@@ -36,11 +67,12 @@ let permute = {
         return(mod289_3([(x * f(34.0) + f(1.0)) * x]));
         finish();
       }
-    )
+    ),
+    args
   );
 };
 
-let snoise = {
+let snoise = args => {
   let v = vec2arg("v");
   fundecl(
     floatfun("snoise"),
@@ -57,41 +89,41 @@ let snoise = {
            ); /* 1.0 / 41.0 */
         /* First corner */
         let i = vec2var("i");
-        i =@ floor(v + dot(v, cC **. _yy));
+        i =@ floor(v + dot(v, cC **. yy'));
         let x0 = vec2var("x0");
-        x0 =@ v - i + dot(i, cC **. _xx);
+        x0 =@ v - i + dot(i, cC **. xx');
         /* Other corners */
         let i1 = vec2var("i1");
         i1
         =@ ternary(
-             x0 **. _x > x0 **. _y,
+             x0 **. x' > x0 **. y',
              vec22f(f(1.0), f(0.0)),
              vec22f(f(0.0), f(1.0))
            );
         let x12 = vec4var("x12");
-        x12 =@ x0 **. _xyxy + cC **. _xxzz;
-        x12 **. _xy -= i1;
+        x12 =@ x0 **. xyxy' + cC **. xxzz';
+        x12 **. xy' -= i1;
         /* Permutations */
         i =@ mod289_2([i]); /* Avoid truncation effects in permutation */
         let p = vec3var("p");
         p
         =@ permute([
-             permute([i **. _y + vec33f(f(0.0), i1 **. _y, f(1.0))])
+             permute([i **. y' + vec33f(f(0.0), i1 **. y', f(1.0))])
              + i
-             **. _x
-             + vec33f(f(0.0), i1 **. _x, f(1.0))
+             **. x'
+             + vec33f(f(0.0), i1 **. x', f(1.0))
            ]);
         let m = vec3var("m");
         m
-        =@ max([
+        =@ max(
              f(0.5)
-             - vec3([
+             - vec33f(
                  dot(x0, x0),
-                 dot(x12 **. XY, x12 **. XY),
-                 dot(x12 **. ZW, x12 **. ZW)
-               ]),
-             f(0.0)
-           ]);
+                 dot(x12 **. xy', x12 **. xy'),
+                 dot(x12 **. zw', x12 **. zw')
+               ),
+             vec31f(f(0.0))
+           );
         m =@ m * m;
         m =@ m * m;
         /* Gradients: 41 points uniformly over a line, mapped onto a diamond. */
@@ -100,7 +132,7 @@ let snoise = {
         let h = vec3var("h");
         let ox = vec3var("ox");
         let a0 = vec3var("a0");
-        x =@ f(2.0) * fract(p * (cC **. WWW)) - f(1.0);
+        x =@ f(2.0) * fract(p * (cC **. www')) - f(1.0);
         h =@ abs(x) - f(0.5);
         ox =@ floor(x + f(0.5));
         a0 =@ x - ox;
@@ -109,12 +141,13 @@ let snoise = {
         m *= (f(1.79284291400159) - f(0.85373472095314) * (a0 * a0 + h * h));
         /* Compute final noise value at P */
         let g = vec3var("g");
-        g =@ vec3([f(0.0)]);
-        g **. X =@ a0 **. X * (x0 **. X) + h **. X * (x0 **. Y);
-        g **. YZ =@ a0 **. YZ * (x12 **. XZ) + h **. YZ * (x12 **. YW);
+        g =@ vec31f(f(0.0));
+        g **. x' =@ a0 **. x' * (x0 **. x') + h **. x' * (x0 **. y');
+        g **. yz' =@ a0 **. yz' * (x12 **. xz') + h **. yz' * (x12 **. yw');
         return(f(130.0) * dot(m, g));
         finish();
       }
-    )
+    ),
+    args
   );
 };

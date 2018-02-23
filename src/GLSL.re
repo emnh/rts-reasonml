@@ -145,40 +145,30 @@ let getType = x =>
 
 type t('a, 'b) = PhantomAlgebra.t('a, 'b);
 
-type genType1T('a, 'c) = [< | `zero('a) | `one('a) ] as 'c;
+type genType1T('a, 'c) = [< | `zero('a) | `one('a)] as 'c;
 
 type genType2T('a, 'b, 'c) = [< | `zero('b) &('a) | `one('b) &('a)] as 'c
 constraint 'a = 'b;
 
 let genericexprlist:
-  (list(trT(t('dim, genType1T('rank1, 'rank3)))), 'a) =>
-  trT(t('dim, 'rank3)) =
+  (list(trT(t('dim, genType1T('rank1, 'rank3)))), 'a) => trT(t('dim, 'rank3)) =
   (_, e) => Typed(protoScalar, unused(e));
 
 let genericexpr1:
   (trT(t('dim, genType1T('rank1, 'rank2))), 'a) => trT(t('dim, 'rank2)) =
   (l, e) => Typed(getType(l), unused(e));
 
-let genericexpr1float:
-  (trT(t('dim, genType1T('rank1, 'rank2))), 'a) => trT(t('dim, 'rank2)) =
+let genericexpr1float: (trT(t('dim, genType1T('rank1, 'rank2))), 'a) => trT('b) =
   (_, e) => Typed(protoScalar, unused(e));
 
 let genericexpr2:
-  (
-    trT(t('dim, genType1T('rank1, 'rank2))),
-    trT(t('dim, 'rank2)),
-    'a
-  ) =>
+  (trT(t('dim, genType1T('rank1, 'rank2))), trT(t('dim, 'rank2)), 'a) =>
   trT(t('dim, 'rank2)) =
   (l, _, e) => Typed(getType(l), e);
 
 let genericexpr2float:
-  (
-    trT(t('dim, genType1T('rank1, 'rank2))),
-    trT(t('dim, 'rank2)),
-    'a
-  ) =>
-  trT(t('dim, 'rank2)) =
+  (trT(t('dim, genType1T('rank1, 'rank2))), trT(t('dim, 'rank2)), 'a) =>
+  trT('b) =
   (_, _, e) => Typed(PhantomAlgebra.scalar(0.0), e);
 
 let oldgenericexprlist = (l, e) =>
@@ -879,9 +869,9 @@ let outColor = vec4output("outColor");
 
 let body = x => x;
 
-let arStack = ref([]);
+let arStack : ref(list(list(statementT))) = ref([]);
 
-let ar = ref([]);
+let ar : ref(list(statementT)) = ref([]);
 
 let vars = ref(SS.empty);
 
@@ -991,9 +981,9 @@ let ( **. ) = (var, st) => {
 let ternary: ('a, 'b, 'b) => 'b =
   (l, r1, r2) => Typed(getType(r1), Ternary(u(l), u(r1), u(r2)));
 
-let max = l => glist(l, BuiltinFun("max", List.map(u, l)));
+let max = (l, r) => g2(l, r, BuiltinFun2("max", u(l), u(r)));
 
-let min = l => glist(l, BuiltinFun("min", List.map(u, l)));
+let min = (l, r) => g2(l, r, BuiltinFun2("min", u(l), u(r)));
 
 let sqrt = l => g1(l, BuiltinFun1("sqrt", u(l)));
 
@@ -1063,6 +1053,9 @@ let vec21f = (x: trT(PhantomAlgebra.scalar('a))) =>
 let vec22f =
     (x: trT(PhantomAlgebra.scalar('a)), y: trT(PhantomAlgebra.scalar('a))) =>
   Typed(protoVec2, BuiltinFun("vec2", List.map(u, [x, y])));
+
+let vec31f = (x: trT(PhantomAlgebra.scalar('a))) =>
+  Typed(protoVec3, BuiltinFun("vec3", List.map(u, [x])));
 
 let vec33f =
     (
