@@ -114,7 +114,7 @@ and rT =
 and grT('a) = rT
 and rightExprT = rT
 and trT('a) =
-  | Typed('a, grT('a))
+  | Typed('a, rT)
   | Untyped(rT)
 and statementT =
   | Assignment(lT, rT)
@@ -304,7 +304,8 @@ let fmtTransformer = {
     name;
   },
   combine,
-  rexprCombine: (t, l) => t.combine(t, ["(", t.combine(t, l), ")"]),
+  /* rexprCombine: (t, l) => t.combine(t, ["(", t.combine(t, l), ")"]), */
+  rexprCombine: (t, l) => t.combine(t, [t.combine(t, l)]),
   lExpr: (t, expr) =>
     t.combine(
       t,
@@ -431,7 +432,7 @@ let fmtTransformer = {
               indent,
               switch stmt {
               | Assignment(left, right) =>
-                t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)]);
+                t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)])
               | DeclAssignment(vart, left, right) =>
                 t.combine(
                   t,
@@ -1075,6 +1076,9 @@ let (|+|) = (x, y) =>
 let vec4 = (x: trT(PhantomAlgebra.vec4('a))) =>
   Typed(protoVec4, BuiltinFun("vec4", List.map(u, [x])));
 
+let vec41f = (x: trT(PhantomAlgebra.scalar('a))) =>
+  Typed(protoVec4, BuiltinFun("vec4", List.map(u, [x])));
+
 let vec44f =
     (
       x: trT(PhantomAlgebra.scalar('a)),
@@ -1167,3 +1171,7 @@ let tmp = vec21f(b);
 c =@ vec21f(b);
 
 c =@ tmp;
+
+finish();
+
+();
