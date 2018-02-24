@@ -24,12 +24,18 @@ exception No2D;
 
 exception NoProgram;
 
-let getShaderProgram =
-  Memoize.partialMemoize3((gl, fg, bg) => {
+let getShaderExampleProgram =
+  Memoize.partialMemoize2((fg, bg)
     /*
-     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
-      */
-    let (uniforms, programSource) = WaterRenderer.makeProgramSource();
+     let (uniforms, programSource) = WaterRenderer.Renderer.makeProgramSource();
+       */
+    => ShaderExample.makeProgramSource(fg, bg));
+
+let getWaterProgram =
+  Memoize.partialMemoize0(() => WaterRenderer.Water.makeProgramSource());
+
+let getShaderProgram =
+  Memoize.partialMemoize3((gl, uniforms, programSource: GLSL.programT) => {
     let vertexShaderSource = programSource.vertexShader;
     let fragmentShaderSource = programSource.fragmentShader;
     let vertexShader =
@@ -165,6 +171,41 @@ let getRotation =
     (rx, ry, rz);
   });
 
+let runFrameBuffer = (gl, time) => {
+  let width = 256;
+  let height = 256;
+  let renderTarget = WebGL2Util.createRenderTarget(gl, width, height);
+  let (uniforms, shaderProgramSource) = getWaterProgram();
+  switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
+  | (uniforms, Some(program)) =>
+    Memoize.setMemoizeId(program);
+    let geometry = Three.createQuadGeometry();
+    let buffers = WebGL2Util.createBuffers(gl, geometry);
+    let vao = WebGL2Util.createAttributes(gl, program, buffers);
+    WebGL2Util.preRender(gl, width, height);
+    Math.globalSeedRandom(ConfigVars.seed#get());
+    let (x, y, z) = (0.0, 0.0, 0.0);
+    let (rx, ry, rz) = (0.0, 0.0, 0.0);
+    let sz = 1000.0;
+    WebGL2Util.renderToTarget(gl, renderTarget, () =>
+      renderObj(
+        gl,
+        program,
+        buffers,
+        vao,
+        (sz, sz, sz),
+        (x, y, z),
+        (rx, ry, rz),
+        width,
+        height,
+        time,
+        uniforms
+      )
+    );
+  | (_, None) => raise(NoProgram)
+  };
+};
+
 let run = (gl, time) => {
   let geometryType = ConfigVars.geometryType#get();
   let fg = ConfigVars.foregroundColor#get();
@@ -172,7 +213,8 @@ let run = (gl, time) => {
   let width = state.window.width;
   let height = state.window.height;
   let count = ConfigVars.count#get();
-  switch (getShaderProgram(gl, fg, bg)) {
+  let (uniforms, shaderProgramSource) = getShaderExampleProgram(fg, bg);
+  switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
     Document.debug(Document.window, gl);
@@ -218,6 +260,7 @@ let run = (gl, time) => {
 
 let rec renderLoop = (startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
+  runFrameBuffer(gl, t /. 1000.0);
   run(gl, t /. 1000.0);
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {

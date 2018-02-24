@@ -237,7 +237,7 @@ let getNewRandomTexture = (gl, randf) => {
     border,
     srcFormat,
     srcType,
-    pixels
+    Js.Nullable.from_opt(Some(pixels))
   );
   texture;
 };

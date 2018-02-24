@@ -144,6 +144,17 @@ var cacheDefault = {
 // API
 //
 
+  function memoize0(cache, f) {
+    var args = [];
+    var cacheId = JSON.stringify(args);
+    var retval = cache.get(cacheId);
+    if (typeof retval === 'undefined') {
+      retval = f();
+      cache.set(cacheId, retval);
+    }
+    return retval;
+  };
+
   function memoize1(cache, f, a) {
     var args = [a];
     var cacheId = JSON.stringify(args);
@@ -186,6 +197,11 @@ var cacheDefault = {
       cache.set(cacheId, retval);
     }
     return retval;
+  };
+
+  window.partialMemoize0 = function(f) {
+    var cache = new ObjectWithoutPrototypeCache();
+    return memoize0.bind(this, cache, f);
   };
 
   window.partialMemoize1 = function(f) {

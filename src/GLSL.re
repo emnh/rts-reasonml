@@ -1015,6 +1015,7 @@ let sampler2Duniform = name =>
 let samplerCubeUniform = name =>
   Typed(`SamplerCube, RVar((Uniform, Sampler2D, name)));
 
+/* Begin builtins and defaults */
 /*
  let gl_Vertex = vec4builtin("gl_Vertex");
  */
@@ -1031,6 +1032,15 @@ let outColor = vec4output("outColor");
 
 let gl_FragColor = outColor;
 
+let a_uv = vec2attr("a_uv");
+
+let v_uv = vec2varying("v_uv");
+
+let u_modelViewMatrix = mat4uniform("modelViewMatrix");
+
+let u_projectionMatrix = mat4uniform("projectionMatrix");
+
+/* End of builtins and defaults */
 let arStack = ref([]);
 
 let ar = ref([]);

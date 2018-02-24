@@ -66,7 +66,7 @@ let createAttributes = (gl, program, buffers) => {
   bindVertexArray(gl, vao);
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
-  if (positionAttributeLocation != -1) {
+  if (positionAttributeLocation != (-1)) {
     enableVertexAttribArray(gl, positionAttributeLocation);
     let size = 3;
     let normalize = Js.Boolean.to_js_boolean(false);
@@ -86,7 +86,7 @@ let createAttributes = (gl, program, buffers) => {
   };
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
-  if (uvAttributeLocation != -1) {
+  if (uvAttributeLocation != (-1)) {
     enableVertexAttribArray(gl, uvAttributeLocation);
     let size = 2;
     let normalize = Js.Boolean.to_js_boolean(false);
@@ -179,4 +179,92 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
     getUNSIGNED_SHORT(gl),
     buffers.offset
   );
+};
+
+type renderTargetT = {
+  width: int,
+  height: int,
+  framebuffer: framebufferT,
+  texture: textureT
+};
+
+let createRenderTarget = (gl, width, height) => {
+  /* create to render to */
+  let targetTextureWidth = width;
+  let targetTextureHeight = height;
+  let targetTexture = createTexture(gl);
+  bindTexture(gl, getTEXTURE_2D(gl), targetTexture);
+  /* define size and format of level 0 */
+  let level = 0;
+  let internalFormat = getRGBA32F(gl);
+  let border = 0;
+  let format = getRGBA(gl);
+  let ttype = getUNSIGNED_BYTE(gl);
+  let data = Js.Nullable.null;
+  texImage2DdataFloat(
+    gl,
+    getTEXTURE_2D(gl),
+    level,
+    internalFormat,
+    targetTextureWidth,
+    targetTextureHeight,
+    border,
+    format,
+    ttype,
+    data
+  );
+  /* set the filtering so we don't need mips */
+  texParameteri(
+    gl,
+    getTEXTURE_2D(gl),
+    getTEXTURE_MIN_FILTER(gl),
+    getLINEAR(gl)
+  );
+  texParameteri(
+    gl,
+    getTEXTURE_2D(gl),
+    getTEXTURE_WRAP_S(gl),
+    getCLAMP_TO_EDGE(gl)
+  );
+  texParameteri(
+    gl,
+    getTEXTURE_2D(gl),
+    getTEXTURE_WRAP_T(gl),
+    getCLAMP_TO_EDGE(gl)
+  );
+  /* Create and bind the framebuffer */
+  let fb = createFramebuffer(gl);
+  bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.from_opt(Some(fb)));
+  /* Attach the texture as the first color attachment */
+  let attachmentPoint = getCOLOR_ATTACHMENT0(gl);
+  framebufferTexture2D(
+    gl,
+    getFRAMEBUFFER(gl),
+    attachmentPoint,
+    getTEXTURE_2D(gl),
+    targetTexture,
+    level
+  );
+  {
+    framebuffer: fb,
+    texture: targetTexture,
+    width: targetTextureWidth,
+    height: targetTextureHeight
+  };
+};
+
+let renderToTarget = (gl, renderTarget, renderFunction) => {
+  /* render to our targetTexture by binding the framebuffer */
+  bindFramebuffer(
+    gl,
+    getFRAMEBUFFER(gl),
+    Js.Nullable.from_opt(Some(renderTarget.framebuffer))
+  );
+  /* Tell WebGL how to convert from clip space to pixels */
+  viewport(gl, 0, 0, renderTarget.width, renderTarget.height);
+  /* Clear the canvas AND the depth buffer. */
+  clearColor(gl, 0, 0, 1, 1); /* clear to blue */
+  clear(gl, getCOLOR_BUFFER_BIT(gl) lor getDEPTH_BUFFER_BIT(gl));
+  renderFunction();
+  bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.null);
 };

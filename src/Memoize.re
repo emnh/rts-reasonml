@@ -17,6 +17,8 @@ external partialMemoize33 :
   ([@bs.uncurry] (('a, 'b, 'c) => 'r)) => [@bs.uncurry] (('a, 'b, 'c) => 'r) =
   "window.partialMemoize3";
 
+[@bs.val] external partialMemoize0 : 'a => 'a = "window.partialMemoize0";
+
 [@bs.val] external partialMemoize1 : 'a => 'a = "window.partialMemoize1";
 
 [@bs.val] external partialMemoize2 : 'a => 'a = "window.partialMemoize2";

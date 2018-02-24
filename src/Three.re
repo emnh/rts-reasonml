@@ -122,6 +122,8 @@ let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
 let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 256, 256);
 
+let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
+
 let createSphereGeometry = () => {
   let box = protoSphere;
   {
@@ -149,6 +151,14 @@ let createPlaneGeometry = () => {
   };
 };
 
+let createQuadGeometry = () => {
+  let box = protoQuad;
+  {
+    position: getFloat32Array(getPosition(getAttributes(box))),
+    uv: getFloat32Array(getUV(getAttributes(box))),
+    index: getInt16Array(getIndex(box))
+  };
+};
 let getObjectMatrix = (position, scale, rotation) => {
   let mesh = protoMesh;
   let (x, y, z) = position;

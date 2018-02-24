@@ -101,7 +101,9 @@ type drawT;
 
 type primitiveT;
 
-type colorBufferBitT;
+type colorBufferBitT = int;
+
+type depthBufferBitT = colorBufferBitT;
 
 type vertexArrayT;
 
@@ -128,6 +130,12 @@ type rgbaT;
 type textureIndexT;
 
 type extensionT;
+
+type framebufferT;
+
+type framebufferTypeT;
+
+type colorAttachmentT;
 
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
@@ -163,6 +171,14 @@ external createShader : (glT, shaderTypeT) => shaderT = "createShader";
 [@bs.send] external createBuffer : glT => bufferT = "createBuffer";
 
 [@bs.send] external createTexture : glT => textureT = "createTexture";
+
+[@bs.send]
+external createFramebuffer : glT => framebufferT = "createFramebuffer";
+
+[@bs.send]
+external framebufferTexture2D :
+  (glT, framebufferTypeT, colorAttachmentT, texture2DT, textureT, int) => unit =
+  "createFramebuffer";
 
 [@bs.send]
 external createVertexArray : glT => vertexArrayT = "createVertexArray";
@@ -206,6 +222,10 @@ external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 
 [@bs.send]
 external bindTexture : (glT, texture2DT, textureT) => unit = "bindTexture";
+
+[@bs.send]
+external bindFramebuffer : (glT, framebufferTypeT, Js.Nullable.t(framebufferT)) => unit =
+  "bindTexture";
 
 [@bs.send]
 external bufferData : (glT, arrayBufferTypeT, Float32Array.t, drawT) => unit =
@@ -259,12 +279,36 @@ external texImage2D :
 
 [@bs.send]
 external texImage2Ddata :
-  (glT, texture2DT, int, rgbaT, int, int, int, rgbaT, primitiveT, Uint8Array.t) => unit =
+  (
+    glT,
+    texture2DT,
+    int,
+    rgbaT,
+    int,
+    int,
+    int,
+    rgbaT,
+    primitiveT,
+    Uint8Array.t
+  ) =>
+  unit =
   "texImage2D";
 
-  [@bs.send]
+[@bs.send]
 external texImage2DdataFloat :
-  (glT, texture2DT, int, rgbaT, int, int, int, rgbaT, primitiveT, Float32Array.t) => unit =
+  (
+    glT,
+    texture2DT,
+    int,
+    rgbaT,
+    int,
+    int,
+    int,
+    rgbaT,
+    primitiveT,
+    Js.Nullable.t(Float32Array.t)
+  ) =>
+  unit =
   "texImage2D";
 
 [@bs.send]
@@ -306,6 +350,9 @@ external getELEMENT_ARRAY_BUFFER : glT => elementArrayBufferT =
 
 [@bs.get]
 external getCOLOR_BUFFER_BIT : glT => colorBufferBitT = "COLOR_BUFFER_BIT";
+
+[@bs.get]
+external getDEPTH_BUFFER_BIT : glT => depthBufferBitT = "COLOR_BUFFER_BIT";
 
 [@bs.get] external getTRIANGLES : glT => drawGeometryT = "TRIANGLES";
 
@@ -369,3 +416,8 @@ external getTEXTURE_MAG_FILTER : glT => textureParameterT =
 [@bs.get] external getTEXTURE14 : glT => textureIndexT = "TEXTURE14";
 
 [@bs.get] external getTEXTURE15 : glT => textureIndexT = "TEXTURE15";
+
+[@bs.get] external getFRAMEBUFFER : glT => framebufferTypeT = "FRAMEBUFFER";
+
+[@bs.get]
+external getCOLOR_ATTACHMENT0 : glT => colorAttachmentT = "COLOR_ATTACHMENT0";
