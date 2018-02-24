@@ -178,7 +178,7 @@ external createFramebuffer : glT => framebufferT = "createFramebuffer";
 [@bs.send]
 external framebufferTexture2D :
   (glT, framebufferTypeT, colorAttachmentT, texture2DT, textureT, int) => unit =
-  "createFramebuffer";
+  "framebufferTexture2D";
 
 [@bs.send]
 external createVertexArray : glT => vertexArrayT = "createVertexArray";
@@ -202,6 +202,10 @@ external getShaderInfoLog : (glT, shaderT) => string = "getShaderInfoLog";
 [@bs.send]
 external getProgramInfoLog : (glT, programT) => string = "getProgramInfoLog";
 
+[@bs.send]
+external checkFramebufferStatus : (glT, framebufferTypeT) => int =
+  "checkFramebufferStatus";
+
 [@bs.send] external deleteShader : (glT, shaderT) => unit = "deleteShader";
 
 [@bs.send]
@@ -224,8 +228,9 @@ external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 external bindTexture : (glT, texture2DT, textureT) => unit = "bindTexture";
 
 [@bs.send]
-external bindFramebuffer : (glT, framebufferTypeT, Js.Nullable.t(framebufferT)) => unit =
-  "bindTexture";
+external bindFramebuffer :
+  (glT, framebufferTypeT, Js.Nullable.t(framebufferT)) => unit =
+  "bindFramebuffer";
 
 [@bs.send]
 external bufferData : (glT, arrayBufferTypeT, Float32Array.t, drawT) => unit =
@@ -318,7 +323,7 @@ external activeTexture : (glT, textureIndexT) => unit = "activeTexture";
 external generateMipmap : (glT, texture2DT) => unit = "generateMipmap";
 
 [@bs.send]
-external getExtension : (glT, string) => extensionT = "getExtension";
+external getExtension : (glT, string) => Js.Nullable.t(extensionT) = "getExtension";
 
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 

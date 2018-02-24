@@ -226,7 +226,9 @@ let getNewRandomTexture = (gl, randf) => {
 		*/
   };
   /* TODO: memoize */
+  /*
   let _ = WebGL2.getExtension(gl, "OES_texture_float");
+  */
   WebGL2.texImage2DdataFloat(
     gl,
     t2d,

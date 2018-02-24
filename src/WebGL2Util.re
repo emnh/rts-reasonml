@@ -1,5 +1,7 @@
 open WebGL2;
 
+exception WebGL2Exception(string);
+
 let createShader = (gl, stype, source) => {
   let shader = createShader(gl, stype);
   shaderSource(gl, shader, source);
@@ -102,7 +104,8 @@ let createAttributes = (gl, program, buffers) => {
       offset
     );
   } else {
-    Js.log("warning: unused a_uv");
+    ();
+      /* Js.log("warning: unused a_uv"); */
   };
   vao;
 };
@@ -189,6 +192,15 @@ type renderTargetT = {
 };
 
 let createRenderTarget = (gl, width, height) => {
+  /* TODO: memoize? */
+  let a = WebGL2.getExtension(gl, "OES_texture_float_linear");
+  if (a == Js.Nullable.null) {
+    raise(WebGL2Exception("missing extension OES_texture_float_linear"));
+  };
+  let b = WebGL2.getExtension(gl, "EXT_color_buffer_float");
+  if (b == Js.Nullable.null) {
+    raise(WebGL2Exception("missing extension EXT_color_buffer_float"));
+  };
   /* create to render to */
   let targetTextureWidth = width;
   let targetTextureHeight = height;
@@ -199,7 +211,7 @@ let createRenderTarget = (gl, width, height) => {
   let internalFormat = getRGBA32F(gl);
   let border = 0;
   let format = getRGBA(gl);
-  let ttype = getUNSIGNED_BYTE(gl);
+  let ttype = getFLOAT(gl);
   let data = Js.Nullable.null;
   texImage2DdataFloat(
     gl,
@@ -214,6 +226,12 @@ let createRenderTarget = (gl, width, height) => {
     data
   );
   /* set the filtering so we don't need mips */
+  texParameteri(
+    gl,
+    getTEXTURE_2D(gl),
+    getTEXTURE_MAG_FILTER(gl),
+    getLINEAR(gl)
+  );
   texParameteri(
     gl,
     getTEXTURE_2D(gl),
@@ -245,6 +263,10 @@ let createRenderTarget = (gl, width, height) => {
     targetTexture,
     level
   );
+  /*
+    Js.log(checkFramebufferStatus(gl, getFRAMEBUFFER(gl)));
+  */
+  bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.null);
   {
     framebuffer: fb,
     texture: targetTexture,

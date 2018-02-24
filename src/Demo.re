@@ -24,15 +24,19 @@ exception No2D;
 
 exception NoProgram;
 
+exception Bug;
+
 let getShaderExampleProgram =
-  Memoize.partialMemoize2((fg, bg)
-    /*
-     let (uniforms, programSource) = WaterRenderer.Renderer.makeProgramSource();
-       */
-    => ShaderExample.makeProgramSource(fg, bg));
+  Memoize.partialMemoize2((fg, bg) => ShaderExample.makeProgramSource(fg, bg));
+
+let getWaterRendererProgram =
+  Memoize.partialMemoize0(() => WaterRenderer.Renderer.makeProgramSource());
 
 let getWaterProgram =
-  Memoize.partialMemoize0(() => WaterRenderer.Water.makeProgramSource());
+  Memoize.partialMemoize1(tref => WaterRenderer.Water.makeProgramSource(tref));
+
+let getCopyProgram =
+  Memoize.partialMemoize1(t => ShaderCopy.makeProgramSource(t));
 
 let getShaderProgram =
   Memoize.partialMemoize3((gl, uniforms, programSource: GLSL.programT) => {
@@ -44,8 +48,10 @@ let getShaderProgram =
         WebGL2.getVERTEX_SHADER(gl),
         vertexShaderSource
       );
-    Js.log("Vertex shader:");
-    Js.log(MyString.lineNumbers(vertexShaderSource));
+    /*
+     Js.log("Vertex shader:");
+     Js.log(MyString.lineNumbers(vertexShaderSource));
+     */
     switch vertexShader {
     | Some(_) => ()
     | None =>
@@ -58,8 +64,10 @@ let getShaderProgram =
         WebGL2.getFRAGMENT_SHADER(gl),
         fragmentShaderSource
       );
-    Js.log("Fragment shader:");
-    Js.log(MyString.lineNumbers(fragmentShaderSource));
+    /*
+     Js.log("Fragment shader:");
+     Js.log(MyString.lineNumbers(fragmentShaderSource));
+     */
     switch fragmentShader {
     | Some(_) => ()
     | None =>
@@ -125,9 +133,7 @@ let getGeometryAndBuffers =
     (geometry, buffers, vao);
   });
 
-let renderObj =
-    (gl, program, buffers, vao, size, pos, rot, width, height, time, uniforms) => {
-  let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
+let getCamera = (width, height) => {
   let cameraPosition = (
     ConfigVars.cameraX#get(),
     ConfigVars.cameraY#get(),
@@ -138,7 +144,28 @@ let renderObj =
     ConfigVars.cameraRotationY#get(),
     ConfigVars.cameraRotationZ#get()
   );
-  let camera = Three.getCamera(width, height, cameraPosition, cameraRotation);
+  (
+    Three.getCamera(width, height, cameraPosition, cameraRotation),
+    cameraPosition
+  );
+};
+
+let renderObj =
+    (
+      gl,
+      program,
+      (camera, cameraPosition),
+      buffers,
+      vao,
+      size,
+      pos,
+      rot,
+      width,
+      height,
+      time,
+      uniforms
+    ) => {
+  let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
   let viewMatrices: Three.viewTransformT =
     Three.getViewMatrices(camera, obj.matrixWorld);
   let (uniformBlock, textures) =
@@ -171,11 +198,41 @@ let getRotation =
     (rx, ry, rz);
   });
 
-let runFrameBuffer = (gl, time) => {
-  let width = 256;
-  let height = 256;
-  let renderTarget = WebGL2Util.createRenderTarget(gl, width, height);
-  let (uniforms, shaderProgramSource) = getWaterProgram();
+let getWaterRT =
+  Memoize.partialMemoize4((gl, width, height, _) =>
+    WebGL2Util.createRenderTarget(gl, width, height)
+  );
+
+let runFrameBuffer =
+    (gl, time, renderTarget: option(WebGL2Util.renderTargetT), programSource) => {
+  /*
+   let fg = ConfigVars.foregroundColor#get();
+   let bg = ConfigVars.backgroundColor#get();
+   let (uniforms, shaderProgramSource) = getShaderExampleProgram(fg, bg);
+      */
+  let (uniforms, shaderProgramSource) = programSource;
+  let drawToScreen =
+    switch renderTarget {
+    | Some(_) => false
+    | None => true
+    };
+  let getRenderTarget = () =>
+    switch renderTarget {
+    | Some(x) => x
+    | None => raise(Bug)
+    };
+  let width =
+    if (drawToScreen) {
+      state.window.width;
+    } else {
+      getRenderTarget().width;
+    };
+  let height =
+    if (drawToScreen) {
+      state.window.height;
+    } else {
+      getRenderTarget().height;
+    };
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
@@ -184,13 +241,18 @@ let runFrameBuffer = (gl, time) => {
     let vao = WebGL2Util.createAttributes(gl, program, buffers);
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
-    let (x, y, z) = (0.0, 0.0, 0.0);
+    let (x, y, z) = (0.0, 0.0, (-1.0));
     let (rx, ry, rz) = (0.0, 0.0, 0.0);
-    let sz = 1000.0;
-    WebGL2Util.renderToTarget(gl, renderTarget, () =>
+    let sz = 2.0;
+    let cameraPosition = (0.0, 0.0, 0.0);
+    let rf = () =>
       renderObj(
         gl,
         program,
+        (
+          Three.getCamera(width, height, cameraPosition, (0.0, 0.0, 0.0)),
+          cameraPosition
+        ),
         buffers,
         vao,
         (sz, sz, sz),
@@ -200,10 +262,37 @@ let runFrameBuffer = (gl, time) => {
         height,
         time,
         uniforms
-      )
-    );
+      );
+    if (drawToScreen) {
+      rf();
+    } else {
+      WebGL2Util.renderToTarget(gl, getRenderTarget(), rf);
+    };
   | (_, None) => raise(NoProgram)
   };
+};
+
+let targetIndex = ref(0);
+
+let textureRef = ref(None);
+
+let runPipeline = (gl, time) => {
+  let width = 256;
+  let height = 256;
+  targetIndex := (targetIndex^ + 1) mod 2;
+  let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
+  let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
+  let (texture, renderTarget) =
+    switch targetIndex^ {
+    | 0 => (renderTarget2.texture, renderTarget1)
+    | _ => (renderTarget1.texture, renderTarget2)
+    };
+  let uAndSrc = getWaterProgram(textureRef);
+  runFrameBuffer(gl, time, Some(renderTarget), uAndSrc);
+  /* Next time use previous output as input */
+  textureRef := Some(renderTarget.texture);
+  let uAndSrc2 = getCopyProgram(renderTarget1.texture);
+  runFrameBuffer(gl, time, None, uAndSrc2);
 };
 
 let run = (gl, time) => {
@@ -214,6 +303,7 @@ let run = (gl, time) => {
   let height = state.window.height;
   let count = ConfigVars.count#get();
   let (uniforms, shaderProgramSource) = getShaderExampleProgram(fg, bg);
+  let (uniforms, shaderProgramSource) = getWaterRendererProgram();
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
@@ -243,6 +333,7 @@ let run = (gl, time) => {
       renderObj(
         gl,
         program,
+        getCamera(width, height),
         buffers,
         vao,
         (sz, sz, sz),
@@ -260,8 +351,10 @@ let run = (gl, time) => {
 
 let rec renderLoop = (startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
-  runFrameBuffer(gl, t /. 1000.0);
-  run(gl, t /. 1000.0);
+  runPipeline(gl, t /. 1000.0);
+  /*
+   run(gl, t /. 1000.0);
+   */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
     Document.requestAnimationFrame(() =>

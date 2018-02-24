@@ -10,7 +10,30 @@ open! GLSL;
 
 open GLSLUniforms;
 
+let u_resolution = vec2uniform("u_resolution");
+
 let eye = vec3uniform("u_eye");
+
+let water = sampler2Duniform("t_water");
+
+let memGRT =
+  Memoize.partialMemoize3((gl, height, offset) =>
+    getNewRandomTexture(gl, () => Math.random() *. height +. offset)
+  );
+
+let registeredWater =
+  registerTextureUniform(
+    water,
+    arg => {
+      let retval =
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        );
+      retval;
+    }
+  );
 
 module Renderer = {
   let light = vec3uniform("u_light");
@@ -18,7 +41,6 @@ module Renderer = {
   let sphereRadius = floatuniform("u_sphereRadius");
   let tiles = sampler2Duniform("t_tiles");
   let causticTex = sampler2Duniform("t_causticTex");
-  let water = sampler2Duniform("t_water");
   let cIOR_AIR = const(floatif(1.0));
   let cIOR_WATER = const(floatif(1.333));
   let abovewaterColor = const(vec3i3f(0.25, 1.0, 1.25));
@@ -641,23 +663,6 @@ module Renderer = {
         retval;
       }
     );
-  let memGRT =
-    Memoize.partialMemoize3((gl, height, offset) =>
-      getNewRandomTexture(gl, () => Math.random() *. height +. offset)
-    );
-  let registeredWater =
-    registerTextureUniform(
-      water,
-      arg => {
-        let retval =
-          memGRT(
-            arg.gl,
-            ConfigVars.waterHeight#get(),
-            ConfigVars.waterOffset#get()
-          );
-        retval;
-      }
-    );
   let getUniforms = () => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
@@ -696,15 +701,23 @@ module Water = {
    * Released under the MIT license
    */
   /* The data in the texture is (position.y, velocity.y, normal.x, normal.z) */
-  let coord = vec2varying("coord");
+  /*
+   let coord = vec2varying("coord");
+   */
+  let coord = gl_FragCoord **. xy' / u_resolution;
   let vertexShader =
-    body(() => {
-      coord =@ gl_Vertex **. xy' * f(0.5) + f(0.5);
-      gl_Position =@ vec4(gl_Vertex **. xyz' |+| f(1.0));
-    });
-  let water = sampler2Duniform("texture");
+    body(()
+      /*
+       coord =@ gl_Vertex **. xy' * f(0.5) + f(0.5);
+       gl_Position =@ vec4(gl_Vertex **. xyz' |+| f(1.0));
+       */
+      =>
+        gl_Position
+        =@ u_projectionMatrix
+        * u_modelViewMatrix
+        * vec4(gl_Vertex **. xyz' |+| f(1.0))
+      );
   let delta = vec2uniform("delta");
-  let coord = vec2varying("coord");
   let updateFragmentShader =
     body(() => {
       /* get vertex info */
@@ -735,6 +748,11 @@ module Water = {
       /* move the vertex along the velocity */
       info **. r' += info **. g';
       gl_FragColor =@ info;
+      /* XXX: debug */
+      /*
+       gl_FragColor **. rg' =@ gl_FragCoord **. xy' / u_resolution;
+       */
+      gl_FragColor **. a' =@ f(1.0);
     });
   let normalFragmentShader =
     body(() => {
@@ -766,7 +784,7 @@ module Water = {
       gl_FragColor =@ info;
     });
   let r = registerUniform;
-  let getUniforms = () => [
+  let getUniforms = textureRef => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     r(
@@ -775,17 +793,34 @@ module Water = {
         let (x, y, z) = arg.eye;
         [|x, y, z|];
       }
+    ),
+    r(u_resolution, arg =>
+      [|float_of_int(arg.width), float_of_int(arg.height)|]
+    ),
+    r(delta, arg =>
+      [|1.0 /. float_of_int(arg.width), 1.0 /. float_of_int(arg.height)|]
+    ),
+    registerTextureUniform(water, arg =>
+      switch textureRef^ {
+      | Some(x) => x
+      | None =>
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        )
+      }
     )
   ];
-  let makeProgramSource = () => {
-    let uniformBlock = getUniforms();
+  let makeProgramSource = textureRef => {
+    let uniformBlock = getUniforms(textureRef);
     (
       uniformBlock,
       getProgram(uniformBlock, vertexShader, updateFragmentShader)
     );
   };
-  let makeNormalProgramSource = () => {
-    let uniformBlock = getUniforms();
+  let makeNormalProgramSource = textureRef => {
+    let uniformBlock = getUniforms(textureRef);
     (
       uniformBlock,
       getProgram(uniformBlock, vertexShader, normalFragmentShader)
