@@ -120,7 +120,7 @@ let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
-let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 10, 10);
+let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 256, 256);
 
 let createSphereGeometry = () => {
   let box = protoSphere;
@@ -166,33 +166,20 @@ let getObjectMatrix = (position, scale, rotation) => {
 };
 
 let getCamera =
-  Memoize.partialMemoize4(
-    (width, height, pos, rot) => {
-      let viewAngle = 45.0;
-      let aspect = float_of_int(width) /. float_of_int(height);
-      let near = 0.1;
-      let far = 10000.0;
-      let camera = createPerspectiveCamera(viewAngle, aspect, near, far);
-      let (x, y, z) = pos;
-      let (rx, ry, rz) = rot;
-      setCameraPosition(camera, x, y, z);
-      setCameraRotation(camera, rx, ry, rz);
-      camera;
-    }
-  );
+  Memoize.partialMemoize4((width, height, pos, rot) => {
+    let viewAngle = 45.0;
+    let aspect = float_of_int(width) /. float_of_int(height);
+    let near = 0.1;
+    let far = 10000.0;
+    let camera = createPerspectiveCamera(viewAngle, aspect, near, far);
+    let (x, y, z) = pos;
+    let (rx, ry, rz) = rot;
+    setCameraPosition(camera, x, y, z);
+    setCameraRotation(camera, rx, ry, rz);
+    camera;
+  });
 
-let getViewMatrices = (matrixWorld, width, height) => {
-  let pos = (
-    ConfigVars.cameraX#get(),
-    ConfigVars.cameraY#get(),
-    ConfigVars.cameraZ#get()
-  );
-  let rot = (
-    ConfigVars.cameraRotationX#get(),
-    ConfigVars.cameraRotationY#get(),
-    ConfigVars.cameraRotationZ#get()
-  );
-  let camera = getCamera(width, height, pos, rot);
+let getViewMatrices = (camera, matrixWorld) => {
   updateCameraMatrixWorld(camera);
   let modelMatrix = cloneMatrix4(matrixWorld);
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));

@@ -5,7 +5,8 @@ type uniformInputT = {
   width: int,
   height: int,
   modelViewMatrix: array(float),
-  projectionMatrix: array(float)
+  projectionMatrix: array(float),
+  eye: (float, float, float)
 };
 
 /*
@@ -73,7 +74,6 @@ let setupTexture = (gl, texture) => {
     WebGL2.getTEXTURE_MAG_FILTER(gl),
     WebGL2.getNEAREST(gl)
   );
-
   let level = 0;
   let internalFormat = WebGL2.getRGBA(gl);
   let width = 1;
@@ -82,9 +82,18 @@ let setupTexture = (gl, texture) => {
   let srcFormat = WebGL2.getRGBA(gl);
   let srcType = WebGL2.getUNSIGNED_BYTE(gl);
   let pixel = Uint8Array.create([|255, 0, 0, 255|]);
-  WebGL2.texImage2Ddata(gl, t2d, level, internalFormat,
-                width, height, border, srcFormat, srcType,
-                pixel);
+  WebGL2.texImage2Ddata(
+    gl,
+    t2d,
+    level,
+    internalFormat,
+    width,
+    height,
+    border,
+    srcFormat,
+    srcType,
+    pixel
+  );
 };
 
 let uploadImage = (gl, texture, img) => {
@@ -109,15 +118,15 @@ let uploadImage = (gl, texture, img) => {
     img
   );
   WebGL2.generateMipmap(gl, t2d);
-  setupTexture(gl, texture);
 };
 
 /* TODO: Preallocate and refill array */
 let computeUniformBlock =
-    (gl, time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
+    (gl, time, width, height, eye, modelViewMatrix, projectionMatrix, uniforms) => {
   let uniformArg = {
     gl,
     time,
+    eye,
     tick: 0.0,
     width,
     height,
@@ -183,4 +192,52 @@ let computeUniformBlock =
       []
     );
   (uniformBlock, textures);
+};
+
+let getNewTexture = (gl, path) => {
+  let img = Document.createImage();
+  let texture = WebGL2.createTexture(gl);
+  setupTexture(gl, texture);
+  Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
+  Document.setSource(img, path);
+  texture;
+};
+
+let getNewRandomTexture = (gl, randf) => {
+  let texture = WebGL2.createTexture(gl);
+  setupTexture(gl, texture);
+  let t2d = WebGL2.getTEXTURE_2D(gl);
+  let level = 0;
+  let internalFormat = WebGL2.getRGBA32F(gl);
+  let width = 256;
+  let height = 256;
+  let border = 0;
+  let srcFormat = WebGL2.getRGBA(gl);
+  let srcType = WebGL2.getFLOAT(gl);
+  let size = width * height * 4;
+  let pixels = Float32Array.createSize(size);
+  for (i in 0 to size) {
+    Float32Array.set(pixels, i, randf());
+		/*
+    switch (i mod 4) {
+    | 0 => Float32Array.set(pixels, i, Math.random() *. 1.0)
+    | _ => ()
+    };
+		*/
+  };
+  /* TODO: memoize */
+  let _ = WebGL2.getExtension(gl, "OES_texture_float");
+  WebGL2.texImage2DdataFloat(
+    gl,
+    t2d,
+    level,
+    internalFormat,
+    width,
+    height,
+    border,
+    srcFormat,
+    srcType,
+    pixels
+  );
+  texture;
 };

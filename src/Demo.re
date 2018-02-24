@@ -27,8 +27,8 @@ exception NoProgram;
 let getShaderProgram =
   Memoize.partialMemoize3((gl, fg, bg) => {
     /*
-      let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
-     */
+     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+      */
     let (uniforms, programSource) = WaterRenderer.makeProgramSource();
     let vertexShaderSource = programSource.vertexShader;
     let fragmentShaderSource = programSource.fragmentShader;
@@ -121,25 +121,27 @@ let getGeometryAndBuffers =
 
 let renderObj =
     (gl, program, buffers, vao, size, pos, rot, width, height, time, uniforms) => {
-  let (rx, ry, rz) = rot;
-  let obj: Three.objectTransformT =
-    Three.getObjectMatrix(
-      pos,
-      size,
-      (
-        Math.sin(time) *. 2.0 *. Math.pi +. rx,
-        Math.sin(0.35 *. time) *. 2.0 *. Math.pi +. ry,
-        Math.sin(0.73 *. time) *. 2.0 *. Math.pi +. rz
-      )
-    );
+  let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
+  let cameraPosition = (
+    ConfigVars.cameraX#get(),
+    ConfigVars.cameraY#get(),
+    ConfigVars.cameraZ#get()
+  );
+  let cameraRotation = (
+    ConfigVars.cameraRotationX#get(),
+    ConfigVars.cameraRotationY#get(),
+    ConfigVars.cameraRotationZ#get()
+  );
+  let camera = Three.getCamera(width, height, cameraPosition, cameraRotation);
   let viewMatrices: Three.viewTransformT =
-    Three.getViewMatrices(obj.matrixWorld, width, height);
+    Three.getViewMatrices(camera, obj.matrixWorld);
   let (uniformBlock, textures) =
     GLSLUniforms.computeUniformBlock(
       gl,
       time,
       width,
       height,
+      cameraPosition,
       viewMatrices.modelViewMatrix,
       viewMatrices.projectionMatrix,
       uniforms
@@ -152,7 +154,7 @@ let seedrandom = Math.localSeedRandom();
 let getPosition =
   Memoize.partialMemoize3((_, _, spread) => {
     let f = () => (Math.random() -. 0.5) *. 2.0 *. spread;
-    let (rx, ry, rz) = (f(), f(), (-20.0));
+    let (rx, ry, rz) = (f(), f(), 0.0);
     (rx, ry, rz);
   });
 
@@ -178,10 +180,22 @@ let run = (gl, time) => {
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     for (i in 1 to count) {
+      let (bx, by, bz) = (
+        ConfigVars.objectX#get(),
+        ConfigVars.objectY#get(),
+        ConfigVars.objectZ#get()
+      );
       let (x, y, z) =
         getPosition(i, ConfigVars.seed#get(), ConfigVars.spread#get());
+      let (x, y, z) = (bx +. x, by +. y, bz +. z);
       let (rx, ry, rz) =
         getRotation(i, ConfigVars.seed#get(), ConfigVars.rotationSpread#get());
+      let rspeed = ConfigVars.rotationSpeed#get();
+      let (rx, ry, rz) = (
+        rspeed *. Math.sin(time) *. 2.0 *. Math.pi +. rx,
+        rspeed *. Math.sin(0.35 *. time) *. 2.0 *. Math.pi +. ry,
+        rspeed *. Math.sin(0.73 *. time) *. 2.0 *. Math.pi +. rz
+      );
       let sz = ConfigVars.size#get();
       let iseed = float_of_int(i);
       renderObj(

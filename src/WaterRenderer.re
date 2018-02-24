@@ -57,6 +57,9 @@ let sky = samplerCubeUniform("u_sky");
 /* TODO: bool */
 let u_isAboveWater = floatuniform("u_isAboveWater");
 
+/*
+ let gl_Vertex = gl_Vertex **. xzyw';
+ */
 let intersectCubeBody =
   body(() => {
     let tMin = vec3var("tMin");
@@ -416,7 +419,7 @@ let waterFragmentShader =
         /* underwater */
         normal =@ f(0.0) - normal;
         let reflectedRay = vec3var("reflectedRay1");
-        let refractedRay = vec3var("reflectedRay1");
+        let refractedRay = vec3var("refractedRay1");
         let fresnel = floatvar("fresnel1");
         reflectedRay =@ reflect(incomingRay, normal);
         refractedRay =@ refract(incomingRay, normal, cIOR_WATER / cIOR_AIR);
@@ -446,7 +449,7 @@ let waterFragmentShader =
       () => {
         /* above water */
         let reflectedRay = vec3var("reflectedRay2");
-        let refractedRay = vec3var("reflectedRay2");
+        let refractedRay = vec3var("refractedRay2");
         let fresnel = floatvar("fresnel2");
         reflectedRay =@ reflect(incomingRay, normal);
         refractedRay =@ refract(incomingRay, normal, cIOR_AIR / cIOR_WATER);
@@ -470,7 +473,7 @@ let waterFragmentShader =
 
 /* XXX: for debug */
 /*
- gl_FragColor =@ texture(water, v_uv);
+ gl_FragColor =@ texture(tiles, v_uv);
  */
 /*
  gl_FragColor **. rg' =@ v_uv;
@@ -651,15 +654,6 @@ let causticsFragmentShader =
 
 let r = registerUniform;
 
-let getNewTexture = (gl, path) => {
-  let img = Document.createImage();
-  let texture = WebGL2.createTexture(gl);
-  setupTexture(gl, texture);
-  Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
-  Document.setSource(img, path);
-  texture;
-};
-
 let tilesTexture = ref(None);
 
 let registeredTiles =
@@ -686,25 +680,28 @@ let registeredCaustics =
       let retval =
         switch tilesTexture2^ {
         | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
+        | None => getNewRandomTexture(arg.gl, () => Math.random() *. 0.0)
         };
       tilesTexture2 := Some(retval);
       retval;
     }
   );
 
-let tilesTexture3 = ref(None);
+let memGRT =
+  Memoize.partialMemoize3((gl, height, offset) =>
+    getNewRandomTexture(gl, () => Math.random() *. height +. offset)
+  );
 
 let registeredWater =
   registerTextureUniform(
     water,
     arg => {
       let retval =
-        switch tilesTexture3^ {
-        | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
-        };
-      tilesTexture3 := Some(retval);
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        );
       retval;
     }
   );
@@ -712,13 +709,19 @@ let registeredWater =
 let getUniforms = () => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
-  r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]),
-  r(sphereRadius, (_) => [|1.0|]),
+  r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]),
+  /* r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]), */
+  r(sphereRadius, (_) => [|0.25|]),
   r(u_isAboveWater, (_) => [|1.0|]),
   r(light, (_) => [|2.0, 2.0, (-1.0)|]),
-  r(eye, (_) =>
-    [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|]
+  r(
+    eye,
+    arg => {
+      let (x, y, z) = arg.eye;
+      [|x, y, z|];
+    }
   ),
+  /* [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|] */
   registeredTiles,
   registeredWater,
   registeredCaustics

@@ -127,6 +127,8 @@ type rgbaT;
 
 type textureIndexT;
 
+type extensionT;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
@@ -260,11 +262,19 @@ external texImage2Ddata :
   (glT, texture2DT, int, rgbaT, int, int, int, rgbaT, primitiveT, Uint8Array.t) => unit =
   "texImage2D";
 
+  [@bs.send]
+external texImage2DdataFloat :
+  (glT, texture2DT, int, rgbaT, int, int, int, rgbaT, primitiveT, Float32Array.t) => unit =
+  "texImage2D";
+
 [@bs.send]
 external activeTexture : (glT, textureIndexT) => unit = "activeTexture";
 
 [@bs.send]
 external generateMipmap : (glT, texture2DT) => unit = "generateMipmap";
+
+[@bs.send]
+external getExtension : (glT, string) => extensionT = "getExtension";
 
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 
@@ -325,6 +335,8 @@ external getTEXTURE_MAG_FILTER : glT => textureParameterT =
   "TEXTURE_MAG_FILTER";
 
 [@bs.get] external getRGBA : glT => rgbaT = "RGBA";
+
+[@bs.get] external getRGBA32F : glT => rgbaT = "RGBA32F";
 
 [@bs.get] external getTEXTURE0 : glT => textureIndexT = "TEXTURE0";
 
