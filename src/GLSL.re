@@ -30,7 +30,8 @@ type glslTypeT =
   | Mat2
   | Mat3
   | Mat4
-  | Sampler2D;
+  | Sampler2D
+  | SamplerCube;
 
 type varT =
   | Builtin
@@ -270,6 +271,7 @@ let glslTypeString = t =>
   | Mat3 => "mat3"
   | Mat4 => "mat4"
   | Sampler2D => "sampler2D"
+  | SamplerCube => "samplerCube"
   };
 
 type uniformInputT = {
@@ -956,6 +958,11 @@ let mat4arg = name => Typed(protoMat4, RVar((Arg, Mat4, name)));
 let sampler2Duniform = name =>
   Typed(`Sampler2D, RVar((Uniform, Sampler2D, name)));
 
+let samplerCubeUniform = name =>
+  Typed(`SamplerCube, RVar((Uniform, Sampler2D, name)));
+
+let gl_Vertex = vec4builtin("gl_Vertex");
+
 let gl_Position = vec4builtin("gl_Position");
 
 let gl_FragCoord = vec4builtin("gl_FragCoord");
@@ -1103,8 +1110,10 @@ let pow = (l, r) => g2(l, r, BuiltinFun2("pow", u(l), u(r)));
 let dot = (l, r) => genericexpr2float(l, r, BuiltinFun2("dot", u(l), u(r)));
 
 let texture = (l: trT([ | `Sampler2D]), r: trT(PhantomAlgebra.vec2('a))) =>
-  /* TODO: fix types as in commented line */
   Typed(protoVec4, BuiltinFun2("texture", u(l), u(r)));
+
+let textureCube = (l: trT([ | `SamplerCube]), r: trT(PhantomAlgebra.vec3('a))) =>
+  Typed(protoVec4, BuiltinFun2("textureCube", u(l), u(r)));
 
 /*switch (l, r) {
     /* | (Typed(`Sampler2D, _), Typed(`Vec2, _)) => Typed(`Vec4, Texture(l, r))*/
