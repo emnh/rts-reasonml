@@ -667,9 +667,9 @@ let getShader = (prelude, uniforms, varyings, main) =>
   version
   ++ newline
   ++ newline
-  ++ precision
-  ++ newline
   ++ prelude
+  ++ newline
+  ++ precision
   ++ formatAttributes(getAttributes(main))
   ++ newline
   ++ newline
