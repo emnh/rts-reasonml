@@ -29,31 +29,6 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   };
 };
 
-/* TODO: Preallocate and refill array */
-let computeUniformBlock =
-    (gl, time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
-  let uniformArg: GLSLUniforms.uniformInputT = {
-    gl,
-    time,
-    tick: 0.0,
-    width,
-    height,
-    modelViewMatrix,
-    projectionMatrix
-  };
-  let l =
-    List.map(
-      ((_, f)) =>
-        switch f {
-        | GLSLUniforms.UniformFloatArray(f2) => f2(uniformArg)
-        | _ => [||]
-        },
-      uniforms
-    );
-  let uniformBlock = Float32Array.create(Array.concat(l));
-  uniformBlock;
-};
-
 let preRender = (gl, width, height) => {
   viewport(gl, 0, 0, width, height);
   enable(gl, getDEPTH_TEST(gl));
@@ -132,7 +107,7 @@ let getUniformBufferAndLocation =
     (uniformPerSceneBuffer, uniformPerSceneLocation);
   });
 
-let renderObject = (gl, program, buffers, vao, uniformBlock) => {
+let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
   useProgram(gl, program);
   bindVertexArray(gl, vao);
   /* Upload uniforms */
@@ -160,6 +135,34 @@ let renderObject = (gl, program, buffers, vao, uniformBlock) => {
   /* Bind buffers */
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
+  /* Bind textures */
+  let textureIndices = [
+    getTEXTURE0(gl),
+    getTEXTURE1(gl),
+    getTEXTURE2(gl),
+    getTEXTURE3(gl),
+    getTEXTURE4(gl),
+    getTEXTURE5(gl),
+    getTEXTURE6(gl),
+    getTEXTURE7(gl),
+    getTEXTURE8(gl),
+    getTEXTURE9(gl),
+    getTEXTURE10(gl),
+    getTEXTURE11(gl),
+    getTEXTURE12(gl),
+    getTEXTURE13(gl),
+    getTEXTURE14(gl),
+    getTEXTURE15(gl)
+  ];
+  List.iteri(
+    (index, (name, texture)) => {
+      let uniformLocation = getUniformLocation(gl, program, name);
+      uniform1i(gl, uniformLocation, index);
+      activeTexture(gl, List.nth(textureIndices, index));
+      bindTexture(gl, getTEXTURE_2D(gl), texture);
+    },
+    textures
+  );
   /* Render */
   drawElements(
     gl,

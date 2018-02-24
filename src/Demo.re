@@ -130,8 +130,8 @@ let renderObj =
     );
   let viewMatrices: Three.viewTransformT =
     Three.getViewMatrices(obj.matrixWorld, width, height);
-  let uniformBlock =
-    WebGL2Util.computeUniformBlock(
+  let (uniformBlock, textures) =
+    GLSLUniforms.computeUniformBlock(
       gl,
       time,
       width,
@@ -140,7 +140,7 @@ let renderObj =
       viewMatrices.projectionMatrix,
       uniforms
     );
-  WebGL2Util.renderObject(gl, program, buffers, vao, uniformBlock);
+  WebGL2Util.renderObject(gl, program, buffers, textures, vao, uniformBlock);
 };
 
 let seedrandom = Math.localSeedRandom();

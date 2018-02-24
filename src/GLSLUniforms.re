@@ -10,20 +10,29 @@ type uniformInputT = {
 
 /*
  type uniformTextureT = {
-   wrapS: WebGL2.glT => WebGL2.clampT,
-   wrapT: WebGL2.glT => WebGL2.clampT,
+    wrapS: WebGL2.glT => WebGL2.clampT,
+    wrapT: WebGL2.glT => WebGL2.clampT,
+   name: string,
    texture: WebGL2.glT => WebGL2.textureT
  };
- */
+    */
 type uniformFunctionT =
   | UniformFloatArray(uniformInputT => array(float))
-  | UniformTexture(uniformInputT => WebGL2.textureT);
+  | UniformTexture(string, uniformInputT => WebGL2.textureT);
 
 type uniformBlockT = list((GLSL.rT, uniformInputT => array(float)));
 
 let registerUniform = (a, b) => (GLSL.untyped(a), UniformFloatArray(b));
 
-let registerTextureUniform = (a, b) => (GLSL.untyped(a), UniformTexture(b));
+let registerTextureUniform = (a, b) => {
+  let a = GLSL.untyped(a);
+  let name =
+    switch a {
+    | GLSL.RVar((_, _, name)) => name
+    | _ => raise(GLSL.GLSLTypeError("bad uniform"))
+    };
+  (a, UniformTexture(name, b));
+};
 
 let cachedEmptyTexture = ref(None);
 
@@ -62,4 +71,39 @@ let setupTexture = (gl, _) => {
     WebGL2.getTEXTURE_MAG_FILTER(gl),
     WebGL2.getNEAREST(gl)
   );
+};
+
+/* TODO: Preallocate and refill array */
+let computeUniformBlock =
+    (gl, time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
+  let uniformArg = {
+    gl,
+    time,
+    tick: 0.0,
+    width,
+    height,
+    modelViewMatrix,
+    projectionMatrix
+  };
+  let l =
+    List.map(
+      ((_, f)) =>
+        switch f {
+        | UniformFloatArray(f2) => f2(uniformArg)
+        | _ => [||]
+        },
+      uniforms
+    );
+  let uniformBlock = Float32Array.create(Array.concat(l));
+  let textures =
+    List.fold_right(
+      ((_, f), r) =>
+        switch f {
+        | UniformTexture(name, f2) => [(name, f2(uniformArg)), ...r]
+        | _ => r
+        },
+      uniforms,
+      []
+    );
+  (uniformBlock, textures);
 };

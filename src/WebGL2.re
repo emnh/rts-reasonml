@@ -125,6 +125,8 @@ type textureParameterValueT;
 
 type rgbaT;
 
+type textureIndexT;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
@@ -137,7 +139,10 @@ external getUniformBlockIndex : (glT, programT, string) => uniformBlockIndexT =
 external uniformBlockBinding : (glT, programT, uniformBlockIndexT, int) => unit =
   "uniformBlockBinding";
 
-[@bs.send] [@bs.send]
+[@bs.send]
+external uniform1i : (glT, uniformLocationT, int) => unit = "uniform1i";
+
+[@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
 
 [@bs.send]
@@ -250,6 +255,9 @@ external texImage2D :
   (glT, texture2DT, int, rgbaT, rgbaT, primitiveT, Document.imageT) => unit =
   "textImage2D";
 
+[@bs.send]
+external activeTexture : (glT, textureIndexT) => unit = "activeTexture";
+
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 
 [@bs.get] external getFRAGMENT_SHADER : glT => shaderTypeT = "FRAGMENT_SHADER";
@@ -309,3 +317,35 @@ external getTEXTURE_MAG_FILTER : glT => textureParameterT =
   "TEXTURE_MAG_FILTER";
 
 [@bs.get] external getRGBA : glT => rgbaT = "RGBA";
+
+[@bs.get] external getTEXTURE0 : glT => textureIndexT = "TEXTURE0";
+
+[@bs.get] external getTEXTURE1 : glT => textureIndexT = "TEXTURE1";
+
+[@bs.get] external getTEXTURE2 : glT => textureIndexT = "TEXTURE2";
+
+[@bs.get] external getTEXTURE3 : glT => textureIndexT = "TEXTURE3";
+
+[@bs.get] external getTEXTURE4 : glT => textureIndexT = "TEXTURE4";
+
+[@bs.get] external getTEXTURE5 : glT => textureIndexT = "TEXTURE5";
+
+[@bs.get] external getTEXTURE6 : glT => textureIndexT = "TEXTURE6";
+
+[@bs.get] external getTEXTURE7 : glT => textureIndexT = "TEXTURE7";
+
+[@bs.get] external getTEXTURE8 : glT => textureIndexT = "TEXTURE8";
+
+[@bs.get] external getTEXTURE9 : glT => textureIndexT = "TEXTURE9";
+
+[@bs.get] external getTEXTURE10 : glT => textureIndexT = "TEXTURE10";
+
+[@bs.get] external getTEXTURE11 : glT => textureIndexT = "TEXTURE11";
+
+[@bs.get] external getTEXTURE12 : glT => textureIndexT = "TEXTURE12";
+
+[@bs.get] external getTEXTURE13 : glT => textureIndexT = "TEXTURE13";
+
+[@bs.get] external getTEXTURE14 : glT => textureIndexT = "TEXTURE14";
+
+[@bs.get] external getTEXTURE15 : glT => textureIndexT = "TEXTURE15";
