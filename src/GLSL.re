@@ -288,17 +288,6 @@ let glslTypeString = t =>
   | SamplerCube => "samplerCube"
   };
 
-type uniformInputT = {
-  time: float,
-  tick: float,
-  width: int,
-  height: int,
-  modelViewMatrix: array(float),
-  projectionMatrix: array(float)
-};
-
-type uniformBlockT = list((rT, uniformInputT => array(float)));
-
 type shaderMainT = gRootT;
 
 /* TODO: should probably be an object */

@@ -26,11 +26,18 @@ exception NoProgram;
 
 let getShaderProgram =
   Memoize.partialMemoize3((gl, fg, bg) => {
-    let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+    /*
+     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+     */
+    let (uniforms, programSource) = WaterRenderer.makeProgramSource();
     let vertexShaderSource = programSource.vertexShader;
     let fragmentShaderSource = programSource.fragmentShader;
     let vertexShader =
-      WebGL2.createShader(gl, WebGL2.getVERTEX_SHADER(gl), vertexShaderSource);
+      WebGL2Util.createShader(
+        gl,
+        WebGL2.getVERTEX_SHADER(gl),
+        vertexShaderSource
+      );
     switch vertexShader {
     | Some(_) => ()
     | None =>
@@ -38,7 +45,7 @@ let getShaderProgram =
       Js.log(MyString.lineNumbers(vertexShaderSource));
     };
     let fragmentShader =
-      WebGL2.createShader(
+      WebGL2Util.createShader(
         gl,
         WebGL2.getFRAGMENT_SHADER(gl),
         fragmentShaderSource
@@ -51,7 +58,7 @@ let getShaderProgram =
     };
     let program =
       switch (vertexShader, fragmentShader) {
-      | (Some(vs), Some(fs)) => WebGL2.createProgram(gl, vs, fs)
+      | (Some(vs), Some(fs)) => WebGL2Util.createProgram(gl, vs, fs)
       | _ => None
       };
     (uniforms, program);
@@ -72,7 +79,7 @@ let setupDocument = () => {
       Memoize.setMemoizeId(gl);
       gl;
     | None =>
-      showError("No WebGL2!");
+      showError("No WebGL2Util!");
       raise(NoGL);
     };
   let setCanvasSize = (_) => {
@@ -103,8 +110,8 @@ let getGeometryAndBuffers =
       | "Plane" => Three.createPlaneGeometry()
       | _ => Three.createBoxGeometry()
       };
-    let buffers = WebGL2.createBuffers(gl, geometry);
-    let vao = WebGL2.createAttributes(gl, program, buffers);
+    let buffers = WebGL2Util.createBuffers(gl, geometry);
+    let vao = WebGL2Util.createAttributes(gl, program, buffers);
     (geometry, buffers, vao);
   });
 
@@ -124,7 +131,8 @@ let renderObj =
   let viewMatrices: Three.viewTransformT =
     Three.getViewMatrices(obj.matrixWorld, width, height);
   let uniformBlock =
-    WebGL2.computeUniformBlock(
+    WebGL2Util.computeUniformBlock(
+      gl,
       time,
       width,
       height,
@@ -132,7 +140,7 @@ let renderObj =
       viewMatrices.projectionMatrix,
       uniforms
     );
-  WebGL2.renderObject(gl, program, buffers, vao, uniformBlock);
+  WebGL2Util.renderObject(gl, program, buffers, vao, uniformBlock);
 };
 
 let seedrandom = Math.localSeedRandom();
@@ -163,7 +171,7 @@ let run = (gl, time) => {
     Memoize.setMemoizeId(program);
     Document.debug(Document.window, gl);
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
-    WebGL2.preRender(gl, width, height);
+    WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     for (i in 1 to count) {
       let (x, y, z) =

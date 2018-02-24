@@ -2,6 +2,8 @@ type element;
 
 type styleT;
 
+type imageT;
+
 let window: element = [%bs.raw "window"];
 
 let document: element = [%bs.raw "window.document"];
@@ -49,6 +51,13 @@ external addEventListener : (element, string, Events.event => unit) => unit =
 [@bs.val]
 external requestAnimationFrame : (unit => unit) => unit =
   "requestAnimationFrame";
+
+[@bs.new] external createImage : unit => imageT = "Image";
+
+[@bs.set] external setSource : (imageT, string) => unit = "src";
+
+/* TODO: 'a = event type */
+[@bs.set] external setOnLoad : (imageT, ('a => unit)) => unit = "onload";
 
 let onReady = (f) => {
   let g = (_) => f();

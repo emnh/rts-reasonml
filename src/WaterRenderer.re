@@ -8,21 +8,23 @@
  */
 open! GLSL;
 
+open GLSLUniforms;
+
 let u_modelViewMatrix = mat4uniform("modelViewMatrix");
 
 let u_projectionMatrix = mat4uniform("projectionMatrix");
 
-let light = vec3uniform("light");
+let light = vec3uniform("u_light");
 
-let sphereCenter = vec3uniform("sphereCenter");
+let sphereCenter = vec3uniform("u_sphereCenter");
 
-let sphereRadius = floatuniform("sphereRadius");
+let sphereRadius = floatuniform("u_sphereRadius");
 
-let tiles = sampler2Duniform("tiles");
+let tiles = sampler2Duniform("t_tiles");
 
-let causticTex = sampler2Duniform("causticTex");
+let causticTex = sampler2Duniform("t_causticTex");
 
-let water = sampler2Duniform("water");
+let water = sampler2Duniform("t_water");
 
 let cIOR_AIR = const(floatif(1.0));
 
@@ -49,7 +51,7 @@ let position = vec3varying("v_position");
 let sky = samplerCubeUniform("u_sky");
 
 /* TODO: bool */
-let isAboveWater = floatuniform("u_isAboveWater");
+let u_isAboveWater = floatuniform("u_isAboveWater");
 
 let intersectCubeBody =
   body(() => {
@@ -79,16 +81,17 @@ let intersectCube = (x, y, z, w) =>
     w
   );
 
-let sphereCenter = vec3arg("sphereCenter");
+let argSphereCenter = vec3arg("sphereCenter");
 
-let sphereRadius = floatarg("sphereRadius");
+let argSphereRadius = floatarg("sphereRadius");
 
 let intersectSphereBody =
   body(() => {
-    let toSphere = vec3i1(origin - sphereCenter);
+    let toSphere = vec3i1(origin - argSphereCenter);
     let a = floati1(dot(ray, ray));
     let b = floati1(f(2.0) * dot(toSphere, ray));
-    let c = floati1(dot(toSphere, toSphere) - sphereRadius * sphereRadius);
+    let c =
+      floati1(dot(toSphere, toSphere) - argSphereRadius * argSphereRadius);
     let discriminant = floatvar("discriminant");
     discriminant =@ b * b - f(4.0) * a * c;
     ifstmt(
@@ -104,7 +107,7 @@ let intersectSphereBody =
 let intersectSphere = (x, y, z, w) =>
   fundecl4(
     floatfun("intersectSphere"),
-    (origin, ray, sphereCenter, sphereRadius),
+    (origin, ray, argSphereCenter, argSphereRadius),
     intersectSphereBody,
     x,
     y,
@@ -116,7 +119,8 @@ let point = vec3arg("point");
 
 let getSphereColorBody =
   body(() => {
-    let color = vec31f(f(0.5));
+    let color = vec3var("color");
+    color =@ vec31f(f(0.5));
     /* ambient occlusion with walls */
     color
     *= (
@@ -401,7 +405,7 @@ let waterFragmentShader =
        );
     incomingRay =@ normalize(position - eye);
     ifelsestmt(
-      isAboveWater < f(0.0),
+      u_isAboveWater < f(0.0),
       () => {
         /* underwater */
         normal =@ f(0.0) - normal;
@@ -631,6 +635,67 @@ let causticsFragmentShader =
       )
     );
   });
+
+let r = registerUniform;
+
+let tilesTexture = ref(None);
+
+let getUniforms = () => [
+  r(u_modelViewMatrix, arg => arg.modelViewMatrix),
+  r(u_projectionMatrix, arg => arg.projectionMatrix),
+  r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]),
+  r(sphereRadius, (_) => [|1.0|]),
+  r(u_isAboveWater, (_) => [|1.0|]),
+  registerTextureUniform(
+    water,
+    arg => {
+      let retval =
+        switch tilesTexture^ {
+        | Some(texture) => texture
+        | None =>
+          let img = Document.createImage();
+          Document.setSource(img, "/resources/tiles.jpg");
+          let gl = arg.gl;
+          let texture = WebGL2.createTexture(gl);
+          setupTexture(gl, texture);
+          Document.setOnLoad(
+            img,
+            evt => {
+              /* the largest mip */
+              let mipLevel = 0;
+              /* format we want in the texture */
+              let internalFormat = WebGL2.getRGBA(gl);
+              /* format of data we are supplying */
+              let srcFormat = WebGL2.getRGBA(gl);
+              /* type of data we are supplying */
+              let srcType = WebGL2.getUNSIGNED_BYTE(gl);
+              /* Upload the image into the texture. */
+              WebGL2.texImage2D(
+                gl,
+                WebGL2.getTEXTURE_2D(gl),
+                mipLevel,
+                internalFormat,
+                srcFormat,
+                srcType,
+                img
+              );
+            }
+          );
+          texture;
+        };
+      tilesTexture := Some(retval);
+      retval;
+    }
+  )
+];
+
+let makeProgramSource = () => {
+  let uniformBlock = getUniforms();
+  (
+    uniformBlock,
+    getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
+  );
+};
 /*
    }\
  ';

@@ -1,6 +1,8 @@
 /* One specific shader */
 open! GLSL;
 
+open GLSLUniforms;
+
 let a_uv = vec2attr("a_uv");
 
 let v_uv = vec2varying("v_uv");

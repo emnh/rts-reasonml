@@ -113,6 +113,18 @@ type uniformBlockIndexT;
 
 type enableT;
 
+type textureT;
+
+type clampT;
+
+type texture2DT;
+
+type textureParameterT;
+
+type textureParameterValueT;
+
+type rgbaT;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
@@ -142,6 +154,8 @@ external createShader : (glT, shaderTypeT) => shaderT = "createShader";
 [@bs.send] external createProgram : glT => programT = "createProgram";
 
 [@bs.send] external createBuffer : glT => bufferT = "createBuffer";
+
+[@bs.send] external createTexture : glT => textureT = "createTexture";
 
 [@bs.send]
 external createVertexArray : glT => vertexArrayT = "createVertexArray";
@@ -184,6 +198,9 @@ external getAttribLocation : (glT, programT, string) => attributeLocationT =
 external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 
 [@bs.send]
+external bindTexture : (glT, texture2DT, textureT) => unit = "bindTexture";
+
+[@bs.send]
 external bufferData : (glT, arrayBufferTypeT, Float32Array.t, drawT) => unit =
   "bufferData";
 
@@ -221,6 +238,18 @@ external drawArrays : (glT, drawGeometryT, int, int) => unit = "drawArrays";
 external drawElements : (glT, drawGeometryT, int, primitiveT, int) => unit =
   "drawElements";
 
+[@bs.send]
+external texParameteri :
+  (glT, texture2DT, textureParameterT, textureParameterValueT) => unit =
+  "texParameteri";
+
+[@bs.send] external enable : (glT, enableT) => unit = "enable";
+
+[@bs.send]
+external texImage2D :
+  (glT, texture2DT, int, rgbaT, rgbaT, primitiveT, Document.imageT) => unit =
+  "textImage2D";
+
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 
 [@bs.get] external getFRAGMENT_SHADER : glT => shaderTypeT = "FRAGMENT_SHADER";
@@ -241,6 +270,8 @@ external getUNIFORM_BUFFER : glT => uniformBufferTypeT = "UNIFORM_BUFFER";
 
 [@bs.get] external getFLOAT : glT => primitiveT = "FLOAT";
 
+[@bs.get] external getUNSIGNED_BYTE : glT => primitiveT = "UNSIGNED_BYTE";
+
 [@bs.get] external getUNSIGNED_SHORT : glT => primitiveT = "UNSIGNED_SHORT";
 
 [@bs.get]
@@ -254,165 +285,27 @@ external getCOLOR_BUFFER_BIT : glT => colorBufferBitT = "COLOR_BUFFER_BIT";
 
 [@bs.get] external getDEPTH_TEST : glT => enableT = "DEPTH_TEST";
 
-[@bs.send] external enable : (glT, enableT) => unit = "enable";
+[@bs.get]
+external getCLAMP_TO_EDGE : glT => textureParameterValueT = "CLAMP_TO_EDGE";
 
-let createShader = (gl, stype, source) => {
-  let shader = createShader(gl, stype);
-  shaderSource(gl, shader, source);
-  compileShader(gl, shader);
-  let success = getShaderParameter(gl, shader, getCOMPILE_STATUS(gl));
-  if (Js.to_bool(success)) {
-    Some(shader);
-  } else {
-    Js.log(getShaderInfoLog(gl, shader));
-    deleteShader(gl, shader);
-    None;
-  };
-};
+[@bs.get] external getNEAREST : glT => textureParameterValueT = "NEAREST";
 
-let createProgram = (gl, vertexShader, fragmentShader) => {
-  let program = createProgram(gl);
-  attachShader(gl, program, vertexShader);
-  attachShader(gl, program, fragmentShader);
-  linkProgram(gl, program);
-  let success = getProgramParameter(gl, program, getLINK_STATUS(gl));
-  if (Js.to_bool(success)) {
-    Some(program);
-  } else {
-    Js.log(getProgramInfoLog(gl, program));
-    deleteProgram(gl, program);
-    None;
-  };
-};
+[@bs.get] external getLINEAR : glT => textureParameterValueT = "LINEAR";
 
-/* TODO: Preallocate and refill array */
-let computeUniformBlock =
-    (time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
-  let uniformArg: GLSL.uniformInputT = {
-    time,
-    tick: 0.0,
-    width,
-    height,
-    modelViewMatrix,
-    projectionMatrix
-  };
-  let l = List.map(((_, f)) => f(uniformArg), uniforms);
-  let uniformBlock = Float32Array.create(Array.concat(l));
-  uniformBlock;
-};
+[@bs.get] external getTEXTURE_2D : glT => texture2DT = "TEXTURE_2D";
 
-let preRender = (gl, width, height) => {
-  viewport(gl, 0, 0, width, height);
-  enable(gl, getDEPTH_TEST(gl));
-  clearColor(gl, 0, 0, 0, 0);
-  clear(gl, getCOLOR_BUFFER_BIT(gl));
-};
+[@bs.get]
+external getTEXTURE_WRAP_S : glT => textureParameterT = "TEXTURE_WRAP_S";
 
-type glBuffersT = {
-  positionBuffer: bufferT,
-  uvBuffer: bufferT,
-  indexBuffer: bufferT,
-  offset: int,
-  count: int
-};
+[@bs.get]
+external getTEXTURE_WRAP_T : glT => textureParameterT = "TEXTURE_WRAP_T";
 
-let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
-  let positions = geometry.position;
-  let index = geometry.index;
-  let positionBuffer = createBuffer(gl);
-  bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
-  bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
-  let uvBuffer = createBuffer(gl);
-  bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
-  bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
-  let indexBuffer = createBuffer(gl);
-  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
-  bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
-  let offset = 0;
-  let count = Int16Array.length(index);
-  {positionBuffer, uvBuffer, indexBuffer, offset, count};
-};
+[@bs.get]
+external getTEXTURE_MIN_FILTER : glT => textureParameterT =
+  "TEXTURE_MIN_FILTER";
 
-let createAttributes = (gl, program, buffers) => {
-  let vao = createVertexArray(gl);
-  bindVertexArray(gl, vao);
-  let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
-  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
-  enableVertexAttribArray(gl, positionAttributeLocation);
-  let size = 3;
-  let normalize = Js.Boolean.to_js_boolean(false);
-  let stride = 0;
-  let offset = 0;
-  vertexAttribPointer(
-    gl,
-    positionAttributeLocation,
-    size,
-    getFLOAT(gl),
-    normalize,
-    stride,
-    offset
-  );
-  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
-  let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
-  enableVertexAttribArray(gl, uvAttributeLocation);
-  let size = 2;
-  let normalize = Js.Boolean.to_js_boolean(false);
-  let stride = 0;
-  let offset = 0;
-  vertexAttribPointer(
-    gl,
-    uvAttributeLocation,
-    size,
-    getFLOAT(gl),
-    normalize,
-    stride,
-    offset
-  );
-  vao;
-};
+[@bs.get]
+external getTEXTURE_MAG_FILTER : glT => textureParameterT =
+  "TEXTURE_MAG_FILTER";
 
-let getUniformBufferAndLocation =
-  Memoize.partialMemoize2((gl, program) => {
-    let uniformPerSceneBuffer = createBuffer(gl);
-    let uniformPerSceneLocation =
-      getUniformBlockIndex(gl, program, "u_PerScene");
-    (uniformPerSceneBuffer, uniformPerSceneLocation);
-  });
-
-let renderObject = (gl, program, buffers, vao, uniformBlock) => {
-  useProgram(gl, program);
-  bindVertexArray(gl, vao);
-  /* Upload uniforms */
-  let (uniformPerSceneBuffer, uniformPerSceneLocation) =
-    getUniformBufferAndLocation(gl, program);
-  /*
-   Js.log((uniformPerSceneBuffer, uniformPerSceneLocation));
-   */
-  let uniformBlockBindingIndex = 0;
-  uniformBlockBinding(
-    gl,
-    program,
-    uniformPerSceneLocation,
-    uniformBlockBindingIndex
-  );
-  bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
-  bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getDYNAMIC_DRAW(gl));
-  bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
-  bindBufferBase(
-    gl,
-    getUNIFORM_BUFFER(gl),
-    uniformBlockBindingIndex,
-    uniformPerSceneBuffer
-  );
-  /* Bind buffers */
-  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
-  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
-  /* Render */
-  drawElements(
-    gl,
-    getTRIANGLES(gl),
-    buffers.count,
-    getUNSIGNED_SHORT(gl),
-    buffers.offset
-  );
-};
+[@bs.get] external getRGBA : glT => rgbaT = "RGBA";
