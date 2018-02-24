@@ -1307,9 +1307,28 @@ let forstmt = (init, test, increment, body) => {
   add(ForStatement(init, u(test), increment, body));
 };
 
-let ifstmt = (l, b) => add(IfStatement(u(l), b));
+let ifstmt = (test, body) => {
+  let body = {
+    push();
+    body();
+    pop();
+  };
+  add(IfStatement(u(test), body));
+};
 
-let ifelsestmt = (l, b1, b2) => add(IfElseStatement(u(l), b1, b2));
+let ifelsestmt = (l, body1, body2) => {
+  let body1 = {
+    push();
+    body1();
+    pop();
+  };
+  let body2 = {
+    push();
+    body2();
+    pop();
+  };
+  add(IfElseStatement(u(l), body1, body2));
+};
 
 /* let f = x => Typed(`Float, ImmediateFloat(x)); */
 /* let f: float => trT([ | `Float]) = x => Typed(`Float, ImmediateFloat(x)); */

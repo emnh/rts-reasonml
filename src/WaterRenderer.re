@@ -93,19 +93,10 @@ let intersectSphereBody =
     discriminant =@ b * b - f(4.0) * a * c;
     ifstmt(
       discriminant > f(0.0),
-      {
-        push();
+      () => {
         let t = floatvar("t");
         t =@ (f(0.0) - b - sqrt(discriminant)) / (f(2.0) * a);
-        ifstmt(
-          t > f(0.0),
-          {
-            push();
-            return(t);
-            pop();
-          }
-        );
-        pop();
+        ifstmt(t > f(0.0), () => return(t));
       }
     );
   });
@@ -161,8 +152,7 @@ let getSphereColorBody =
     info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
     ifstmt(
       point **. y' < info **. r',
-      {
-        push();
+      () => {
         let caustic = vec4var("caustic");
         caustic
         =@ texture(
@@ -180,7 +170,6 @@ let getSphereColorBody =
              + f(0.5)
            );
         diffuse *= (caustic **. r' * f(4.0));
-        pop();
       }
     );
     color += diffuse;
@@ -200,37 +189,28 @@ let getWallColorBody =
     normal =@ vec31f(f(0.0));
     ifelsestmt(
       abs(point **. x') > f(0.999),
-      {
-        push();
+      () => {
         wallColor
         =@ texture(tiles, point **. yz' * f(0.5) + vec22f(f(1.0), f(0.5)))
         **. rgb';
         normal =@ vec33f(f(0.0) - point **. x', f(0.0), f(0.0));
-        pop();
       },
-      {
-        push();
+      () =>
         ifelsestmt(
           abs(point **. z') > f(0.999),
-          {
-            push();
+          () => {
             wallColor
             =@ texture(tiles, point **. yx' * f(0.5) + vec22f(f(1.0), f(0.5)))
             **. rgb';
             normal =@ vec33f(f(0.0), f(0.0), f(0.0) - point **. z');
-            pop();
           },
-          {
-            push();
+          () => {
             wallColor
             =@ texture(tiles, point **. xz' * f(0.5) + f(0.5))
             **. rgb';
             normal =@ vec33f(f(0.0), f(1.0), f(0.0));
-            pop();
           }
-        );
-        pop();
-      }
+        )
     );
     scale /= length(point); /* pool ambient occlusion */
     scale
@@ -254,8 +234,7 @@ let getWallColorBody =
     info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
     ifelsestmt(
       point **. y' < info **. r',
-      {
-        push();
+      () => {
         let caustic = vec4var("caustic");
         caustic
         =@ texture(
@@ -273,10 +252,8 @@ let getWallColorBody =
              + f(0.5)
            );
         scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
-        pop();
       },
-      {
-        push();
+      () => {
         /* shadow for the rim of the pool */
         let t = vec2var("t");
         t
@@ -307,7 +284,6 @@ let getWallColorBody =
           )
         );
         scale += diffuse * f(0.5);
-        pop();
       }
     );
     return(wallColor * scale);
@@ -329,16 +305,11 @@ let getSurfaceRayColorBody =
     q =@ intersectSphere(origin, ray, sphereCenter, sphereRadius);
     ifelsestmt(
       q < f(1.0e6),
-      {
-        push();
-        color =@ getSphereColor(origin + ray * q);
-        pop();
-      },
-      {
-        push();
+      () => color =@ getSphereColor(origin + ray * q),
+      () => {
         ifelsestmt(
           ray **. y' < f(0.0),
-          {
+          () => {
             push();
             let t = vec2var("t1");
             t
@@ -349,10 +320,8 @@ let getSurfaceRayColorBody =
                  vec33f(f(1.0), f(2.0), f(1.0))
                );
             color =@ getWallColor(origin + ray * (t **. y'));
-            pop();
           },
-          {
-            push();
+          () => {
             let t = vec2var("t2");
             t
             =@ intersectCube(
@@ -365,34 +334,20 @@ let getSurfaceRayColorBody =
             hit =@ origin + ray * (t **. y');
             ifelsestmt(
               hit **. y' < f(2.0) / f(12.0),
-              {
-                push();
-                color =@ getWallColor(hit);
-                pop();
-              },
-              {
-                push();
+              () => color =@ getWallColor(hit),
+              () => {
                 color =@ textureCube(sky, ray) **. rgb';
                 color
                 += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
                 * vec33f(f(10.0), f(8.0), f(6.0));
-                pop();
               }
             );
-            pop();
           }
         );
         pop();
       }
     );
-    ifstmt(
-      ray **. y' < f(0.0),
-      {
-        push();
-        color *= waterColor;
-        pop();
-      }
-    );
+    ifstmt(ray **. y' < f(0.0), () => color *= waterColor);
     return(color);
   });
 
@@ -447,9 +402,8 @@ let waterFragmentShader =
     incomingRay =@ normalize(position - eye);
     ifelsestmt(
       isAboveWater < f(0.0),
-      {
+      () => {
         /* underwater */
-        push();
         normal =@ f(0.0) - normal;
         let reflectedRay = vec3var("reflectedRay1");
         let refractedRay = vec3var("reflectedRay1");
@@ -478,11 +432,9 @@ let waterFragmentShader =
              )
              |+| f(1.0)
            );
-        pop();
       },
-      {
+      () => {
         /* above water */
-        push();
         let reflectedRay = vec3var("reflectedRay2");
         let refractedRay = vec3var("reflectedRay2");
         let fresnel = floatvar("fresnel2");
@@ -502,7 +454,6 @@ let waterFragmentShader =
         =@ getSurfaceRayColor(position, refractedRay, abovewaterColor);
         gl_FragColor
         =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
-        pop();
       }
     );
   });
@@ -521,13 +472,8 @@ let sphereFragmentShader =
     gl_FragColor =@ vec4(getSphereColor(position) |+| f(1.0));
     let info = vec4var("info");
     info =@ texture(water, position **. xz' * f(0.5) + f(0.5));
-    ifstmt(
-      position **. y' < info **. r',
-      {
-        push();
-        gl_FragColor **. rgb' *= (underwaterColor * f(1.2));
-        pop();
-      }
+    ifstmt(position **. y' < info **. r', () =>
+      gl_FragColor **. rgb' *= (underwaterColor * f(1.2))
     );
   });
 
@@ -547,14 +493,10 @@ let cubeVertexShader =
 let cubeFragmentShader =
   body(() => {
     gl_FragColor =@ vec4(getWallColor(position) |+| f(1.0));
-    info = texture(water, position **. xz' * f(0.5) + f(0.5));
-    ifstmt(
-      position **. y' < info **. r',
-      {
-        push();
-        gl_FragColor **. rgb' *= underwaterColor * f(1.2);
-        pop();
-      }
+    let info = vec4var("info");
+    info =@ texture(water, position **. xz' * f(0.5) + f(0.5));
+    ifstmt(position **. y' < info **. r', () =>
+      gl_FragColor **. rgb' *= (underwaterColor * f(1.2))
     );
   });
 /*
