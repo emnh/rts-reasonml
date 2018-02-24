@@ -462,14 +462,19 @@ let waterFragmentShader =
         =@ getSurfaceRayColor(position, reflectedRay, abovewaterColor);
         refractedColor
         =@ getSurfaceRayColor(position, refractedRay, abovewaterColor);
-        /* XXX: for debug */
-        gl_FragColor **. xy' =@ v_uv;
         gl_FragColor
         =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
       }
     );
   });
 
+/* XXX: for debug */
+/*
+ gl_FragColor =@ texture(water, v_uv);
+ */
+/*
+ gl_FragColor **. rg' =@ v_uv;
+ */
 let sphereVertexShader =
   body(() => {
     position =@ sphereCenter + gl_Vertex **. xyz' * sphereRadius;
@@ -646,23 +651,25 @@ let causticsFragmentShader =
 
 let r = registerUniform;
 
+let getNewTexture = (gl, path) => {
+  let img = Document.createImage();
+  let texture = WebGL2.createTexture(gl);
+  setupTexture(gl, texture);
+  Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
+  Document.setSource(img, path);
+  texture;
+};
+
 let tilesTexture = ref(None);
 
-let registeredWater =
+let registeredTiles =
   registerTextureUniform(
-    water,
+    tiles,
     arg => {
       let retval =
         switch tilesTexture^ {
         | Some(texture) => texture
-        | None =>
-          let img = Document.createImage();
-          Document.setSource(img, "/resources/tiles.jpg");
-          let gl = arg.gl;
-          let texture = WebGL2.createTexture(gl);
-          setupTexture(gl, texture);
-          Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
-          texture;
+        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
         };
       tilesTexture := Some(retval);
       retval;
@@ -679,16 +686,25 @@ let registeredCaustics =
       let retval =
         switch tilesTexture2^ {
         | Some(texture) => texture
-        | None =>
-          let img = Document.createImage();
-          Document.setSource(img, "/resources/tiles.jpg");
-          let gl = arg.gl;
-          let texture = WebGL2.createTexture(gl);
-          setupTexture(gl, texture);
-          Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
-          texture;
+        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
         };
       tilesTexture2 := Some(retval);
+      retval;
+    }
+  );
+
+let tilesTexture3 = ref(None);
+
+let registeredWater =
+  registerTextureUniform(
+    water,
+    arg => {
+      let retval =
+        switch tilesTexture3^ {
+        | Some(texture) => texture
+        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
+        };
+      tilesTexture3 := Some(retval);
       retval;
     }
   );
@@ -703,6 +719,7 @@ let getUniforms = () => [
   r(eye, (_) =>
     [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|]
   ),
+  registeredTiles,
   registeredWater,
   registeredCaustics
 ];

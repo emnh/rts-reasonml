@@ -256,7 +256,15 @@ external texImage2D :
   "texImage2D";
 
 [@bs.send]
+external texImage2Ddata :
+  (glT, texture2DT, int, rgbaT, int, int, int, rgbaT, primitiveT, Uint8Array.t) => unit =
+  "texImage2D";
+
+[@bs.send]
 external activeTexture : (glT, textureIndexT) => unit = "activeTexture";
+
+[@bs.send]
+external generateMipmap : (glT, texture2DT) => unit = "generateMipmap";
 
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 

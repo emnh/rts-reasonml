@@ -34,17 +34,18 @@ let registerTextureUniform = (a, b) => {
   (a, UniformTexture(name, b));
 };
 
-let cachedEmptyTexture = ref(None);
+/*
+ let cachedEmptyTexture = ref(None);
 
-let emptyTexture = gl => {
-  let retval =
-    switch cachedEmptyTexture^ {
-    | Some(x) => x
-    | None => WebGL2.createTexture(gl)
-    };
-  retval;
-};
-
+ let emptyTexture = gl => {
+   let retval =
+     switch cachedEmptyTexture^ {
+     | Some(x) => x
+     | None => WebGL2.createTexture(gl)
+     };
+   retval;
+ };
+ */
 let setupTexture = (gl, texture) => {
   let t2d = WebGL2.getTEXTURE_2D(gl);
   WebGL2.bindTexture(gl, t2d, texture);
@@ -72,6 +73,18 @@ let setupTexture = (gl, texture) => {
     WebGL2.getTEXTURE_MAG_FILTER(gl),
     WebGL2.getNEAREST(gl)
   );
+
+  let level = 0;
+  let internalFormat = WebGL2.getRGBA(gl);
+  let width = 1;
+  let height = 1;
+  let border = 0;
+  let srcFormat = WebGL2.getRGBA(gl);
+  let srcType = WebGL2.getUNSIGNED_BYTE(gl);
+  let pixel = Uint8Array.create([|255, 0, 0, 255|]);
+  WebGL2.texImage2Ddata(gl, t2d, level, internalFormat,
+                width, height, border, srcFormat, srcType,
+                pixel);
 };
 
 let uploadImage = (gl, texture, img) => {
@@ -88,13 +101,15 @@ let uploadImage = (gl, texture, img) => {
   /* Upload the image into the texture. */
   WebGL2.texImage2D(
     gl,
-    WebGL2.getTEXTURE_2D(gl),
+    t2d,
     mipLevel,
     internalFormat,
     srcFormat,
     srcType,
     img
   );
+  WebGL2.generateMipmap(gl, t2d);
+  setupTexture(gl, texture);
 };
 
 /* TODO: Preallocate and refill array */
