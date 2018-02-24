@@ -45,8 +45,9 @@ let emptyTexture = gl => {
   retval;
 };
 
-let setupTexture = (gl, _) => {
+let setupTexture = (gl, texture) => {
   let t2d = WebGL2.getTEXTURE_2D(gl);
+  WebGL2.bindTexture(gl, t2d, texture);
   WebGL2.texParameteri(
     gl,
     t2d,
@@ -73,6 +74,29 @@ let setupTexture = (gl, _) => {
   );
 };
 
+let uploadImage = (gl, texture, img) => {
+  let t2d = WebGL2.getTEXTURE_2D(gl);
+  WebGL2.bindTexture(gl, t2d, texture);
+  /* the largest mip */
+  let mipLevel = 0;
+  /* format we want in the texture */
+  let internalFormat = WebGL2.getRGBA(gl);
+  /* format of data we are supplying */
+  let srcFormat = WebGL2.getRGBA(gl);
+  /* type of data we are supplying */
+  let srcType = WebGL2.getUNSIGNED_BYTE(gl);
+  /* Upload the image into the texture. */
+  WebGL2.texImage2D(
+    gl,
+    WebGL2.getTEXTURE_2D(gl),
+    mipLevel,
+    internalFormat,
+    srcFormat,
+    srcType,
+    img
+  );
+};
+
 /* TODO: Preallocate and refill array */
 let computeUniformBlock =
     (gl, time, width, height, modelViewMatrix, projectionMatrix, uniforms) => {
@@ -85,16 +109,54 @@ let computeUniformBlock =
     modelViewMatrix,
     projectionMatrix
   };
+  let alignAt2 = l =>
+    switch (Array.length(l) mod 2) {
+    | 0 => l
+    | 1 => Array.concat([l, [|0.0|]])
+    | _ => raise(GLSL.GLSLTypeError("can't happen"))
+    };
+  let alignAt4 = l =>
+    switch (Array.length(l) mod 4) {
+    | 0 => l
+    | 1 => Array.concat([l, [|0.0, 0.0, 0.0|]])
+    | 2 => Array.concat([l, [|0.0, 0.0|]])
+    | 3 => Array.concat([l, [|0.0|]])
+    | _ => raise(GLSL.GLSLTypeError("can't happen"))
+    };
   let l =
-    List.map(
-      ((_, f)) =>
+    List.fold_left(
+      (ar, (u, f)) => {
+        let t =
+          switch u {
+          | GLSL.RVar((_, t2, _)) => t2
+          | _ => raise(GLSL.GLSLTypeError("not rvar"))
+          };
+        /** Layout std140 according to
+         * https://www.khronos.org/registry/OpenGL/specs/gl/glspec45.core.pdf#page=159
+         * */
+        let align = x =>
+          switch t {
+          | GLSL.Void => x
+          | GLSL.Int => x
+          | GLSL.Float => x
+          | GLSL.Vec2 => alignAt2(x)
+          | GLSL.Vec3 => alignAt4(x)
+          | GLSL.Vec4 => alignAt2(x)
+          | GLSL.Mat2 => x
+          | GLSL.Mat3 => x
+          | GLSL.Mat4 => x
+          | GLSL.Sampler2D => x
+          | GLSL.SamplerCube => x
+          };
         switch f {
-        | UniformFloatArray(f2) => f2(uniformArg)
-        | _ => [||]
-        },
+        | UniformFloatArray(f2) => Array.concat([align(ar), f2(uniformArg)])
+        | _ => ar
+        };
+      },
+      [||],
       uniforms
     );
-  let uniformBlock = Float32Array.create(Array.concat(l));
+  let uniformBlock = Float32Array.create(l);
   let textures =
     List.fold_right(
       ((_, f), r) =>

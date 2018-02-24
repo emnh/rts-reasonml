@@ -27,16 +27,18 @@ let fmtColor = color => {
   [|float_of_int(r) /. c, float_of_int(g) /. c, float_of_int(b) /. c, 1.0|];
 };
 
+let r = registerUniform;
+
 let getUniforms = (fg, bg) => [
-  (untyped(u_modelViewMatrix), arg => arg.modelViewMatrix),
-  (untyped(u_projectionMatrix), arg => arg.projectionMatrix),
-  (untyped(u_color1), (_) => fmtColor(fg)),
-  (untyped(u_color2), (_) => fmtColor(bg)),
-  (
-    untyped(u_resolution),
+  r(u_modelViewMatrix, arg => arg.modelViewMatrix),
+  r(u_projectionMatrix, arg => arg.projectionMatrix),
+  r(u_color1, (_) => fmtColor(fg)),
+  r(u_color2, (_) => fmtColor(bg)),
+  r(
+    u_resolution,
     arg => [|float_of_int(arg.width), float_of_int(arg.height)|]
   ),
-  (untyped(u_time), arg => [|arg.time|])
+  r(u_time, arg => [|arg.time|])
 ];
 
 let mainVertex =

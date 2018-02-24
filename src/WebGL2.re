@@ -85,7 +85,7 @@ type compileStatusT;
 
 type linkStatusT;
 
-type attributeLocationT;
+type attributeLocationT = int;
 
 type bufferSubT;
 
@@ -253,7 +253,7 @@ external texParameteri :
 [@bs.send]
 external texImage2D :
   (glT, texture2DT, int, rgbaT, rgbaT, primitiveT, Document.imageT) => unit =
-  "textImage2D";
+  "texImage2D";
 
 [@bs.send]
 external activeTexture : (glT, textureIndexT) => unit = "activeTexture";

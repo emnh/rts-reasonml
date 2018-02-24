@@ -27,7 +27,7 @@ exception NoProgram;
 let getShaderProgram =
   Memoize.partialMemoize3((gl, fg, bg) => {
     /*
-     let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
+      let (uniforms, programSource) = ShaderExample.makeProgramSource(fg, bg);
      */
     let (uniforms, programSource) = WaterRenderer.makeProgramSource();
     let vertexShaderSource = programSource.vertexShader;
@@ -38,6 +38,8 @@ let getShaderProgram =
         WebGL2.getVERTEX_SHADER(gl),
         vertexShaderSource
       );
+    Js.log("Vertex shader:");
+    Js.log(MyString.lineNumbers(vertexShaderSource));
     switch vertexShader {
     | Some(_) => ()
     | None =>
@@ -50,6 +52,8 @@ let getShaderProgram =
         WebGL2.getFRAGMENT_SHADER(gl),
         fragmentShaderSource
       );
+    Js.log("Fragment shader:");
+    Js.log(MyString.lineNumbers(fragmentShaderSource));
     switch fragmentShader {
     | Some(_) => ()
     | None =>

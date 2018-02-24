@@ -8,8 +8,6 @@ let vertexPrelude = {|
 |};
 
 let fragmentPrelude = {|
-#extension GL_OES_standard_derivatives : enable
-
 #define VARYING in|};
 
 let precisionQuantifier = "mediump";
@@ -457,10 +455,11 @@ let fmtTransformer = {
                   t,
                   [
                     "for (",
+                    /* TODO: handle multiple init statements */
                     String.map(
                       x =>
                         switch x {
-                        | ';' => ','
+                        | ';' => ' '
                         | _ => x
                         },
                       t.tree(t, l)
@@ -468,10 +467,11 @@ let fmtTransformer = {
                     ";",
                     t.rExpr(t, test),
                     ";",
+                    /* TODO: handle multiple increment statements */
                     String.map(
                       x =>
                         switch x {
-                        | ';' => ','
+                        | ';' => ' '
                         | _ => x
                         },
                       t.tree(t, r2)
@@ -590,6 +590,12 @@ let formatFunctions = attrs => {
           },
         argvars
       );
+    let argvars =
+      List.fold_left(
+        (x, y) => List.concat([x, [",", y]]),
+        [List.hd(argvars)],
+        List.tl(argvars)
+      );
     let body = t.tree(t, body);
     let fn =
       t.combine(
@@ -629,7 +635,7 @@ let formatVaryings = attrs => {
 let formatUniforms = attrs => {
   let formatUniform = attr => {
     let (t, name) = attr;
-    "  "
+    indent
     ++ precisionQuantifier
     ++ " "
     ++ glslTypeString(t)
@@ -637,11 +643,24 @@ let formatUniforms = attrs => {
     ++ name
     ++ ";";
   };
+  let formatUniform2 = attr => {
+    let (t, name) = attr;
+    "uniform " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+  };
+  let filterSamplers = ((t, _)) =>
+    switch t {
+    | Sampler2D => false
+    | _ => true
+    };
+  let (notSamplerAttrs, samplerAttrs) = List.partition(filterSamplers, attrs);
   "layout(std140) uniform u_PerScene {"
   ++ newline
-  ++ String.concat(newline, List.map(formatUniform, attrs)) /*orderVars(formatUniform, attrs))*/
+  ++ String.concat(newline, List.map(formatUniform, notSamplerAttrs))
   ++ newline
-  ++ "};";
+  ++ "};"
+  ++ newline
+  ++ String.concat(newline, List.map(formatUniform2, samplerAttrs))
+  ++ newline;
 };
 
 let formatOutputs = attrs => {
@@ -996,7 +1015,10 @@ let sampler2Duniform = name =>
 let samplerCubeUniform = name =>
   Typed(`SamplerCube, RVar((Uniform, Sampler2D, name)));
 
-let gl_Vertex = vec4builtin("gl_Vertex");
+/*
+ let gl_Vertex = vec4builtin("gl_Vertex");
+ */
+let gl_Vertex = vec4attr("a_position");
 
 let gl_Position = vec4builtin("gl_Position");
 
@@ -1341,20 +1363,27 @@ let i = x => Typed(`Int, ImmediateInt(x));
 let return = l => add(Return(u(l)));
 
 /* float var declaration and initialization */
-let floatif = a => {
-  let var = floatvar(genSym());
-  var =@ f(a);
-  var;
-};
+/* TODO: figure out how to do this properly */
+let floatif = a =>
+  /*
+   let var = floatvar(genSym());
+   var =@ f(a);
+   var;
+   */
+  f(a);
 
 /* vec3 of 3 floats var declaration and initialization */
-let vec3i3f = (a, b, c) => {
-  let var = vec3var(genSym());
-  var =@ vec33f(f(a), f(b), f(c));
-  var;
-};
+/* TODO: figure out how to do this properly */
+let vec3i3f = (a, b, c) =>
+  /*
+   let var = vec3var(genSym());
+   var =@ vec33f(f(a), f(b), f(c));
+   var;
+   */
+  vec33f(f(a), f(b), f(c));
 
 /* float of expr declaration and initialization */
+/* TODO: figure out how to do this properly */
 let floati1 = a => {
   let var = floatvar(genSym());
   var =@ a;
@@ -1362,6 +1391,7 @@ let floati1 = a => {
 };
 
 /* vec3 of expr declaration and initialization */
+/* TODO: figure out how to do this properly */
 let vec3i1 = a => {
   let var = vec3var(genSym());
   var =@ a;

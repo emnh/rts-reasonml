@@ -10,6 +10,10 @@ open! GLSL;
 
 open GLSLUniforms;
 
+let a_uv = vec2attr("a_uv");
+
+let v_uv = vec2varying("v_uv");
+
 let u_modelViewMatrix = mat4uniform("modelViewMatrix");
 
 let u_projectionMatrix = mat4uniform("projectionMatrix");
@@ -305,6 +309,7 @@ let waterColor = vec3arg("waterColor");
 let getSurfaceRayColorBody =
   body(() => {
     let color = vec3var("color");
+    color =@ vec31f(f(0.0));
     let q = floatvar("q");
     q =@ intersectSphere(origin, ray, sphereCenter, sphereRadius);
     ifelsestmt(
@@ -367,6 +372,7 @@ let getSurfaceRayColor = (x, y, z) =>
 
 let waterVertexShader =
   body(() => {
+    v_uv =@ a_uv;
     let info = vec4var("info");
     info =@ texture(water, gl_Vertex **. xy' * f(0.5) + f(0.5));
     position =@ gl_Vertex **. xzy';
@@ -456,6 +462,8 @@ let waterFragmentShader =
         =@ getSurfaceRayColor(position, reflectedRay, abovewaterColor);
         refractedColor
         =@ getSurfaceRayColor(position, refractedRay, abovewaterColor);
+        /* XXX: for debug */
+        gl_FragColor **. xy' =@ v_uv;
         gl_FragColor
         =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
       }
@@ -640,12 +648,7 @@ let r = registerUniform;
 
 let tilesTexture = ref(None);
 
-let getUniforms = () => [
-  r(u_modelViewMatrix, arg => arg.modelViewMatrix),
-  r(u_projectionMatrix, arg => arg.projectionMatrix),
-  r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]),
-  r(sphereRadius, (_) => [|1.0|]),
-  r(u_isAboveWater, (_) => [|1.0|]),
+let registeredWater =
   registerTextureUniform(
     water,
     arg => {
@@ -658,35 +661,50 @@ let getUniforms = () => [
           let gl = arg.gl;
           let texture = WebGL2.createTexture(gl);
           setupTexture(gl, texture);
-          Document.setOnLoad(
-            img,
-            evt => {
-              /* the largest mip */
-              let mipLevel = 0;
-              /* format we want in the texture */
-              let internalFormat = WebGL2.getRGBA(gl);
-              /* format of data we are supplying */
-              let srcFormat = WebGL2.getRGBA(gl);
-              /* type of data we are supplying */
-              let srcType = WebGL2.getUNSIGNED_BYTE(gl);
-              /* Upload the image into the texture. */
-              WebGL2.texImage2D(
-                gl,
-                WebGL2.getTEXTURE_2D(gl),
-                mipLevel,
-                internalFormat,
-                srcFormat,
-                srcType,
-                img
-              );
-            }
-          );
+          Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
           texture;
         };
       tilesTexture := Some(retval);
       retval;
     }
-  )
+  );
+
+/* TODO: use render target texture with caustics on it */
+let tilesTexture2 = ref(None);
+
+let registeredCaustics =
+  registerTextureUniform(
+    causticTex,
+    arg => {
+      let retval =
+        switch tilesTexture2^ {
+        | Some(texture) => texture
+        | None =>
+          let img = Document.createImage();
+          Document.setSource(img, "/resources/tiles.jpg");
+          let gl = arg.gl;
+          let texture = WebGL2.createTexture(gl);
+          setupTexture(gl, texture);
+          Document.setOnLoad(img, (_) => uploadImage(gl, texture, img));
+          texture;
+        };
+      tilesTexture2 := Some(retval);
+      retval;
+    }
+  );
+
+let getUniforms = () => [
+  r(u_modelViewMatrix, arg => arg.modelViewMatrix),
+  r(u_projectionMatrix, arg => arg.projectionMatrix),
+  r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]),
+  r(sphereRadius, (_) => [|1.0|]),
+  r(u_isAboveWater, (_) => [|1.0|]),
+  r(light, (_) => [|2.0, 2.0, (-1.0)|]),
+  r(eye, (_) =>
+    [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|]
+  ),
+  registeredWater,
+  registeredCaustics
 ];
 
 let makeProgramSource = () => {

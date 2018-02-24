@@ -66,36 +66,44 @@ let createAttributes = (gl, program, buffers) => {
   bindVertexArray(gl, vao);
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
-  enableVertexAttribArray(gl, positionAttributeLocation);
-  let size = 3;
-  let normalize = Js.Boolean.to_js_boolean(false);
-  let stride = 0;
-  let offset = 0;
-  vertexAttribPointer(
-    gl,
-    positionAttributeLocation,
-    size,
-    getFLOAT(gl),
-    normalize,
-    stride,
-    offset
-  );
+  if (positionAttributeLocation != -1) {
+    enableVertexAttribArray(gl, positionAttributeLocation);
+    let size = 3;
+    let normalize = Js.Boolean.to_js_boolean(false);
+    let stride = 0;
+    let offset = 0;
+    vertexAttribPointer(
+      gl,
+      positionAttributeLocation,
+      size,
+      getFLOAT(gl),
+      normalize,
+      stride,
+      offset
+    );
+  } else {
+    Js.log("warning: unused a_position");
+  };
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
-  enableVertexAttribArray(gl, uvAttributeLocation);
-  let size = 2;
-  let normalize = Js.Boolean.to_js_boolean(false);
-  let stride = 0;
-  let offset = 0;
-  vertexAttribPointer(
-    gl,
-    uvAttributeLocation,
-    size,
-    getFLOAT(gl),
-    normalize,
-    stride,
-    offset
-  );
+  if (uvAttributeLocation != -1) {
+    enableVertexAttribArray(gl, uvAttributeLocation);
+    let size = 2;
+    let normalize = Js.Boolean.to_js_boolean(false);
+    let stride = 0;
+    let offset = 0;
+    vertexAttribPointer(
+      gl,
+      uvAttributeLocation,
+      size,
+      getFLOAT(gl),
+      normalize,
+      stride,
+      offset
+    );
+  } else {
+    Js.log("warning: unused a_uv");
+  };
   vao;
 };
 
@@ -132,9 +140,6 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
     uniformBlockBindingIndex,
     uniformPerSceneBuffer
   );
-  /* Bind buffers */
-  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
-  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
   /* Bind textures */
   let textureIndices = [
     getTEXTURE0(gl),
@@ -163,6 +168,9 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
     },
     textures
   );
+  /* Bind buffers */
+  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
+  bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
   /* Render */
   drawElements(
     gl,
