@@ -8,6 +8,8 @@ let vertexPrelude = {|
 |};
 
 let fragmentPrelude = {|
+#extension GL_OES_standard_derivatives : enable
+
 #define VARYING in|};
 
 let precisionQuantifier = "mediump";
@@ -1146,6 +1148,10 @@ let min = (l, r) => g2(l, r, BuiltinFun2("min", u(l), u(r)));
 let mix = (l, r1, r2) =>
   mixexpr3(l, r1, r2, BuiltinFun3("mix", u(l), u(r1), u(r2)));
 
+/* TODO: type check */
+let clamp = (l, r1, r2) =>
+  Typed(getType(l), BuiltinFun3("clamp", u(l), u(r1), u(r2)));
+
 let sqrt = l => g1(l, BuiltinFun1("sqrt", u(l)));
 
 let sin = l => g1(l, BuiltinFun1("sin", u(l)));
@@ -1156,6 +1162,10 @@ let abs = l => g1(l, BuiltinFun1("abs", u(l)));
 
 let exp = l => g1(l, BuiltinFun1("exp", u(l)));
 
+let dFdx = l => g1(l, BuiltinFun1("dFdx", u(l)));
+
+let dFdy = l => g1(l, BuiltinFun1("dFdy", u(l)));
+
 let length = l => genericexpr1float(l, BuiltinFun1("length", u(l)));
 
 let normalize = l => g1(l, BuiltinFun1("normalize", u(l)));
@@ -1165,6 +1175,8 @@ let floor = l => g1(l, BuiltinFun1("floor", u(l)));
 let fract = l => g1(l, BuiltinFun1("fract", u(l)));
 
 let pow = (l, r) => g2(l, r, BuiltinFun2("pow", u(l), u(r)));
+
+let cross = (l, r) => g2(l, r, BuiltinFun2("cross", u(l), u(r)));
 
 let dot = (l, r) => genericexpr2float(l, r, BuiltinFun2("dot", u(l), u(r)));
 

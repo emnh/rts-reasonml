@@ -499,6 +499,138 @@ let cubeFragmentShader =
       gl_FragColor **. rgb' *= (underwaterColor * f(1.2))
     );
   });
+
+let oldPos = vec3varying("oldPos");
+
+let newPos = vec3varying("newPos");
+
+let ray = vec3varying("ray");
+
+let refractedLight = vec3arg("refractedLight");
+
+let projectBody =
+  body(() => {
+    /* project the ray onto the plane */
+    let tcube = vec2var("tcube");
+    tcube
+    =@ intersectCube(
+         origin,
+         ray,
+         vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
+         vec33f(f(1.0), f(2.0), f(1.0))
+       );
+    origin += ray * (tcube **. y');
+    let tplane = floatvar("tplane");
+    tplane =@ (f(0.0) - origin **. y' - f(1.0)) / (refractedLight **. y');
+    return(origin + refractedLight * tplane);
+  });
+
+let project = (x, y, z) =>
+  fundecl3(
+    vec3fun("project"),
+    (origin, ray, refractedLight),
+    projectBody,
+    x,
+    y,
+    z
+  );
+
+let causticsVertexShader =
+  body(() => {
+    let info = vec4var("info");
+    info =@ texture(water, gl_Vertex **. xy' * f(0.5) + f(0.5));
+    info **. ba' *= f(0.5);
+    let normal = vec3var("normal");
+    normal
+    =@ vec33f(
+         info **. b',
+         sqrt(f(1.0) - dot(info **. ba', info **. ba')),
+         info **. a'
+       );
+    /* project the vertices along the refracted vertex ray */
+    let refractedLight = vec3var("refractedLight");
+    refractedLight
+    =@ refract(
+         f(0.0) - light,
+         vec33f(f(0.0), f(1.0), f(0.0)),
+         cIOR_AIR / cIOR_WATER
+       );
+    ray =@ refract(f(0.0) - light, normal, cIOR_AIR / cIOR_WATER);
+    oldPos =@ project(gl_Vertex **. xzy', refractedLight, refractedLight);
+    newPos
+    =@ project(
+         gl_Vertex **. xzy' + vec33f(f(0.0), info **. r', f(0.0)),
+         ray,
+         refractedLight
+       );
+    gl_Position
+    =@ vec4(
+         f(0.75)
+         * (newPos **. xz' + refractedLight **. xz' / (refractedLight **. y'))
+         |+| f(0.0)
+         |+| f(1.0)
+       );
+  });
+
+let causticsFragmentShader =
+  body(() => {
+    /* if the triangle gets smaller, it gets brighter, and vice versa */
+    let oldArea = floatvar("oldArea");
+    let newArea = floatvar("newArea");
+    oldArea =@ length(dFdx(oldPos)) * length(dFdy(oldPos));
+    newArea =@ length(dFdx(newPos)) * length(dFdy(newPos));
+    gl_FragColor =@ vec44f(oldArea / newArea * f(0.2), f(1.0), f(0.0), f(0.0));
+    let refractedLight = vec3var("refractedLight");
+    refractedLight
+    =@ refract(
+         f(0.0) - light,
+         vec33f(f(0.0), f(1.0), f(0.0)),
+         cIOR_AIR / cIOR_WATER
+       );
+    /* compute a blob shadow and make sure we only draw a shadow if the player is blocking the light */
+    let dir = vec3var("dir");
+    dir =@ (sphereCenter - newPos) / sphereRadius;
+    let area = vec3var("area");
+    area =@ cross(dir, refractedLight);
+    let shadow = floatvar("shadow");
+    shadow =@ dot(area, area);
+    let dist = floatvar("dist");
+    dist =@ dot(dir, f(0.0) - refractedLight);
+    shadow =@ f(1.0) + (shadow - f(1.0)) / (f(0.05) + dist * f(0.025));
+    shadow =@ clamp(f(1.0) / (f(1.0) + exp(f(0.0) - shadow)), f(0.0), f(1.0));
+    shadow =@ mix(f(1.0), shadow, clamp(dist * f(2.0), f(0.0), f(1.0)));
+    gl_FragColor **. g' =@ shadow;
+    /* shadow for the rim of the pool */
+    let t = vec2var("t");
+    t
+    =@ intersectCube(
+         newPos,
+         f(0.0) - refractedLight,
+         vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
+         vec33f(f(1.0), f(2.0), f(1.0))
+       );
+    gl_FragColor
+    **. r'
+    *= (
+      f(1.0)
+      / (
+        f(1.0)
+        + exp(
+            f(-200.0)
+            / (f(1.0) + f(10.0) * (t **. y' - t **. x'))
+            * (
+              newPos
+              **. y'
+              - refractedLight
+              **. y'
+              * (t **. y')
+              - f(2.0)
+              / f(12.0)
+            )
+          )
+      )
+    );
+  });
 /*
    }\
  ';
