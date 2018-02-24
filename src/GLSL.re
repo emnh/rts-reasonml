@@ -1015,8 +1015,6 @@ let gl_FragColor = vec4builtin("gl_FragColor");
 
 let outColor = vec4output("outColor");
 
-let body = x => x;
-
 let arStack = ref([]);
 
 let ar = ref([]);
@@ -1028,10 +1026,13 @@ let add = x => {
   ();
 };
 
-let finish = () => {
-  let value = List.rev(ar^);
+let start =() => {
   ar := [];
   vars := SS.empty;
+};
+
+let finish = () => {
+  let value = List.rev(ar^);
   value;
 };
 
@@ -1056,6 +1057,12 @@ let hasVar = var =>
 let addVar = var => {
   vars := SS.add(var, vars^);
   ();
+};
+
+let body = (x : unit => unit) => {
+  start();
+  x();
+  finish();
 };
 
 let g1 = genericexpr1;
