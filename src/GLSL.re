@@ -120,6 +120,7 @@ and trT('a) =
 and statementT =
   | Assignment(lT, rT)
   | DeclAssignment(glslTypeT, lT, rT)
+  | ForStatement(gRootT, rT, gRootT, gRootT)
   | IfStatement(rT, gRootT)
   | IfElseStatement(rT, gRootT, gRootT)
   | Return(rT)
@@ -174,6 +175,17 @@ let genericexpr2float:
   (trT(t('dim, genType1T('rank1, 'rank2))), trT(t('dim, 'rank2)), 'a) =>
   trT('b) =
   (_, _, e) => Typed(PhantomAlgebra.scalar(0.0), e);
+
+/* TODO: constrain rank3 to be zero or equal to rank2 */
+let mixexpr3:
+  (
+    trT(t('dim, genType1T('rank1, 'rank2))),
+    trT(t('dim, 'rank2)),
+    trT(t('dim2, genType1T('rank3, 'rank4))),
+    'a
+  ) =>
+  trT(t('dim, 'rank2)) =
+  (l, _, _, e) => Typed(getType(l), e);
 
 let oldgenericexprlist = (l, e) =>
   switch (List.hd(l)) {
@@ -448,6 +460,38 @@ let fmtTransformer = {
                 )
               | Return(right) =>
                 t.combine(t, ["return ", t.rExpr(t, right), ";"])
+              | ForStatement(l, test, r2, body) =>
+                let body = t.tree(t, body);
+                t.combine(
+                  t,
+                  [
+                    "for (",
+                    String.map(
+                      x =>
+                        switch x {
+                        | ';' => ','
+                        | _ => x
+                        },
+                      t.tree(t, l)
+                    ),
+                    ";",
+                    t.rExpr(t, test),
+                    ";",
+                    String.map(
+                      x =>
+                        switch x {
+                        | ';' => ','
+                        | _ => x
+                        },
+                      t.tree(t, r2)
+                    ),
+                    ") {",
+                    newline,
+                    body,
+                    newline,
+                    "}"
+                  ]
+                );
               | IfStatement(l, body) =>
                 let body = t.tree(t, body);
                 t.combine(
@@ -1089,6 +1133,9 @@ let max = (l, r) => g2(l, r, BuiltinFun2("max", u(l), u(r)));
 
 let min = (l, r) => g2(l, r, BuiltinFun2("min", u(l), u(r)));
 
+let mix = (l, r1, r2) =>
+  mixexpr3(l, r1, r2, BuiltinFun3("mix", u(l), u(r1), u(r2)));
+
 let sqrt = l => g1(l, BuiltinFun1("sqrt", u(l)));
 
 let sin = l => g1(l, BuiltinFun1("sin", u(l)));
@@ -1100,6 +1147,8 @@ let abs = l => g1(l, BuiltinFun1("abs", u(l)));
 let exp = l => g1(l, BuiltinFun1("exp", u(l)));
 
 let length = l => genericexpr1float(l, BuiltinFun1("length", u(l)));
+
+let normalize = l => g1(l, BuiltinFun1("normalize", u(l)));
 
 let floor = l => g1(l, BuiltinFun1("floor", u(l)));
 
@@ -1134,6 +1183,16 @@ let refract:
     Typed(getType(l), e);
   };
 
+let reflect:
+  (
+    trT(t('dim, genType1T('rank1, 'rank2))),
+    trT(t('dim, 'rank2))
+  ) =>
+  trT(t('dim, 'rank2)) =
+  (l, r1) => {
+    let e = BuiltinFun2("reflect", u(l), u(r1));
+    Typed(getType(l), e);
+  };
 /*let vec2: cfun1 =*/
 /*
  let vec2 = l => {
@@ -1215,6 +1274,31 @@ let vec44f =
 
  let mat4 = l => BuiltinFun("mat4", l);
  */
+let forstmt = (init, test, increment, body) => {
+  let init = {
+    push();
+    init();
+    pop();
+  };
+  /*
+   let r1 = {
+     push();
+     r1();
+     pop();
+   };*/
+  let increment = {
+    push();
+    increment();
+    pop();
+  };
+  let body = {
+    push();
+    body();
+    pop();
+  };
+  add(ForStatement(init, u(test), increment, body));
+};
+
 let ifstmt = (l, b) => add(IfStatement(u(l), b));
 
 let ifelsestmt = (l, b1, b2) => add(IfElseStatement(u(l), b1, b2));

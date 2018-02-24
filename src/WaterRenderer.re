@@ -48,6 +48,9 @@ let position = vec3varying("v_position");
 
 let sky = samplerCubeUniform("u_sky");
 
+/* TODO: bool */
+let isAboveWater = floatuniform("u_isAboveWater");
+
 let intersectCubeBody = {
   let tMin = vec3var("tMin");
   tMin =@ (cubeMin - origin) / ray;
@@ -414,7 +417,97 @@ let waterVertexShader =
     }
   );
 
-let waterFragmentShader = body(finish());
+let waterFragmentShader =
+  body(
+    {
+      let coord = vec2var("coord");
+      let info = vec4var("info");
+      coord =@ position **. xz' * f(0.5) + f(0.5);
+      info =@ texture(water, coord);
+      /* TODO: int var */
+      let i = floatvar("i");
+      /* make water look more "peaked" */
+      forstmt(
+        () => i =@ f(0.0),
+        i < f(5.0),
+        () => i += f(1.0),
+        () => {
+          coord += info **. ba' * f(0.005);
+          info =@ texture(water, coord);
+        }
+      );
+      let normal = vec3var("normal");
+      let incomingRay = vec3var("incomingRay");
+      normal
+      =@ vec33f(
+           info **. b',
+           sqrt(f(1.0) - dot(info **. ba', info **. ba')),
+           info **. a'
+         );
+      incomingRay =@ normalize(position - eye);
+      ifelsestmt(
+        isAboveWater < f(0.0),
+        {
+          /* underwater */
+          push();
+          normal =@ f(0.0) - normal;
+          let reflectedRay = vec3var("reflectedRay1");
+          let refractedRay = vec3var("reflectedRay1");
+          let fresnel = floatvar("fresnel1");
+          reflectedRay =@ reflect(incomingRay, normal);
+          refractedRay =@ refract(incomingRay, normal, cIOR_WATER / cIOR_AIR);
+          fresnel
+          =@ mix(
+               f(0.5),
+               f(1.0),
+               pow(f(1.0) - dot(normal, f(0.0) - incomingRay), f(3.0))
+             );
+          let reflectedColor = vec3var("reflectedColor1");
+          let refractedColor = vec3var("refractedColor1");
+          reflectedColor
+          =@ getSurfaceRayColor(position, reflectedRay, underwaterColor);
+          refractedColor
+          =@ getSurfaceRayColor(position, refractedRay, vec31f(f(1.0)))
+          * vec33f(f(0.8), f(1.0), f(1.1));
+          gl_FragColor
+          =@ vec4(
+               mix(
+                 reflectedColor,
+                 refractedColor,
+                 (f(1.0) - fresnel) * length(refractedRay)
+               )
+               |+| f(1.0)
+             );
+          pop();
+        },
+        {
+          /* above water */
+          push();
+          let reflectedRay = vec3var("reflectedRay2");
+          let refractedRay = vec3var("reflectedRay2");
+          let fresnel = floatvar("fresnel2");
+          reflectedRay =@ reflect(incomingRay, normal);
+          refractedRay =@ refract(incomingRay, normal, cIOR_AIR / cIOR_WATER);
+          fresnel
+          =@ mix(
+               f(0.25),
+               f(1.0),
+               pow(f(1.0) - dot(normal, f(0.0) - incomingRay), f(3.0))
+             );
+          let reflectedColor = vec3var("reflectedColor2");
+          let refractedColor = vec3var("refractedColor2");
+          reflectedColor
+          =@ getSurfaceRayColor(position, reflectedRay, abovewaterColor);
+          refractedColor
+          =@ getSurfaceRayColor(position, refractedRay, abovewaterColor);
+          gl_FragColor
+          =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
+          pop();
+        }
+      );
+      finish();
+    }
+  );
 /*
    }\
  ';
