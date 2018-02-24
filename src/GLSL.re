@@ -1011,9 +1011,12 @@ let gl_Position = vec4builtin("gl_Position");
 
 let gl_FragCoord = vec4builtin("gl_FragCoord");
 
-let gl_FragColor = vec4builtin("gl_FragColor");
-
+/*
+ let gl_FragColor = vec4builtin("gl_FragColor");
+ */
 let outColor = vec4output("outColor");
+
+let gl_FragColor = outColor;
 
 let arStack = ref([]);
 
@@ -1026,7 +1029,7 @@ let add = x => {
   ();
 };
 
-let start =() => {
+let start = () => {
   ar := [];
   vars := SS.empty;
 };
@@ -1059,7 +1062,7 @@ let addVar = var => {
   ();
 };
 
-let body = (x : unit => unit) => {
+let body = (x: unit => unit) => {
   start();
   x();
   finish();
@@ -1191,15 +1194,13 @@ let refract:
   };
 
 let reflect:
-  (
-    trT(t('dim, genType1T('rank1, 'rank2))),
-    trT(t('dim, 'rank2))
-  ) =>
+  (trT(t('dim, genType1T('rank1, 'rank2))), trT(t('dim, 'rank2))) =>
   trT(t('dim, 'rank2)) =
   (l, r1) => {
     let e = BuiltinFun2("reflect", u(l), u(r1));
     Typed(getType(l), e);
   };
+
 /*let vec2: cfun1 =*/
 /*
  let vec2 = l => {

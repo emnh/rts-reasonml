@@ -530,6 +530,33 @@ let sphereFragmentShader =
       }
     );
   });
+
+let cubeVertexShader =
+  body(() => {
+    position =@ gl_Vertex **. xyz';
+    position
+    **. y'
+    =@ ((f(1.0) - position **. y') * (f(7.0) / f(12.0)) - f(1.0))
+    * poolHeight;
+    gl_Position
+    =@ u_projectionMatrix
+    * u_modelViewMatrix
+    * vec4(position |+| f(1.0));
+  });
+
+let cubeFragmentShader =
+  body(() => {
+    gl_FragColor =@ vec4(getWallColor(position) |+| f(1.0));
+    info = texture(water, position **. xz' * f(0.5) + f(0.5));
+    ifstmt(
+      position **. y' < info **. r',
+      {
+        push();
+        gl_FragColor **. rgb' *= underwaterColor * f(1.2);
+        pop();
+      }
+    );
+  });
 /*
    }\
  ';
