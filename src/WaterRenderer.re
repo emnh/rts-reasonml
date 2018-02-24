@@ -8,8 +8,6 @@
  */
 open! GLSL;
 
-/*
-
 let light = vec3uniform("light");
 
 let sphereCenter = vec3uniform("sphereCenter");
@@ -33,32 +31,32 @@ let helperFunctions = {
   let cubeMin = vec3arg("cubeMin");
   let cubeMax = vec3arg("cubeMax");
   let intersectCube =
-    fundecl(
+    fundecl4(
       vec2fun("intersectCube"),
-      [origin, ray, cubeMin, cubeMax],
+      (origin, ray, cubeMin, cubeMax),
       {
         let tMin = vec3var("tMin");
         tMin =@ (cubeMin - origin) / ray;
         let tMax = vec3var("tMax");
         tMax =@ (cubeMax - origin) / ray;
         let t1 = vec3var("t1");
-        t1 =@ min([tMin, tMax]);
+        t1 =@ min(tMin, tMax);
         let t2 = vec3var("t2");
-        t2 =@ max([tMin, tMax]);
+        t2 =@ max(tMin, tMax);
         let tNear = floatvar("tNear");
         let tFar = floatvar("tFar");
-        tNear =@ max([max([t1 **. X, t1 **. Y]), t1 **. Z]);
-        tFar =@ min([min([t2 **. X, t2 **. Y]), t2 **. Z]);
-        return(vec2([tNear, tFar]));
+        tNear =@ max(max(t1 **. x', t1 **. y'), t1 **. z');
+        tFar =@ min(min(t2 **. x', t2 **. y'), t2 **. z');
+        return(vec2(tNear |+| tFar));
         finish();
       }
     );
   let sphereCenter = vec3arg("sphereCenter");
   let sphereRadius = floatarg("sphereRadius");
   let intersectSphere =
-    fundecl(
+    fundecl4(
       vec2fun("intersectSphere"),
-      [origin, ray, sphereCenter, sphereRadius],
+      (origin, ray, sphereCenter, sphereRadius),
       {
         let toSphere = vec3i1(origin - sphereCenter);
         let a = floati1(dot(ray, ray));
@@ -88,18 +86,18 @@ let helperFunctions = {
     );
   let point = vec3arg("point");
   let getSphereColor =
-    fundecl(
+    fundecl1(
       vec3fun("getSphereColor"),
-      [point],
+      point,
       {
-        let color = vec3([f(0.5)]);
+        let color = vec31f(f(0.5));
         /* ambient occlusion with walls */
         color
         *= (
           f(1.0)
           - f(0.9)
           / pow(
-              (f(1.0) + sphereRadius - abs(point **. X)) / sphereRadius,
+              (f(1.0) + sphereRadius - abs(point **. x')) / sphereRadius,
               f(3.0)
             )
         );
@@ -108,7 +106,7 @@ let helperFunctions = {
           f(1.0)
           - f(0.9)
           / pow(
-              (f(1.0) + sphereRadius - abs(point **. Z)) / sphereRadius,
+              (f(1.0) + sphereRadius - abs(point **. z')) / sphereRadius,
               f(3.0)
             )
         );
@@ -116,7 +114,7 @@ let helperFunctions = {
         *= (
           f(1.0)
           - f(0.9)
-          / pow((point **. Y + f(1.0) + sphereRadius) / sphereRadius, f(3.0))
+          / pow((point **. y' + f(1.0) + sphereRadius) / sphereRadius, f(3.0))
         );
         /* caustics */
         let sphereNormal = vec3var("sphereNormal");
@@ -125,17 +123,17 @@ let helperFunctions = {
         refractedLight
         =@ refract(
              f(0.0) - light,
-             vec3([f(0.0), f(1.0), f(0.0)]),
+             vec33f(f(0.0), f(1.0), f(0.0)),
              cIOR_AIR / cIOR_WATER
            );
         let diffuse = floatvar("diffuse");
         diffuse
-        =@ max([f(0.0), dot(f(0.0) - refractedLight, sphereNormal)])
+        =@ max(f(0.0), dot(f(0.0) - refractedLight, sphereNormal))
         * f(0.5);
         let info = vec4var("info");
-        info =@ texture(water, point **. XZ * f(0.5) + f(0.5));
+        info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
         ifstmt(
-          point **. Y < info **. R,
+          point **. y' < info **. r',
           {
             push();
             let caustic = vec4var("caustic");
@@ -145,16 +143,16 @@ let helperFunctions = {
                  f(0.75)
                  * (
                    point
-                   **. XZ
+                   **. xz'
                    - point
-                   **. Y
-                   * (refractedLight **. XZ)
-                   / (refractedLight **. Y)
+                   **. y'
+                   * (refractedLight **. xz')
+                   / (refractedLight **. y')
                  )
                  * f(0.5)
                  + f(0.5)
                );
-            diffuse *= (caustic **. R * f(4.0));
+            diffuse *= (caustic **. r' * f(4.0));
             pop();
           }
         );
@@ -164,47 +162,47 @@ let helperFunctions = {
       }
     );
   let getWallColor =
-    fundecl(
+    fundecl1(
       vec3fun("getWallColor"),
-      [point],
+      point,
       {
         let scale = floatvar("scale");
         scale =@ f(0.5);
         let wallColor = vec3var("wallColor");
-        wallColor =@ vec3([f(0.0)]);
+        wallColor =@ vec31f(f(0.0));
         let normal = vec3var("normal");
-        normal =@ vec3([f(0.0)]);
+        normal =@ vec31f(f(0.0));
         ifelsestmt(
-          abs(point **. X) > f(0.999),
+          abs(point **. x') > f(0.999),
           {
             push();
             wallColor
-            =@ texture(tiles, point **. YZ * f(0.5) + vec2([f(1.0), f(0.5)]))
-            **. RGB;
-            normal =@ vec3([f(0.0) - point **. X, f(0.0), f(0.0)]);
+            =@ texture(tiles, point **. yz' * f(0.5) + vec22f(f(1.0), f(0.5)))
+            **. rgb';
+            normal =@ vec33f(f(0.0) - point **. x', f(0.0), f(0.0));
             pop();
           },
           {
             push();
             ifelsestmt(
-              abs(point **. Z) > f(0.999),
+              abs(point **. z') > f(0.999),
               {
                 push();
                 wallColor
                 =@ texture(
                      tiles,
-                     point **. YX * f(0.5) + vec2([f(1.0), f(0.5)])
+                     point **. yx' * f(0.5) + vec22f(f(1.0), f(0.5))
                    )
-                **. RGB;
-                normal =@ vec3([f(0.0), f(0.0), f(0.0) - point **. Z]);
+                **. rgb';
+                normal =@ vec33f(f(0.0), f(0.0), f(0.0) - point **. z');
                 pop();
               },
               {
                 push();
                 wallColor
-                =@ texture(tiles, point **. XZ * f(0.5) + f(0.5))
-                **. RGB;
-                normal =@ vec3([f(0.0), f(1.0), f(0.0)]);
+                =@ texture(tiles, point **. xz' * f(0.5) + f(0.5))
+                **. rgb';
+                normal =@ vec33f(f(0.0), f(1.0), f(0.0));
                 pop();
               }
             );
@@ -224,15 +222,15 @@ let helperFunctions = {
         =@ f(0.0)
         - refract(
             f(0.0) - light,
-            vec3([f(0.0), f(1.0), f(0.0)]),
+            vec33f(f(0.0), f(1.0), f(0.0)),
             cIOR_AIR / cIOR_WATER
           );
         let diffuse = floatvar("diffuse");
-        diffuse =@ max([f(0.0), dot(refractedLight, normal)]);
+        diffuse =@ max(f(0.0), dot(refractedLight, normal));
         let info = vec4var("info");
-        info =@ texture(water, point **. XZ * f(0.5) + f(0.5));
+        info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
         ifelsestmt(
-          point **. Y < info **. R,
+          point **. y' < info **. r',
           {
             push();
             let caustic = vec4var("caustic");
@@ -242,16 +240,16 @@ let helperFunctions = {
                  f(0.75)
                  * (
                    point
-                   **. XZ
+                   **. xz'
                    - point
-                   **. Y
-                   * (refractedLight **. XZ)
-                   / (refractedLight **. Y)
+                   **. y'
+                   * (refractedLight **. xz')
+                   / (refractedLight **. y')
                  )
                  * f(0.5)
                  + f(0.5)
                );
-            scale += diffuse * (caustic **. R) * f(2.0) * (caustic **. G);
+            scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
             pop();
           },
           {
@@ -259,12 +257,12 @@ let helperFunctions = {
             /* shadow for the rim of the pool */
             let t = vec2var("t");
             t
-            =@ intersectCube([
+            =@ intersectCube(
                  point,
                  refractedLight,
-                 vec3([f(-1.0), f(0.0) - poolHeight, f(-1.0)]),
-                 vec3([f(1.0), f(2.0), f(1.0)])
-               ]);
+                 vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
+                 vec33f(f(1.0), f(2.0), f(1.0))
+               );
             diffuse
             *= (
               f(1.0)
@@ -272,13 +270,13 @@ let helperFunctions = {
                 f(1.0)
                 + exp(
                     f(-200.0)
-                    / (f(1.0) + f(10.0) * (t **. Y - t **. X))
+                    / (f(1.0) + f(10.0) * (t **. y' - t **. x'))
                     * (
                       point
-                      **. Y
+                      **. y'
                       + refractedLight
-                      **. Y
-                      * (t **. Y)
+                      **. y'
+                      * (t **. y')
                       - f(2.0)
                       / f(12.0)
                     )
@@ -295,15 +293,6 @@ let helperFunctions = {
     );
   ();
 };
-
-END OF COMMENT
-*/
-
-
-
-
-
-
 /*
    }\
  ';

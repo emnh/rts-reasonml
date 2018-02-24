@@ -46,7 +46,7 @@ let mainVertex =
       position =@ a_position **. xyz';
       position
       **. z'
-      =@ ShaderAshima.snoise([a_position **. xy' + f(2.0) * u_time])
+      =@ ShaderAshima.snoise(a_position **. xy' + f(2.0) * u_time)
       * f(0.2);
       gl_Position
       =@ u_projectionMatrix
@@ -94,9 +94,9 @@ let mainFragment =
            |+| f(1.0)
          );
       outColor += (u_color1 + u_color2);
-      outColor **. r' += ShaderAshima.snoise([v_uv]);
-      outColor **. g' += ShaderAshima.snoise([v_uv + f(123.234)]);
-      outColor **. b' += ShaderAshima.snoise([v_uv - f(323.234)]);
+      outColor **. r' += ShaderAshima.snoise(v_uv);
+      outColor **. g' += ShaderAshima.snoise(v_uv + f(123.234));
+      outColor **. b' += ShaderAshima.snoise(v_uv - f(323.234));
       finish();
     }
   );

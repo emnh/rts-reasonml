@@ -49,19 +49,19 @@ let mod289_3_body =
     }
   );
 
-let mod289_2 = x => fundecl(vec2fun("mod289"), [x2], mod289_2_body, x);
+let mod289_2 = x => fundecl1(vec2fun("mod289"), x2, mod289_2_body, x);
 
-let mod289_3 = x => fundecl(vec3fun("mod289"), [x3], mod289_3_body, x);
+let mod289_3 = x => fundecl1(vec3fun("mod289"), x3, mod289_3_body, x);
 
 let permute_body =
   body(
     {
-      return(mod289_3([(x * f(34.0) + f(1.0)) * x]));
+      return(mod289_3((x * f(34.0) + f(1.0)) * x));
       finish();
     }
   );
 
-let permute = args => fundecl(vec3fun("permute"), [x], permute_body, args);
+let permute = arg => fundecl1(vec3fun("permute"), x, permute_body, arg);
 
 let v = vec2arg("v");
 
@@ -93,15 +93,15 @@ let snoise_body =
       x12 =@ x0 **. xyxy' + cC **. xxzz';
       x12 **. xy' -= i1;
       /* Permutations */
-      i =@ mod289_2([i]); /* Avoid truncation effects in permutation */
+      i =@ mod289_2(i); /* Avoid truncation effects in permutation */
       let p = vec3var("p");
       p
-      =@ permute([
-           permute([i **. y' + vec33f(f(0.0), i1 **. y', f(1.0))])
+      =@ permute(
+           permute(i **. y' + vec33f(f(0.0), i1 **. y', f(1.0)))
            + i
            **. x'
            + vec33f(f(0.0), i1 **. x', f(1.0))
-         ]);
+         );
       let m = vec3var("m");
       m
       =@ max(
@@ -138,6 +138,4 @@ let snoise_body =
     }
   );
 
-let snoise = args => {
-  fundecl(floatfun("snoise"), [v], snoise_body, args);
-};
+let snoise = arg => fundecl1(floatfun("snoise"), v, snoise_body, arg);
