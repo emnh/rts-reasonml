@@ -84,7 +84,8 @@ let createAttributes = (gl, program, buffers) => {
       offset
     );
   } else {
-    Js.log("warning: unused a_position");
+    ();
+      /* Js.log("warning: unused a_position"); */
   };
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");

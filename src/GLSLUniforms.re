@@ -99,6 +99,24 @@ let setupTexture = (gl, texture) => {
 let uploadImage = (gl, texture, img) => {
   let t2d = WebGL2.getTEXTURE_2D(gl);
   WebGL2.bindTexture(gl, t2d, texture);
+  WebGL2.texParameteri(
+    gl,
+    t2d,
+    WebGL2.getTEXTURE_WRAP_S(gl),
+    WebGL2.getREPEAT(gl)
+  );
+  WebGL2.texParameteri(
+    gl,
+    t2d,
+    WebGL2.getTEXTURE_WRAP_T(gl),
+    WebGL2.getREPEAT(gl)
+  );
+  WebGL2.texParameteri(
+    gl,
+    t2d,
+    WebGL2.getTEXTURE_MIN_FILTER(gl),
+    WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
+  );
   /* the largest mip */
   let mipLevel = 0;
   /* format we want in the texture */
@@ -118,18 +136,14 @@ let uploadImage = (gl, texture, img) => {
     img
   );
   WebGL2.generateMipmap(gl, t2d);
-  WebGL2.texParameteri(
-    gl,
-    t2d,
-    WebGL2.getTEXTURE_MIN_FILTER(gl),
-    WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
-  );
+  /*
   WebGL2.texParameteri(
     gl,
     t2d,
     WebGL2.getTEXTURE_MAG_FILTER(gl),
     WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
   );
+  */
 };
 
 /* TODO: Preallocate and refill array */

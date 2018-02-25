@@ -675,14 +675,15 @@ module Renderer = {
         retval;
       }
     );
-  let getUniforms = textureRef => [
+  let getUniforms = (textureRef, causticsRef) => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]),
     /* r(sphereCenter, (_) => [|0.0, 0.0, 0.0|]), */
     r(sphereRadius, (_) => [|0.25|]),
     r(u_isAboveWater, (_) => [|1.0|]),
-    r(light, (_) => [|2.0, 2.0, (-1.0)|]),
+    /* r(light, (_) => [|2.0, 2.0, (-1.0)|]), */
+    r(light, (_) => [|0.0, 2.0, 0.0|]),
     r(
       eye,
       arg => {
@@ -692,7 +693,7 @@ module Renderer = {
     ),
     /* [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|] */
     registeredTiles,
-    registeredCaustics,
+    /* registeredCaustics, */
     /* registeredWater */
     registerTextureUniform(water, arg =>
       switch textureRef^ {
@@ -705,13 +706,31 @@ module Renderer = {
         )
       }
     ),
+    registerTextureUniform(causticTex, arg =>
+      switch causticsRef^ {
+      | Some(x) => x
+      | None =>
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        )
+      }
+    ),
     registeredSky
   ];
-  let makeProgramSource = textureRef => {
-    let uniformBlock = getUniforms(textureRef);
+  let makeProgramSource = (textureRef, causticsRef) => {
+    let uniformBlock = getUniforms(textureRef, causticsRef);
     (
       uniformBlock,
       getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
+    );
+  };
+  let makeCausticsProgramSource = textureRef => {
+    let uniformBlock = getUniforms(textureRef, ref(None));
+    (
+      uniformBlock,
+      getProgram(uniformBlock, causticsVertexShader, causticsFragmentShader)
     );
   };
 };

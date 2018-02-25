@@ -58,6 +58,8 @@ external createPerspectiveCamera : (float, float, float, float) => cameraT =
 
 [@bs.get] external getElements : matrix4T => array(float) = "elements";
 
+[@bs.set] external setElements : (matrix4T, array(float)) => unit = "elements";
+
 [@bs.get] external getMeshMatrixWorld : meshT => matrix4T = "matrixWorld";
 
 [@bs.get]
@@ -210,11 +212,51 @@ let getViewMatrices = (camera, matrixWorld) => {
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));
   multiplyMatrix4(modelViewMatrix, modelMatrix);
   let projectionMatrix = getCameraProjectionMatrix(camera);
-  /*
-   transposeMatrix4(modelViewMatrix);
-   transposeMatrix4(projectionMatrix);*/
+  let tmpArray = [|
+    (-0.9366722106933594),
+    0.0,
+    (-0.3502073884010315),
+    0.0,
+    (-0.14800404012203217),
+    0.9063078165054321,
+    0.39585480093955994,
+    0.45315390825271606,
+    0.3173956871032715,
+    0.4226182699203491,
+    (-0.8489133715629578),
+    (-3.7886908054351807),
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  |];
+  let tmpArray2 = [|
+    3.1733386516571045,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.4142136573791504,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    (-1.0002000331878662),
+    (-0.020002000033855438),
+    0.0,
+    0.0,
+    (-1.0),
+    0.0
+  |];
+  let modelViewMatrix2 = cloneMatrix4(modelViewMatrix);
+  let projectionMatrix2 = cloneMatrix4(projectionMatrix);
+  setElements(modelViewMatrix2, tmpArray);
+  /* setElements(projectionMatrix, tmpArray2);*/
+  transposeMatrix4(modelViewMatrix2);
+  multiplyMatrix4(modelViewMatrix2, modelMatrix);
+  /* transposeMatrix4(projectionMatrix); */
   {
-    modelViewMatrix: getElements(modelViewMatrix),
+    modelViewMatrix: getElements(modelViewMatrix2),
     projectionMatrix: getElements(projectionMatrix)
   };
 };

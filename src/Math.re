@@ -3,7 +3,10 @@ let pi = [%bs.raw "Math.PI"];
 [@bs.module "seedrandom"] [@bs.val]
 external localSeedRandom : (unit, string) => unit = "seedrandom";
 
-[@bs.val] external globalSeedRandom : string => unit = "Math.seedrandom";
+[@bs.val]
+external globalSeedRandom :
+  (string, [@bs.as {json|{ "entropy": true }|json}] _) => unit =
+  "Math.seedrandom";
 
 [@bs.val] external random : unit => float = "Math.random";
 
@@ -13,4 +16,5 @@ external localSeedRandom : (unit, string) => unit = "seedrandom";
 
 [@bs.val] external floor : float => float = "Math.floor";
 
-let getRandomInt = max => int_of_float(floor(random() *. floor(float_of_int(max))));
+let getRandomInt = max =>
+  int_of_float(floor(random() *. floor(float_of_int(max))));

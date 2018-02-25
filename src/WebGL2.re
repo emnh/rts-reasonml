@@ -384,6 +384,9 @@ external getLINEAR_MIPMAP_LINEAR : glT => textureParameterValueT =
 [@bs.get] external getTEXTURE_2D : glT => texture2DT = "TEXTURE_2D";
 
 [@bs.get]
+external getREPEAT : glT => textureParameterValueT = "REPEAT";
+
+[@bs.get]
 external getTEXTURE_WRAP_S : glT => textureParameterT = "TEXTURE_WRAP_S";
 
 [@bs.get]

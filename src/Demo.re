@@ -30,8 +30,13 @@ let getShaderExampleProgram =
   Memoize.partialMemoize2((fg, bg) => ShaderExample.makeProgramSource(fg, bg));
 
 let getWaterRendererProgram =
+  Memoize.partialMemoize2((tref, cref) =>
+    WaterRenderer.Renderer.makeProgramSource(tref, cref)
+  );
+
+let getWaterCausticsProgram =
   Memoize.partialMemoize1(tref =>
-    WaterRenderer.Renderer.makeProgramSource(tref)
+    WaterRenderer.Renderer.makeCausticsProgramSource(tref)
   );
 
 let getWaterProgram =
@@ -129,6 +134,7 @@ let getGeometryAndBuffers =
       | "Box" => Three.createBoxGeometry()
       | "Sphere" => Three.createSphereGeometry()
       | "Plane" => Three.createPlaneGeometry()
+      | "Quad" => Three.createQuadGeometry()
       | _ => Three.createBoxGeometry()
       };
     let buffers = WebGL2Util.createBuffers(gl, geometry);
@@ -234,9 +240,12 @@ let runFrameBuffer =
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
+    /*
     let geometry = Three.createQuadGeometry();
     let buffers = WebGL2Util.createBuffers(gl, geometry);
     let vao = WebGL2Util.createAttributes(gl, program, buffers);
+    */
+    let (_, buffers, vao) = getGeometryAndBuffers(gl, program, "Quad");
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     let (x, y, z) = (0.0, 0.0, (-1.0));
@@ -270,9 +279,6 @@ let runFrameBuffer =
   };
 };
 
-let targetIndex = ref(0);
-
-let textureRef = ref(None);
 
 let run = (gl, time, uAndProgram) => {
   let geometryType = ConfigVars.geometryType#get();
@@ -328,11 +334,18 @@ let run = (gl, time, uAndProgram) => {
   };
 };
 
+let targetIndex = ref(0);
+
+let textureRef = ref(None);
+
+let causticsRef = ref(None);
+
 let runPipeline = (gl, time) => {
   let width = 256;
   let height = 256;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
+  let renderTarget3 = getWaterRT(gl, 1024, 1024, "wrt3");
   let switchTargets = () => {
     targetIndex := (targetIndex^ + 1) mod 2;
     switch targetIndex^ {
@@ -341,6 +354,10 @@ let runPipeline = (gl, time) => {
     };
   };
   /* Compute waves */
+  let renderTarget = switchTargets();
+  runFrameBuffer(gl, time, Some(renderTarget), getWaterProgram(textureRef));
+  textureRef := Some(renderTarget.texture);
+  /* Compute waves 2 */
   let renderTarget = switchTargets();
   runFrameBuffer(gl, time, Some(renderTarget), getWaterProgram(textureRef));
   textureRef := Some(renderTarget.texture);
@@ -354,16 +371,24 @@ let runPipeline = (gl, time) => {
   );
   /* Next time use previous output as input */
   textureRef := Some(renderTarget.texture);
+  /* Compute caustics */
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTarget3),
+    getWaterCausticsProgram(textureRef)
+  );
+  causticsRef := Some(renderTarget3.texture);
   /* Copy to screen for debug */
   runFrameBuffer(gl, time, None, getCopyProgram(textureRef));
   /* Render water */
-  run(gl, time, getWaterRendererProgram(textureRef));
+  run(gl, time, getWaterRendererProgram(textureRef, causticsRef));
 };
 
 let runDemo = (gl, time) => {
   let fg = ConfigVars.foregroundColor#get();
   let bg = ConfigVars.backgroundColor#get();
-  run(gl, time, getWaterRendererProgram(ref(None)));
+  /* run(gl, time, getWaterRendererProgram(ref(None))); */
   run(gl, time, getShaderExampleProgram(fg, bg));
 };
 
