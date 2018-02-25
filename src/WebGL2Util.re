@@ -34,8 +34,8 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
 let preRender = (gl, width, height) => {
   viewport(gl, 0, 0, width, height);
   enable(gl, getDEPTH_TEST(gl));
-  clearColor(gl, 0, 0, 0, 0);
-  clear(gl, getCOLOR_BUFFER_BIT(gl));
+  clearColor(gl, 0.9, 0.9, 0.9, 1.0);
+  clear(gl, getCOLOR_BUFFER_BIT(gl) lor getDEPTH_BUFFER_BIT(gl));
 };
 
 type glBuffersT = {
@@ -57,9 +57,9 @@ let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
   bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
   let indexBuffer = createBuffer(gl);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
-  bufferDataInt16(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
+  bufferDataInt32(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
   let offset = 0;
-  let count = Int16Array.length(index);
+  let count = Int32Array.length(index);
   {positionBuffer, uvBuffer, indexBuffer, offset, count};
 };
 
@@ -179,7 +179,7 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
     gl,
     getTRIANGLES(gl),
     buffers.count,
-    getUNSIGNED_SHORT(gl),
+    getUNSIGNED_INT(gl),
     buffers.offset
   );
 };
@@ -264,8 +264,8 @@ let createRenderTarget = (gl, width, height) => {
     level
   );
   /*
-    Js.log(checkFramebufferStatus(gl, getFRAMEBUFFER(gl)));
-  */
+     Js.log(checkFramebufferStatus(gl, getFRAMEBUFFER(gl)));
+   */
   bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.null);
   {
     framebuffer: fb,
@@ -285,7 +285,7 @@ let renderToTarget = (gl, renderTarget, renderFunction) => {
   /* Tell WebGL how to convert from clip space to pixels */
   viewport(gl, 0, 0, renderTarget.width, renderTarget.height);
   /* Clear the canvas AND the depth buffer. */
-  clearColor(gl, 0, 0, 1, 1); /* clear to blue */
+  clearColor(gl, 0.0, 0.0, 1.0, 1.0); /* clear to blue */
   clear(gl, getCOLOR_BUFFER_BIT(gl) lor getDEPTH_BUFFER_BIT(gl));
   renderFunction();
   bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.null);

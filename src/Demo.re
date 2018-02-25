@@ -30,10 +30,17 @@ let getShaderExampleProgram =
   Memoize.partialMemoize2((fg, bg) => ShaderExample.makeProgramSource(fg, bg));
 
 let getWaterRendererProgram =
-  Memoize.partialMemoize0(() => WaterRenderer.Renderer.makeProgramSource());
+  Memoize.partialMemoize1(tref =>
+    WaterRenderer.Renderer.makeProgramSource(tref)
+  );
 
 let getWaterProgram =
   Memoize.partialMemoize1(tref => WaterRenderer.Water.makeProgramSource(tref));
+
+let getWaterNormalProgram =
+  Memoize.partialMemoize1(tref =>
+    WaterRenderer.Water.makeNormalProgramSource(tref)
+  );
 
 let getCopyProgram =
   Memoize.partialMemoize1(t => ShaderCopy.makeProgramSource(t));
@@ -205,11 +212,6 @@ let getWaterRT =
 
 let runFrameBuffer =
     (gl, time, renderTarget: option(WebGL2Util.renderTargetT), programSource) => {
-  /*
-   let fg = ConfigVars.foregroundColor#get();
-   let bg = ConfigVars.backgroundColor#get();
-   let (uniforms, shaderProgramSource) = getShaderExampleProgram(fg, bg);
-      */
   let (uniforms, shaderProgramSource) = programSource;
   let drawToScreen =
     switch renderTarget {
@@ -276,34 +278,12 @@ let targetIndex = ref(0);
 
 let textureRef = ref(None);
 
-let runPipeline = (gl, time) => {
-  let width = 256;
-  let height = 256;
-  targetIndex := (targetIndex^ + 1) mod 2;
-  let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
-  let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
-  let (texture, renderTarget) =
-    switch targetIndex^ {
-    | 0 => (renderTarget2.texture, renderTarget1)
-    | _ => (renderTarget1.texture, renderTarget2)
-    };
-  let uAndSrc = getWaterProgram(textureRef);
-  runFrameBuffer(gl, time, Some(renderTarget), uAndSrc);
-  /* Next time use previous output as input */
-  textureRef := Some(renderTarget.texture);
-  let uAndSrc2 = getCopyProgram(renderTarget1.texture);
-  runFrameBuffer(gl, time, None, uAndSrc2);
-};
-
-let run = (gl, time) => {
+let run = (gl, time, uAndProgram) => {
   let geometryType = ConfigVars.geometryType#get();
-  let fg = ConfigVars.foregroundColor#get();
-  let bg = ConfigVars.backgroundColor#get();
   let width = state.window.width;
   let height = state.window.height;
   let count = ConfigVars.count#get();
-  let (uniforms, shaderProgramSource) = getShaderExampleProgram(fg, bg);
-  let (uniforms, shaderProgramSource) = getWaterRendererProgram();
+  let (uniforms, shaderProgramSource) = uAndProgram;
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
@@ -330,10 +310,13 @@ let run = (gl, time) => {
       );
       let sz = ConfigVars.size#get();
       let iseed = float_of_int(i);
+      let (camera, cameraPos) = getCamera(width, height);
+      let (cx, cy, cz) = cameraPos;
+      Three.cameraLookAt3(camera, x, y, z);
       renderObj(
         gl,
         program,
-        getCamera(width, height),
+        (camera, cameraPos),
         buffers,
         vao,
         (sz, sz, sz),
@@ -349,12 +332,49 @@ let run = (gl, time) => {
   };
 };
 
+let runPipeline = (gl, time) => {
+  let width = 256;
+  let height = 256;
+  let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
+  let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
+  let switchTargets = () => {
+    targetIndex := (targetIndex^ + 1) mod 2;
+    switch targetIndex^ {
+    | 0 => renderTarget1
+    | _ => renderTarget2
+    };
+  };
+  /* Compute waves */
+  let renderTarget = switchTargets();
+  runFrameBuffer(gl, time, Some(renderTarget), getWaterProgram(textureRef));
+  textureRef := Some(renderTarget.texture);
+  /* Compute normals */
+  let renderTarget = switchTargets();
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTarget),
+    getWaterNormalProgram(textureRef)
+  );
+  /* Next time use previous output as input */
+  textureRef := Some(renderTarget.texture);
+  /* Copy to screen for debug */
+  runFrameBuffer(gl, time, None, getCopyProgram(textureRef));
+  /* Render water */
+  run(gl, time, getWaterRendererProgram(textureRef));
+};
+
+let runDemo = (gl, time) => {
+  let fg = ConfigVars.foregroundColor#get();
+  let bg = ConfigVars.backgroundColor#get();
+  run(gl, time, getWaterRendererProgram(ref(None)));
+  run(gl, time, getShaderExampleProgram(fg, bg));
+};
+
 let rec renderLoop = (startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
   runPipeline(gl, t /. 1000.0);
-  /*
-   run(gl, t /. 1000.0);
-   */
+  runDemo(gl, t /. 1000.0);
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
     Document.requestAnimationFrame(() =>

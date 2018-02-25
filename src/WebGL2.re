@@ -241,6 +241,10 @@ external bufferDataInt16 : (glT, arrayBufferTypeT, Int16Array.t, drawT) => unit 
   "bufferData";
 
 [@bs.send]
+external bufferDataInt32 : (glT, arrayBufferTypeT, Int32Array.t, drawT) => unit =
+  "bufferData";
+
+[@bs.send]
 external bindBufferBase : (glT, arrayBufferTypeT, int, bufferT) => unit =
   "bindBufferBase";
 
@@ -259,7 +263,7 @@ external vertexAttribPointer :
 [@bs.send] external viewport : (glT, int, int, int, int) => unit = "viewport";
 
 [@bs.send]
-external clearColor : (glT, int, int, int, int) => unit = "clearColor";
+external clearColor : (glT, float, float, float, float) => unit = "clearColor";
 
 [@bs.send] external clear : (glT, colorBufferBitT) => unit = "clear";
 
@@ -323,7 +327,8 @@ external activeTexture : (glT, textureIndexT) => unit = "activeTexture";
 external generateMipmap : (glT, texture2DT) => unit = "generateMipmap";
 
 [@bs.send]
-external getExtension : (glT, string) => Js.Nullable.t(extensionT) = "getExtension";
+external getExtension : (glT, string) => Js.Nullable.t(extensionT) =
+  "getExtension";
 
 [@bs.get] external getVERTEX_SHADER : glT => shaderTypeT = "VERTEX_SHADER";
 
@@ -349,6 +354,8 @@ external getUNIFORM_BUFFER : glT => uniformBufferTypeT = "UNIFORM_BUFFER";
 
 [@bs.get] external getUNSIGNED_SHORT : glT => primitiveT = "UNSIGNED_SHORT";
 
+[@bs.get] external getUNSIGNED_INT : glT => primitiveT = "UNSIGNED_INT";
+
 [@bs.get]
 external getELEMENT_ARRAY_BUFFER : glT => elementArrayBufferT =
   "ELEMENT_ARRAY_BUFFER";
@@ -357,7 +364,7 @@ external getELEMENT_ARRAY_BUFFER : glT => elementArrayBufferT =
 external getCOLOR_BUFFER_BIT : glT => colorBufferBitT = "COLOR_BUFFER_BIT";
 
 [@bs.get]
-external getDEPTH_BUFFER_BIT : glT => depthBufferBitT = "COLOR_BUFFER_BIT";
+external getDEPTH_BUFFER_BIT : glT => depthBufferBitT = "DEPTH_BUFFER_BIT";
 
 [@bs.get] external getTRIANGLES : glT => drawGeometryT = "TRIANGLES";
 

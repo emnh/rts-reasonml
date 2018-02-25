@@ -2,6 +2,8 @@ open! GLSL;
 
 open GLSLUniforms;
 
+exception Bug(string);
+
 let u_resolution = vec2uniform("u_resolution");
 
 let input = sampler2Duniform("t_input");
@@ -15,9 +17,11 @@ let vertexShader =
   );
 
 let fragmentShader =
-  body(() =>
-    gl_FragColor =@ texture(input, gl_FragCoord **. xy' / u_resolution)
-  );
+  body(() => {
+    gl_FragColor =@ texture(input, gl_FragCoord **. xy' / u_resolution);
+    /* XXX: for debug */
+    gl_FragColor **. a' =@ f(1.0);
+  });
 
 let r = registerUniform;
 
@@ -27,7 +31,12 @@ let getUniforms = texture => [
   r(u_resolution, arg =>
     [|float_of_int(arg.width), float_of_int(arg.height)|]
   ),
-  registerTextureUniform(input, (_) => texture)
+  registerTextureUniform(input, (_) =>
+    switch texture^ {
+    | Some(x) => x
+    | None => raise(Bug("uninitialized shader texture copy"))
+    }
+  )
 ];
 
 let makeProgramSource = texture => {

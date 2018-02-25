@@ -34,9 +34,8 @@ let getUniforms = (fg, bg) => [
   r(u_projectionMatrix, arg => arg.projectionMatrix),
   r(u_color1, (_) => fmtColor(fg)),
   r(u_color2, (_) => fmtColor(bg)),
-  r(
-    u_resolution,
-    arg => [|float_of_int(arg.width), float_of_int(arg.height)|]
+  r(u_resolution, arg =>
+    [|float_of_int(arg.width), float_of_int(arg.height)|]
   ),
   r(u_time, arg => [|arg.time|])
 ];
@@ -45,18 +44,18 @@ let mainVertex =
   body(() => {
     /* gl_Position is a special variable a vertex shader is responsible for setting */
     v_uv =@ a_uv;
-    let position = vec3var("position");
-    position =@ a_position **. xyz';
+    let position = vec4var("position");
+    position =@ a_position **. xyzw';
     position
     **. z'
     =@ ShaderAshima.snoise(a_position **. xy' + f(2.0) * u_time)
     * f(0.2);
     gl_Position
     =@ u_projectionMatrix
-    * u_modelViewMatrix
-    * vec4(position **. xyz' |+| f(1.0));
+    * (u_modelViewMatrix * (position **. xyzw'));
   });
 
+/* vec4(position **. xyzw' |+| f(1.0));*/
 let mainFragment =
   body(() => {
     let position = vec2var("position");

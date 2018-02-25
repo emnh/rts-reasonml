@@ -663,7 +663,7 @@ module Renderer = {
         retval;
       }
     );
-  let getUniforms = () => [
+  let getUniforms = textureRef => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]),
@@ -680,11 +680,22 @@ module Renderer = {
     ),
     /* [|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|] */
     registeredTiles,
-    registeredWater,
-    registeredCaustics
+    registeredCaustics,
+    /* registeredWater */
+    registerTextureUniform(water, arg =>
+      switch textureRef^ {
+      | Some(x) => x
+      | None =>
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        )
+      }
+    )
   ];
-  let makeProgramSource = () => {
-    let uniformBlock = getUniforms();
+  let makeProgramSource = textureRef => {
+    let uniformBlock = getUniforms(textureRef);
     (
       uniformBlock,
       getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
@@ -748,12 +759,12 @@ module Water = {
       /* move the vertex along the velocity */
       info **. r' += info **. g';
       gl_FragColor =@ info;
-      /* XXX: debug */
-      /*
-       gl_FragColor **. rg' =@ gl_FragCoord **. xy' / u_resolution;
-       */
-      gl_FragColor **. a' =@ f(1.0);
     });
+  /* XXX: debug */
+  /*
+   gl_FragColor **. rg' =@ gl_FragCoord **. xy' / u_resolution;
+   gl_FragColor **. a' =@ f(1.0);
+   */
   let normalFragmentShader =
     body(() => {
       /* get vertex info */

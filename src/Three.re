@@ -52,7 +52,7 @@ external createPerspectiveCamera : (float, float, float, float) => cameraT =
 
 [@bs.get] external getFloat32Array : arrayBufferT => Float32Array.t = "array";
 
-[@bs.get] external getInt16Array : arrayBufferT => Int16Array.t = "array";
+[@bs.get] external getInt32Array : arrayBufferT => Int32Array.t = "array";
 
 [@bs.get] external getIndex : boxT => arrayBufferT = "index";
 
@@ -99,10 +99,15 @@ external setCameraRotation : (cameraT, float, float, float) => unit = "set";
 [@bs.send]
 external updateCameraMatrixWorld : cameraT => unit = "updateMatrixWorld";
 
+[@bs.send] external cameraLookAt : (cameraT, meshT) => unit = "lookAt";
+
+[@bs.send]
+external cameraLookAt3 : (cameraT, float, float, float) => unit = "lookAt";
+
 type geometryBuffersT = {
   position: Float32Array.t,
   uv: Float32Array.t,
-  index: Int16Array.t
+  index: Int32Array.t
 };
 
 type objectTransformT = {matrixWorld: matrix4T};
@@ -124,12 +129,21 @@ let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 256, 256);
 
 let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
 
+let reInt32 = x => {
+  /* TODO: optimize, don't expand all arrays to 32 bit */
+  let ar = Int32Array.createSize(Int32Array.length(x));
+  for (i in 0 to Int32Array.length(ar)) {
+    Int32Array.set(ar, i, Int32Array.get(x, i));
+  };
+  ar;
+};
+
 let createSphereGeometry = () => {
   let box = protoSphere;
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box))
+    index: reInt32(getInt32Array(getIndex(box)))
   };
 };
 
@@ -138,7 +152,7 @@ let createBoxGeometry = () => {
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box))
+    index: reInt32(getInt32Array(getIndex(box)))
   };
 };
 
@@ -147,7 +161,7 @@ let createPlaneGeometry = () => {
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box))
+    index: reInt32(getInt32Array(getIndex(box)))
   };
 };
 
@@ -156,9 +170,10 @@ let createQuadGeometry = () => {
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
-    index: getInt16Array(getIndex(box))
+    index: reInt32(getInt32Array(getIndex(box)))
   };
 };
+
 let getObjectMatrix = (position, scale, rotation) => {
   let mesh = protoMesh;
   let (x, y, z) = position;
