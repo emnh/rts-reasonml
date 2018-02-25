@@ -52,6 +52,9 @@ let getWaterNormalProgram =
 let getCopyProgram =
   Memoize.partialMemoize1(t => ShaderCopy.makeProgramSource(t));
 
+let getRandomProgram =
+  Memoize.partialMemoize0(() => ShaderCopy.makeRandomProgramSource());
+
 let getShaderProgram =
   Memoize.partialMemoize3((gl, uniforms, programSource: GLSL.programT) => {
     let vertexShaderSource = programSource.vertexShader;
@@ -364,9 +367,18 @@ let runPipeline = (gl, time) => {
     | _ => renderTarget2
     };
   };
+  let quad = "Quad";
+  let renderTarget = switchTargets();
+  /* Compute initial wave */
+  switch textureRef^ {
+  | Some(_) => ()
+  | None =>
+    runFrameBuffer(gl, time, Some(renderTarget), getRandomProgram(ref(None)), quad);
+    ();
+  };
+  textureRef := Some(renderTarget.texture);
   /* Compute waves */
   let renderTarget = switchTargets();
-  let quad = "Quad";
   runFrameBuffer(
     gl,
     time,
