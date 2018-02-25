@@ -111,12 +111,13 @@ let uploadImage = (gl, texture, img) => {
     WebGL2.getTEXTURE_WRAP_T(gl),
     WebGL2.getREPEAT(gl)
   );
+  /*
   WebGL2.texParameteri(
     gl,
     t2d,
     WebGL2.getTEXTURE_MIN_FILTER(gl),
     WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
-  );
+  );*/
   /* the largest mip */
   let mipLevel = 0;
   /* format we want in the texture */
@@ -136,14 +137,12 @@ let uploadImage = (gl, texture, img) => {
     img
   );
   WebGL2.generateMipmap(gl, t2d);
-  /*
   WebGL2.texParameteri(
     gl,
     t2d,
-    WebGL2.getTEXTURE_MAG_FILTER(gl),
+    WebGL2.getTEXTURE_MIN_FILTER(gl),
     WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
   );
-  */
 };
 
 /* TODO: Preallocate and refill array */
@@ -243,13 +242,7 @@ let getNewRandomTexture = (gl, randf) => {
   let size = width * height * 4;
   let pixels = Float32Array.createSize(size);
   for (i in 0 to size) {
-    Float32Array.set(pixels, i, randf());
-		/*
-    switch (i mod 4) {
-    | 0 => Float32Array.set(pixels, i, Math.random() *. 1.0)
-    | _ => ()
-    };
-		*/
+    Float32Array.set(pixels, i, randf(i));
   };
   /* TODO: memoize */
   /*

@@ -379,7 +379,7 @@ external getCLAMP_TO_EDGE : glT => textureParameterValueT = "CLAMP_TO_EDGE";
 
 [@bs.get]
 external getLINEAR_MIPMAP_LINEAR : glT => textureParameterValueT =
-  "getLINEAR_MIPMAP_LINEAR";
+  "LINEAR_MIPMAP_LINEAR";
 
 [@bs.get] external getTEXTURE_2D : glT => texture2DT = "TEXTURE_2D";
 

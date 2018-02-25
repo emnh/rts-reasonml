@@ -33,7 +33,8 @@ external partialMemoize44 :
   [@bs.uncurry] (('a, 'b, 'c, 'd) => 'r) =
   "window.partialMemoize4";
 
-[@bs.get] external getMemoizeIdentity : 'a => Js.Undefined.t(float) = "memoizeId";
+[@bs.get]
+external getMemoizeIdentity : 'a => Js.Undefined.t(float) = "memoizeId";
 
 [@bs.set] external setMemoizeIdentity : ('a, float) => unit = "memoizeId";
 
@@ -41,8 +42,6 @@ external partialMemoize44 :
 let setMemoizeId = x => {
   let om = getMemoizeIdentity(x);
   if (om == Js.undefined) {
-    Js.log("om");
-    Js.log(om);
     setMemoizeIdentity(x, Math.random());
   };
 };

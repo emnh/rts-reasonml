@@ -18,6 +18,8 @@ let state: stateT = {
   }
 };
 
+let twist = false;
+
 exception NoGL;
 
 exception No2D;
@@ -172,11 +174,12 @@ let renderObj =
       width,
       height,
       time,
-      uniforms
+      uniforms,
+      twist
     ) => {
   let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
   let viewMatrices: Three.viewTransformT =
-    Three.getViewMatrices(camera, obj.matrixWorld);
+    Three.getViewMatrices(camera, obj.matrixWorld, twist);
   let (uniformBlock, textures) =
     GLSLUniforms.computeUniformBlock(
       gl,
@@ -213,7 +216,13 @@ let getWaterRT =
   );
 
 let runFrameBuffer =
-    (gl, time, renderTarget: option(WebGL2Util.renderTargetT), programSource) => {
+    (
+      gl,
+      time,
+      renderTarget: option(WebGL2Util.renderTargetT),
+      programSource,
+      geoType
+    ) => {
   let (uniforms, shaderProgramSource) = programSource;
   let drawToScreen =
     switch renderTarget {
@@ -241,11 +250,11 @@ let runFrameBuffer =
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
     /*
-    let geometry = Three.createQuadGeometry();
-    let buffers = WebGL2Util.createBuffers(gl, geometry);
-    let vao = WebGL2Util.createAttributes(gl, program, buffers);
-    */
-    let (_, buffers, vao) = getGeometryAndBuffers(gl, program, "Quad");
+     let geometry = Three.createQuadGeometry();
+     let buffers = WebGL2Util.createBuffers(gl, geometry);
+     let vao = WebGL2Util.createAttributes(gl, program, buffers);
+     */
+    let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geoType);
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     let (x, y, z) = (0.0, 0.0, (-1.0));
@@ -268,7 +277,8 @@ let runFrameBuffer =
         width,
         height,
         time,
-        uniforms
+        uniforms,
+        twist
       );
     if (drawToScreen) {
       rf();
@@ -278,7 +288,6 @@ let runFrameBuffer =
   | (_, None) => raise(NoProgram)
   };
 };
-
 
 let run = (gl, time, uAndProgram) => {
   let geometryType = ConfigVars.geometryType#get();
@@ -314,7 +323,6 @@ let run = (gl, time, uAndProgram) => {
       let sz = ConfigVars.size#get();
       let iseed = float_of_int(i);
       let (camera, cameraPos) = getCamera(width, height);
-      let (cx, cy, cz) = cameraPos;
       Three.cameraLookAt3(camera, x, y, z);
       renderObj(
         gl,
@@ -328,7 +336,8 @@ let run = (gl, time, uAndProgram) => {
         width,
         height,
         time *. (1.0 +. iseed /. float_of_int(count)) +. iseed,
-        uniforms
+        uniforms,
+        twist
       );
     };
   | (_, None) => raise(NoProgram)
@@ -356,11 +365,24 @@ let runPipeline = (gl, time) => {
   };
   /* Compute waves */
   let renderTarget = switchTargets();
-  runFrameBuffer(gl, time, Some(renderTarget), getWaterProgram(textureRef));
+  let quad = "Quad";
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTarget),
+    getWaterProgram(textureRef),
+    quad
+  );
   textureRef := Some(renderTarget.texture);
   /* Compute waves 2 */
   let renderTarget = switchTargets();
-  runFrameBuffer(gl, time, Some(renderTarget), getWaterProgram(textureRef));
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTarget),
+    getWaterProgram(textureRef),
+    quad
+  );
   textureRef := Some(renderTarget.texture);
   /* Compute normals */
   let renderTarget = switchTargets();
@@ -368,7 +390,8 @@ let runPipeline = (gl, time) => {
     gl,
     time,
     Some(renderTarget),
-    getWaterNormalProgram(textureRef)
+    getWaterNormalProgram(textureRef),
+    quad
   );
   /* Next time use previous output as input */
   textureRef := Some(renderTarget.texture);
@@ -377,11 +400,13 @@ let runPipeline = (gl, time) => {
     gl,
     time,
     Some(renderTarget3),
-    getWaterCausticsProgram(textureRef)
+    getWaterCausticsProgram(textureRef),
+    "Plane"
   );
   causticsRef := Some(renderTarget3.texture);
   /* Copy to screen for debug */
-  runFrameBuffer(gl, time, None, getCopyProgram(textureRef));
+  /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
+  runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);
   /* Render water */
   run(gl, time, getWaterRendererProgram(textureRef, causticsRef));
 };

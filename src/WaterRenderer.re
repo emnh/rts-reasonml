@@ -18,7 +18,13 @@ let water = sampler2Duniform("t_water");
 
 let memGRT =
   Memoize.partialMemoize3((gl, height, offset) =>
-    getNewRandomTexture(gl, () => Math.random() *. height +. offset)
+    getNewRandomTexture(gl, i =>
+      switch (i mod 4) {
+      | 0 => Math.random() *. height +. offset
+      | 1 => 0.0
+      | _ => 0.0
+      }
+    )
   );
 
 let registeredWater =
@@ -669,7 +675,7 @@ module Renderer = {
         let retval =
           switch tilesTexture2^ {
           | Some(texture) => texture
-          | None => getNewRandomTexture(arg.gl, () => Math.random() *. 0.0)
+          | None => getNewRandomTexture(arg.gl, (_) => Math.random() *. 0.0)
           };
         tilesTexture2 := Some(retval);
         retval;

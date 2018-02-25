@@ -127,7 +127,7 @@ let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
-let protoPlane = createPlaneBufferGeometry(2.0, 2.0, 256, 256);
+let protoPlane = createPlaneBufferGeometry(1.0, 1.0, 256, 256);
 
 let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
 
@@ -206,7 +206,7 @@ let getCamera =
     camera;
   });
 
-let getViewMatrices = (camera, matrixWorld) => {
+let getViewMatrices = (camera, matrixWorld, twist) => {
   updateCameraMatrixWorld(camera);
   let modelMatrix = cloneMatrix4(matrixWorld);
   let modelViewMatrix = cloneMatrix4(getCameraMatrixWorldInverse(camera));
@@ -256,7 +256,8 @@ let getViewMatrices = (camera, matrixWorld) => {
   multiplyMatrix4(modelViewMatrix2, modelMatrix);
   /* transposeMatrix4(projectionMatrix); */
   {
-    modelViewMatrix: getElements(modelViewMatrix2),
+    modelViewMatrix:
+      getElements(if (twist) {modelViewMatrix2} else {modelViewMatrix}),
     projectionMatrix: getElements(projectionMatrix)
   };
 };
