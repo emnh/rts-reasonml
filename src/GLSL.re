@@ -110,7 +110,6 @@ and rT =
   | BuiltinFun2(string, rT, rT)
   | BuiltinFun3(string, rT, rT, rT)
   | BuiltinFun4(string, rT, rT, rT, rT)
-  /*| Texture(rT([ | `Sampler2D | `Vec2]), rT([ | `Sampler2D | `Vec2]))*/
   | CustomFun(funExprT, list(rT))
 and grT('a) = rT
 and rightExprT = rT
@@ -650,6 +649,7 @@ let formatUniforms = attrs => {
   let filterSamplers = ((t, _)) =>
     switch t {
     | Sampler2D => false
+    | SamplerCube => false
     | _ => true
     };
   let (notSamplerAttrs, samplerAttrs) = List.partition(filterSamplers, attrs);
@@ -1013,7 +1013,7 @@ let sampler2Duniform = name =>
   Typed(`Sampler2D, RVar((Uniform, Sampler2D, name)));
 
 let samplerCubeUniform = name =>
-  Typed(`SamplerCube, RVar((Uniform, Sampler2D, name)));
+  Typed(`SamplerCube, RVar((Uniform, SamplerCube, name)));
 
 /* Begin builtins and defaults */
 /*
@@ -1205,7 +1205,7 @@ let texture = (l: trT([ | `Sampler2D]), r: trT(PhantomAlgebra.vec2('a))) =>
   Typed(protoVec4, BuiltinFun2("texture", u(l), u(r)));
 
 let textureCube = (l: trT([ | `SamplerCube]), r: trT(PhantomAlgebra.vec3('a))) =>
-  Typed(protoVec4, BuiltinFun2("textureCube", u(l), u(r)));
+  Typed(protoVec4, BuiltinFun2("texture", u(l), u(r)));
 
 /*switch (l, r) {
     /* | (Typed(`Sampler2D, _), Typed(`Vec2, _)) => Typed(`Vec4, Texture(l, r))*/

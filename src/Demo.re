@@ -55,10 +55,8 @@ let getShaderProgram =
         WebGL2.getVERTEX_SHADER(gl),
         vertexShaderSource
       );
-    /*
-     Js.log("Vertex shader:");
-     Js.log(MyString.lineNumbers(vertexShaderSource));
-     */
+    Js.log("Vertex shader:");
+    Js.log(MyString.lineNumbers(vertexShaderSource));
     switch vertexShader {
     | Some(_) => ()
     | None =>
@@ -71,10 +69,8 @@ let getShaderProgram =
         WebGL2.getFRAGMENT_SHADER(gl),
         fragmentShaderSource
       );
-    /*
-     Js.log("Fragment shader:");
-     Js.log(MyString.lineNumbers(fragmentShaderSource));
-     */
+    Js.log("Fragment shader:");
+    Js.log(MyString.lineNumbers(fragmentShaderSource));
     switch fragmentShader {
     | Some(_) => ()
     | None =>
@@ -374,7 +370,9 @@ let runDemo = (gl, time) => {
 let rec renderLoop = (startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
   runPipeline(gl, t /. 1000.0);
-  runDemo(gl, t /. 1000.0);
+  /*
+   runDemo(gl, t /. 1000.0);
+   */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
     Document.requestAnimationFrame(() =>

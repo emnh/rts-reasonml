@@ -118,6 +118,18 @@ let uploadImage = (gl, texture, img) => {
     img
   );
   WebGL2.generateMipmap(gl, t2d);
+  WebGL2.texParameteri(
+    gl,
+    t2d,
+    WebGL2.getTEXTURE_MIN_FILTER(gl),
+    WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
+  );
+  WebGL2.texParameteri(
+    gl,
+    t2d,
+    WebGL2.getTEXTURE_MAG_FILTER(gl),
+    WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
+  );
 };
 
 /* TODO: Preallocate and refill array */

@@ -102,6 +102,7 @@ module Renderer = {
           ifstmt(t > f(0.0), () => return(t));
         }
       );
+      return(f(1.0e6));
     });
   let intersectSphere = (x, y, z, w) =>
     fundecl4(
@@ -312,11 +313,10 @@ module Renderer = {
       ifelsestmt(
         q < f(1.0e6),
         () => color =@ getSphereColor(origin + ray * q),
-        () => {
+        () =>
           ifelsestmt(
             ray **. y' < f(0.0),
             () => {
-              push();
               let t = vec2var("t1");
               t
               =@ intersectCube(
@@ -349,9 +349,7 @@ module Renderer = {
                 }
               );
             }
-          );
-          pop();
-        }
+          )
       );
       ifstmt(ray **. y' < f(0.0), () => color *= waterColor);
       return(color);
@@ -648,6 +646,20 @@ module Renderer = {
         retval;
       }
     );
+  let tilesTexture5 = ref(None);
+  let registeredSky =
+    registerTextureUniform(
+      sky,
+      arg => {
+        let retval =
+          switch tilesTexture5^ {
+          | Some(texture) => texture
+          | None => getNewTexture(arg.gl, "/resources/xneg.jpg")
+          };
+        tilesTexture5 := Some(retval);
+        retval;
+      }
+    );
   /* TODO: use render target texture with caustics on it */
   let tilesTexture2 = ref(None);
   let registeredCaustics =
@@ -692,7 +704,8 @@ module Renderer = {
           ConfigVars.waterOffset#get()
         )
       }
-    )
+    ),
+    registeredSky
   ];
   let makeProgramSource = textureRef => {
     let uniformBlock = getUniforms(textureRef);
