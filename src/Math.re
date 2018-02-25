@@ -10,6 +10,8 @@ external globalSeedRandom :
 
 [@bs.val] external random : unit => float = "Math.random";
 
+[@bs.val] external sqrt : float => float = "Math.sqrt";
+
 [@bs.val] external sin : float => float = "Math.sin";
 
 [@bs.val] external cos : float => float = "Math.cos";

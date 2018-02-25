@@ -351,8 +351,9 @@ let textureRef = ref(None);
 let causticsRef = ref(None);
 
 let runPipeline = (gl, time) => {
-  let width = 256;
-  let height = 256;
+  let sz = 256;
+  let width = sz;
+  let height = sz;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
   let renderTarget3 = getWaterRT(gl, 1024, 1024, "wrt3");
