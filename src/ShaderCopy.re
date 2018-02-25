@@ -26,9 +26,19 @@ let fragmentShader =
 let randomFragmentShader =
   body(() => {
     let uv = vec2var("uv");
-    uv =@ gl_FragCoord **. xy' / u_resolution * f(10.0);
+    uv =@ gl_FragCoord **. xy' / u_resolution;
+    let value = floatvar("value");
+    value
+    =@ ShaderAshima.snoise(uv * f(1.63))
+    * f(0.1)
+    + ShaderAshima.snoise(uv * f(10.0))
+    * f(0.002)
+    + ShaderAshima.snoise(uv * f(20.0))
+    * f(0.0005)
+    + ShaderAshima.snoise(uv * f(40.0))
+    * f(0.00025);
     /* TODO: uniform for max height */
-    gl_FragColor =@ vec44f(ShaderAshima.snoise(uv) * f(0.002), f(0.0), f(0.0), f(0.0));
+    gl_FragColor =@ vec44f(value / f(2.0), f(0.0), f(0.0), f(0.0));
   });
 
 let r = registerUniform;
@@ -50,9 +60,7 @@ let getUniforms = texture => [
 let getUniforms2 = () => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
-  r(u_resolution, arg =>
-    [|float_of_int(arg.width), float_of_int(arg.height)|]
-  ),
+  r(u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|])
 ];
 
 let makeProgramSource = texture => {

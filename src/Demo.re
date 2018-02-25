@@ -373,7 +373,7 @@ let runPipeline = (gl, time) => {
   switch textureRef^ {
   | Some(_) => ()
   | None =>
-    runFrameBuffer(gl, time, Some(renderTarget), getRandomProgram(ref(None)), quad);
+    runFrameBuffer(gl, time, Some(renderTarget), getRandomProgram(), quad);
     ();
   };
   textureRef := Some(renderTarget.texture);
