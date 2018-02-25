@@ -2,6 +2,8 @@ open WebGL2;
 
 exception WebGL2Exception(string);
 
+exception CacheNotWorking;
+
 let createShader = (gl, stype, source) => {
   let shader = createShader(gl, stype);
   shaderSource(gl, shader, source);
@@ -46,7 +48,14 @@ type glBuffersT = {
   count: int
 };
 
+let cbCounter = ref(0);
+
 let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
+  cbCounter := cbCounter^ + 1;
+  if (cbCounter^ > 10) {
+    raise(CacheNotWorking);
+  };
+  Js.log("createBuffers");
   let positions = geometry.position;
   let index = geometry.index;
   let positionBuffer = createBuffer(gl);

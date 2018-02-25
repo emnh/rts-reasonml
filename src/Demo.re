@@ -105,7 +105,7 @@ let setupDocument = () => {
       Memoize.setMemoizeId(gl);
       gl;
     | None =>
-      showError("No WebGL2Util!");
+      showError("No WebGL2!");
       raise(NoGL);
     };
   let setCanvasSize = (_) => {
@@ -290,6 +290,7 @@ let run = (gl, time, uAndProgram) => {
   | (uniforms, Some(program)) =>
     Memoize.setMemoizeId(program);
     Document.debug(Document.window, gl);
+    Document.debug(Document.window, uniforms);
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
