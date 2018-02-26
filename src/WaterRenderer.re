@@ -16,6 +16,12 @@ let eye = vec3uniform("u_eye");
 
 let water = sampler2Duniform("t_water");
 
+let heightMap = sampler2Duniform("t_heightmap");
+
+let heightMultiplier = f(1.0) / ShaderCopy.maxHeight;
+
+let u_time = floatuniform("u_time");
+
 let memGRT =
   Memoize.partialMemoize3((gl, height, offset) =>
     getNewRandomTexture(gl, i =>
@@ -42,22 +48,34 @@ let registeredWater =
   );
 
 module Renderer = {
+  let waterHeight = floatuniform("u_waterHeight");
   let waterOffset = floatuniform("u_waterOffset");
   let light = vec3uniform("u_light");
   let sphereCenter = vec3uniform("u_sphereCenter");
   let sphereRadius = floatuniform("u_sphereRadius");
   let tiles = sampler2Duniform("t_tiles");
+  let terrain = sampler2Duniform("t_terrain");
   let causticTex = sampler2Duniform("t_causticTex");
   let cIOR_AIR = const(floatif(1.0));
   let cIOR_WATER = const(floatif(1.333));
   let abovewaterColor = const(vec3i3f(0.25, 1.0, 1.25) * f(1.5));
   let underwaterColor = const(vec3i3f(0.4, 0.9, 1.0));
-  let poolHeight = const(floatif(2.0));
+  let poolHeight = const(floatif(1.5));
   let origin = vec3arg("origin");
   let ray = vec3arg("ray");
   let cubeMin = vec3arg("cubeMin");
   let cubeMax = vec3arg("cubeMax");
   let position = vec3varying("v_position");
+  /* Set to high number for no walls, 0.999 for standard walls */
+  let wallPosition = f(4.999);
+  /*
+   let globalCubeMin = vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0));
+   let globalCubeMax = vec33f(f(1.0), f(2.0), f(1.0));
+   */
+  let cubeLimit = f(5.0);
+  let globalCubeMin =
+    vec33f(cubeLimit * f(-1.0), f(0.0) - poolHeight, cubeLimit * f(-1.0));
+  let globalCubeMax = vec33f(cubeLimit * f(1.0), f(2.0), cubeLimit * f(1.0));
   let sky = samplerCubeUniform("u_sky");
   /* TODO: bool */
   let u_isAboveWater = floatuniform("u_isAboveWater");
@@ -65,6 +83,61 @@ module Renderer = {
    let gl_Vertex = gl_Vertex **. xzyw';
    */
   let gl_Vertex = gl_Vertex;
+  let crRayOrigin = vec3arg("rayOrigin");
+  let crRayDelta = vec3arg("rayDelta");
+  let crMaxT = f(2.0);
+  let castRayBody =
+    body(() => {
+      /* Modified from https://www.shadertoy.com/view/4scGW7 */
+      let mint = f(0.001);
+      let maxt = crMaxT;
+      let dt = maxt / f(4.0);
+      let lh = floatvar("lh");
+      let ly = floatvar("ly");
+      lh =@ f(0.0);
+      ly =@ f(0.0);
+      let t = floatvar("t");
+      t =@ mint;
+      forstmt(
+        () => t =@ mint,
+        t < maxt,
+        () => t += dt,
+        () => {
+          let p = vec3var("p");
+          p =@ crRayOrigin + crRayDelta * t;
+          let h = floatvar("h");
+          h
+          /*
+           =@ texture(heightMap, fract(p **. xz' * f(0.5) + f(0.5)))
+           */
+          =@ texture(heightMap, fract(p **. xz' * f(0.5) + f(0.5)))
+          **. x'
+          * heightMultiplier
+          * poolHeight
+          - poolHeight;
+          /*
+           h =@ texture(heightMap, p **. xz' * f(0.5) + f(0.5)) **. x' - poolHeight;
+           */
+          /*
+           h =@ texture(water, p **. xz' * f(0.5) + f(0.5)) **. r' * (f(0.0) - poolHeight);
+           */
+          ifstmt(p **. y' < h, () =>
+            return(t - dt + dt * (lh - ly) / (p **. y' - ly - h + lh))
+          );
+          lh =@ h;
+          ly =@ p **. y';
+        }
+      );
+      return(maxt * f(2.0));
+    });
+  let castRay = (x, y) =>
+    fundecl2(
+      floatfun("castRay"),
+      (crRayOrigin, crRayDelta),
+      castRayBody,
+      x,
+      y
+    );
   let intersectCubeBody =
     body(() => {
       let tMin = vec3var("tMin");
@@ -77,8 +150,11 @@ module Renderer = {
       t2 =@ max(tMin, tMax);
       let tNear = floatvar("tNear");
       let tFar = floatvar("tFar");
+      let tMid = floatvar("tMid");
       tNear =@ max(max(t1 **. x', t1 **. y'), t1 **. z');
       tFar =@ min(min(t2 **. x', t2 **. y'), t2 **. z');
+      tMid =@ castRay(origin, ray);
+      ifstmt(tMid <= crMaxT, () => tFar =@ min(tFar, tMid));
       return(vec2(tNear |+| tFar));
     });
   let intersectCube = (x, y, z, w) =>
@@ -195,6 +271,20 @@ module Renderer = {
     });
   let getSphereColor = pt =>
     fundecl1(vec3fun("getSphereColor"), point, getSphereColorBody, pt);
+  let displacementPoint = vec3arg("displacementPoint");
+  let displacementBody =
+    body(() => {
+      let point = vec3var("point");
+      point =@ displacementPoint;
+      point
+      **. y'
+      =@ displacementPoint
+      **. y'
+      * ShaderAshima.snoise(displacementPoint **. xz' * f(10.0) + u_time);
+      return(point);
+    });
+  let displacement = pt =>
+    fundecl1(vec3fun("displacement"), displacementPoint, displacementBody, pt);
   let getWallColorBody =
     body(() => {
       let scale = floatvar("scale");
@@ -204,7 +294,7 @@ module Renderer = {
       let normal = vec3var("normal");
       normal =@ vec31f(f(0.0));
       ifelsestmt(
-        abs(point **. x') > f(0.999),
+        abs(point **. x') > wallPosition,
         () => {
           wallColor
           =@ texture(tiles, point **. yz' * f(0.5) + vec22f(f(1.0), f(0.5)))
@@ -213,7 +303,7 @@ module Renderer = {
         },
         () =>
           ifelsestmt(
-            abs(point **. z') > f(0.999),
+            abs(point **. z') > wallPosition,
             () => {
               wallColor
               =@ texture(
@@ -224,9 +314,11 @@ module Renderer = {
               normal =@ vec33f(f(0.0), f(0.0), f(0.0) - point **. z');
             },
             () => {
-              wallColor
-              =@ texture(tiles, point **. xz' * f(0.5) + f(0.5))
-              **. rgb';
+              let color =
+                texture(terrain, fract(point **. xz' * f(0.5) + f(0.5)));
+              let gray =
+                dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
+              wallColor =@ vec31f(gray);
               normal =@ vec33f(f(0.0), f(1.0), f(0.0));
             }
           )
@@ -258,17 +350,19 @@ module Renderer = {
           caustic
           =@ texture(
                causticTex,
-               f(0.75)
-               * (
-                 point
-                 **. xz'
-                 - point
-                 **. y'
-                 * (refractedLight **. xz')
-                 / (refractedLight **. y')
+               fract(
+                 f(0.75)
+                 * (
+                   point
+                   **. xz'
+                   - point
+                   **. y'
+                   * (refractedLight **. xz')
+                   / (refractedLight **. y')
+                 )
+                 * f(0.5)
+                 + f(0.5)
                )
-               * f(0.5)
-               + f(0.5)
              );
           scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
         },
@@ -276,12 +370,7 @@ module Renderer = {
           /* shadow for the rim of the pool */
           let t = vec2var("t");
           t
-          =@ intersectCube(
-               point,
-               refractedLight,
-               vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
-               vec33f(f(1.0), f(2.0), f(1.0))
-             );
+          =@ intersectCube(point, refractedLight, globalCubeMin, globalCubeMax);
           diffuse
           *= (
             f(1.0)
@@ -326,25 +415,15 @@ module Renderer = {
             ray **. y' < f(0.0),
             () => {
               let t = vec2var("t1");
-              t
-              =@ intersectCube(
-                   origin,
-                   ray,
-                   vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
-                   vec33f(f(1.0), f(2.0), f(1.0))
-                 );
-              color =@ getWallColor(origin + ray * (t **. y'));
+              t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
+              let hit = vec3var("hit1");
+              hit =@ origin + ray * (t **. y');
+              color =@ getWallColor(hit);
             },
             () => {
               let t = vec2var("t2");
-              t
-              =@ intersectCube(
-                   origin,
-                   ray,
-                   vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
-                   vec33f(f(1.0), f(2.0), f(1.0))
-                 );
-              let hit = vec3var("hit");
+              t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
+              let hit = vec3var("hit2");
               hit =@ origin + ray * (t **. y');
               ifelsestmt(
                 hit **. y' < f(2.0) / f(12.0),
@@ -371,13 +450,26 @@ module Renderer = {
       y,
       z
     );
+  let transitionDelta = f(0.0);
+  let isWater = floatvarying("isWater");
   let waterVertexShader =
     body(() => {
       v_uv =@ a_uv;
       let info = vec4var("info");
-      info =@ texture(water, gl_Vertex **. xy' * f(0.5) + f(0.5));
+      let uvc = vec2var("uvc");
+      uvc =@ gl_Vertex **. xy' * f(0.5) + f(0.5);
+      info =@ texture(water, uvc);
+      let height = floatvar("height");
+      height =@ texture(heightMap, uvc) **. x';
+      let waterHeight2 = floatvar("waterHeight2");
+      waterHeight2 =@ info **. r' * waterOffset;
       position =@ gl_Vertex **. xzy';
-      position **. y' += info **. r' * waterOffset;
+      isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
+      ifelsestmt(
+        isWater < f(0.0),
+        () => position **. y' += height * heightMultiplier,
+        () => position **. y' += waterHeight2 * heightMultiplier
+      );
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
@@ -385,9 +477,13 @@ module Renderer = {
     });
   let waterFragmentShader =
     body(() => {
-      let coord = vec2var("coord");
+      let position2 = vec3var("position2");
+      position2 =@ position;
+      let coord = vec2var("ocoord");
+      let ocoord = vec2var("coord");
       let info = vec4var("info");
-      coord =@ position **. xz' * f(0.5) + f(0.5);
+      ocoord =@ position **. xz' * f(0.5) + f(0.5);
+      coord =@ ocoord;
       info =@ texture(water, coord);
       /* TODO: int var */
       let i = floatvar("i");
@@ -409,7 +505,7 @@ module Renderer = {
            sqrt(f(1.0) - dot(info **. ba', info **. ba')),
            info **. a'
          );
-      incomingRay =@ normalize(position - eye);
+      incomingRay =@ normalize(position2 - eye);
       ifelsestmt(
         u_isAboveWater < f(0.0),
         () => {
@@ -429,9 +525,9 @@ module Renderer = {
           let reflectedColor = vec3var("reflectedColor1");
           let refractedColor = vec3var("refractedColor1");
           reflectedColor
-          =@ getSurfaceRayColor(position, reflectedRay, underwaterColor);
+          =@ getSurfaceRayColor(position2, reflectedRay, underwaterColor);
           refractedColor
-          =@ getSurfaceRayColor(position, refractedRay, vec31f(f(1.0)))
+          =@ getSurfaceRayColor(position2, refractedRay, vec31f(f(1.0)))
           * vec33f(f(0.8), f(1.0), f(1.1));
           gl_FragColor
           =@ vec4(
@@ -459,11 +555,19 @@ module Renderer = {
           let reflectedColor = vec3var("reflectedColor2");
           let refractedColor = vec3var("refractedColor2");
           reflectedColor
-          =@ getSurfaceRayColor(position, reflectedRay, abovewaterColor);
+          =@ getSurfaceRayColor(position2, reflectedRay, abovewaterColor);
           refractedColor
-          =@ getSurfaceRayColor(position, refractedRay, abovewaterColor);
+          =@ getSurfaceRayColor(position2, refractedRay, abovewaterColor);
           gl_FragColor
           =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
+          ifstmt(isWater < f(0.0), () =>
+            gl_FragColor =@ texture(terrain, ocoord)
+          );
+          /*mix(
+              gl_FragColor,
+              texture(terrain, ocoord),
+              f(1.0) - min(f(1.0), f(100.0) * isWater)
+            )*/
         }
       );
     });
@@ -520,13 +624,7 @@ module Renderer = {
     body(() => {
       /* project the ray onto the plane */
       let tcube = vec2var("tcube");
-      tcube
-      =@ intersectCube(
-           origin,
-           ray,
-           vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
-           vec33f(f(1.0), f(2.0), f(1.0))
-         );
+      tcube =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
       origin += ray * (tcube **. y');
       let tplane = floatvar("tplane");
       tplane =@ (f(0.0) - origin **. y' - f(1.0)) / (refractedLight **. y');
@@ -654,6 +752,7 @@ module Renderer = {
         retval;
       }
     );
+  /* TODO: cube texture */
   let tilesTexture5 = ref(None);
   let registeredSky =
     registerTextureUniform(
@@ -668,22 +767,7 @@ module Renderer = {
         retval;
       }
     );
-  /* TODO: use render target texture with caustics on it */
-  let tilesTexture2 = ref(None);
-  let registeredCaustics =
-    registerTextureUniform(
-      causticTex,
-      arg => {
-        let retval =
-          switch tilesTexture2^ {
-          | Some(texture) => texture
-          | None => getNewRandomTexture(arg.gl, (_) => Math.random() *. 0.0)
-          };
-        tilesTexture2 := Some(retval);
-        retval;
-      }
-    );
-  let getUniforms = (textureRef, causticsRef) => [
+  let getUniforms = (textureRef, causticsRef, terrainRef, heightMapRef) => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     /* r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]), */
@@ -691,6 +775,7 @@ module Renderer = {
     r(sphereCenter, (_) => [|10.0, 0.0, 10.0|]),
     r(sphereRadius, (_) => [|0.25|]),
     r(u_isAboveWater, (_) => [|1.0|]),
+    r(waterHeight, (_) => [|ConfigVars.waterHeight#get()|]),
     r(waterOffset, (_) => [|ConfigVars.waterOffset2#get()|]),
     r(
       light,
@@ -700,7 +785,6 @@ module Renderer = {
           ConfigVars.lightY#get(),
           ConfigVars.lightZ#get()
         );
-        [|2.0, 2.0, (-1.0)|];
         let normalize = (x, y, z) => {
           let length = Math.sqrt(x *. x +. y *. y +. z *. z);
           (x /. length, y /. length, z /. length);
@@ -709,7 +793,6 @@ module Renderer = {
         [|x, y, z|];
       }
     ),
-    /* r(light, (_) => [|0.0, 2.0, 0.0|]), */
     r(
       eye,
       arg => {
@@ -722,10 +805,19 @@ module Renderer = {
         [|x, y, z|];
       }
     ),
-    /*[|1.269582730631437, 1.190473024326728, (-3.3956534355979198)|] */
+    r(u_time, arg => [|arg.time|]),
     registeredTiles,
-    /* registeredCaustics, */
-    /* registeredWater */
+    registerTextureUniform(terrain, arg =>
+      switch terrainRef^ {
+      | Some(x) => x
+      | None =>
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get(),
+          ConfigVars.waterOffset#get()
+        )
+      }
+    ),
     registerTextureUniform(water, arg =>
       switch textureRef^ {
       | Some(x) => x
@@ -748,10 +840,22 @@ module Renderer = {
         )
       }
     ),
+    registerTextureUniform(heightMap, arg =>
+      switch heightMapRef^ {
+      | Some(x) => x
+      | None =>
+        memGRT(
+          arg.gl,
+          ConfigVars.waterHeight#get() *. 0.0,
+          ConfigVars.waterOffset#get() *. 0.0
+        )
+      }
+    ),
     registeredSky
   ];
-  let makeProgramSource = (textureRef, causticsRef) => {
-    let uniformBlock = getUniforms(textureRef, causticsRef);
+  let makeProgramSource = (textureRef, causticsRef, terrainRef, heightMapRef) => {
+    let uniformBlock =
+      getUniforms(textureRef, causticsRef, terrainRef, heightMapRef);
     (
       uniformBlock,
       getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
@@ -763,7 +867,8 @@ module Renderer = {
     );
   };
   let makeCausticsProgramSource = textureRef => {
-    let uniformBlock = getUniforms(textureRef, ref(None));
+    let uniformBlock =
+      getUniforms(textureRef, ref(None), ref(None), ref(None));
     (
       uniformBlock,
       getProgram(uniformBlock, causticsVertexShader, causticsFragmentShader)
@@ -824,8 +929,8 @@ module Water = {
       info **. g' += (average - info **. r') * f(2.0);
       /* attenuate the velocity a little so waves do not last forever */
       /*
-      info **. g' *= f(0.995);
-      */
+       info **. g' *= f(0.9995);
+       */
       /* move the vertex along the velocity */
       info **. r' += info **. g' * f(0.5);
       gl_FragColor =@ info;

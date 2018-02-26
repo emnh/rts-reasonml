@@ -123,6 +123,7 @@ and statementT =
   | IfStatement(rT, gRootT)
   | IfElseStatement(rT, gRootT, gRootT)
   | Return(rT)
+  | ReturnVoid
   | Discard
 and gRootT = list(statementT);
 
@@ -448,6 +449,8 @@ let fmtTransformer = {
                 )
               | Return(right) =>
                 t.combine(t, ["return ", t.rExpr(t, right), ";"])
+              | ReturnVoid =>
+                t.combine(t, ["return;"])
               | ForStatement(l, test, r2, body) =>
                 let body = t.tree(t, body);
                 t.combine(
@@ -1166,6 +1169,9 @@ let max = (l, r) => g2(l, r, BuiltinFun2("max", u(l), u(r)));
 
 let min = (l, r) => g2(l, r, BuiltinFun2("min", u(l), u(r)));
 
+/* TODO: better type check */
+let fmod = (l, r) => Typed(getType(l), BuiltinFun2("mod", u(l), u(r)));
+
 let mix = (l, r1, r2) =>
   mixexpr3(l, r1, r2, BuiltinFun3("mix", u(l), u(r1), u(r2)));
 
@@ -1371,6 +1377,8 @@ let f = x => Typed(protoScalar, ImmediateFloat(x));
 let i = x => Typed(`Int, ImmediateInt(x));
 
 let return = l => add(Return(u(l)));
+
+let returnVoid = () => add(ReturnVoid);
 
 /* float var declaration and initialization */
 /* TODO: figure out how to do this properly */

@@ -23,6 +23,10 @@ let fragmentShader =
     gl_FragColor **. a' =@ f(1.0);
   });
 
+/* Depends on parameters below */
+let scale = f(0.5);
+let maxHeight = (f(0.1) + f(0.002) + f(0.0005) + f(0.00025)) * scale;
+
 let randomFragmentShader =
   body(() => {
     let uv = vec2var("uv");
@@ -38,7 +42,7 @@ let randomFragmentShader =
     + ShaderAshima.snoise(uv * f(40.0))
     * f(0.00025);
     /* TODO: uniform for max height */
-    gl_FragColor =@ vec44f(value / f(2.0), f(0.0), f(0.0), f(0.0));
+    gl_FragColor =@ vec44f(value * scale, f(0.0), f(0.0), f(0.0));
   });
 
 let r = registerUniform;

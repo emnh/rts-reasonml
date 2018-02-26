@@ -353,6 +353,10 @@ let textureRef = ref(None);
 
 let causticsRef = ref(None);
 
+let heightMapRef = ref(None);
+
+let terrainRenderRef = ref(None);
+
 let runPipeline = (gl, time) => {
   let sz = 256;
   let width = sz;
@@ -360,6 +364,8 @@ let runPipeline = (gl, time) => {
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
   let renderTarget3 = getWaterRT(gl, 1024, 1024, "wrt3");
+  let renderTargetTerrain = getWaterRT(gl, 512, 512, "wrt4");
+  let heightMapRT = getWaterRT(gl, 512, 512, "wrt5");
   let switchTargets = () => {
     targetIndex := (targetIndex^ + 1) mod 2;
     switch targetIndex^ {
@@ -369,6 +375,14 @@ let runPipeline = (gl, time) => {
   };
   let quad = "Quad";
   let renderTarget = switchTargets();
+  /* Compute height map */
+  switch heightMapRef^ {
+  | Some(_) => ()
+  | None =>
+    runFrameBuffer(gl, time, Some(heightMapRT), getRandomProgram(), quad);
+    ();
+  };
+  heightMapRef := Some(heightMapRT.texture);
   /* Compute initial wave */
   switch textureRef^ {
   | Some(_) => ()
@@ -420,8 +434,11 @@ let runPipeline = (gl, time) => {
   /* Copy to screen for debug */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
   runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);
+  /* Render terrain */
+  runFrameBuffer(gl, time, Some(renderTargetTerrain), ShaderTerrain.makeProgramSource(), "Plane");
   /* Render water */
-  run(gl, time, getWaterRendererProgram(textureRef, causticsRef));
+  terrainRenderRef := Some(renderTargetTerrain.texture);
+  run(gl, time, getWaterRendererProgram(textureRef, causticsRef, terrainRenderRef, heightMapRef));
 };
 
 let runDemo = (gl, time) => {
