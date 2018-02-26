@@ -18,9 +18,9 @@ let water = sampler2Duniform("t_water");
 
 let heightMap = sampler2Duniform("t_heightmap");
 
-let height = f(0.1);
+let heightBaseMultiplier = f(0.1);
 
-let heightMultiplier = height / ShaderCopy.maxHeight;
+let heightMultiplier = heightBaseMultiplier / ShaderCopy.maxHeight;
 
 let u_time = floatuniform("u_time");
 
@@ -50,6 +50,8 @@ let registeredWater =
   );
 
 module Renderer = {
+  /* TODO: bool */
+  let isCaustics = floatuniform("u_isCaustics");
   let waterHeight = floatuniform("u_waterHeight");
   let waterOffset = floatuniform("u_waterOffset");
   let light = vec3uniform("u_light");
@@ -68,6 +70,7 @@ module Renderer = {
   let cubeMin = vec3arg("cubeMin");
   let cubeMax = vec3arg("cubeMax");
   let position = vec3varying("v_position");
+  let waterDepth = floatvarying("v_waterDepth");
   /* Set cubeLimit to high number for no walls, 1.0 for standard walls */
   let cubeLimit = f(5.0);
   let wallPosition = cubeLimit - f(0.001);
@@ -89,7 +92,7 @@ module Renderer = {
       /* Modified from https://www.shadertoy.com/view/4scGW7 */
       let mint = f(0.0);
       let maxt = crMaxT;
-      let dt = maxt / f(4.0);
+      let dt = maxt / f(10.0);
       let lh = floatvar("lh");
       let ly = floatvar("ly");
       lh =@ f(0.0);
@@ -143,6 +146,7 @@ module Renderer = {
     );
   let intersectCubeBody =
     body(() => {
+      ifstmt(isCaustics < f(0.0), () => cubeMin **. y' =@ waterDepth);
       let tMin = vec3var("tMin");
       tMin =@ (cubeMin - origin) / ray;
       let tMax = vec3var("tMax");
@@ -153,11 +157,13 @@ module Renderer = {
       t2 =@ max(tMin, tMax);
       let tNear = floatvar("tNear");
       let tFar = floatvar("tFar");
-      let tMid = floatvar("tMid");
       tNear =@ max(max(t1 **. x', t1 **. y'), t1 **. z');
       tFar =@ min(min(t2 **. x', t2 **. y'), t2 **. z');
-      tMid =@ castRay(origin, ray);
-      ifstmt(tMid <= crMaxT, () => tFar =@ min(tFar, tMid));
+      /*
+       let tMid = floatvar("tMid");
+       tMid =@ castRay(origin, ray);
+       ifstmt(tMid <= crMaxT, () => tFar =@ min(tFar, tMid));
+       */
       return(vec2(tNear |+| tFar));
     });
   let intersectCube = (x, y, z, w) =>
@@ -500,6 +506,8 @@ module Renderer = {
       waterHeight2 =@ info **. r' * waterOffset;
       position =@ gl_Vertex **. xzy';
       isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
+      waterDepth =@ position **. y' + height * heightMultiplier * f(5.0);
+      /* waterDepth =@ position **. y' - poolHeight; */
       ifelsestmt(
         isWater < f(0.0),
         () => position **. y' += height * heightMultiplier,
@@ -814,11 +822,12 @@ module Renderer = {
         retval;
       }
     );
-  let getUniforms = (textureRef, causticsRef, terrainRef, heightMapRef) => [
+  let getUniforms = (textureRef, causticsRef, terrainRef, heightMapRef, isc) => [
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     /* r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]), */
     /* r(sphereCenter, (_) => [|0.0, -0.75, 0.0|]), */
+    r(isCaustics, (_) => [|isc|]),
     r(sphereCenter, (_) => [|10.0, 0.0, 10.0|]),
     r(sphereRadius, (_) => [|0.25|]),
     r(u_isAboveWater, (_) => [|1.0|]),
@@ -901,27 +910,30 @@ module Renderer = {
     ),
     registeredSky
   ];
-  let makeProgramSource = Memoize.partialMemoize4((textureRef, causticsRef, terrainRef, heightMapRef) => {
-    let uniformBlock =
-      getUniforms(textureRef, causticsRef, terrainRef, heightMapRef);
-    (
-      uniformBlock,
-      getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
-      /*
-       {
-         ...getProgram(uniformBlock, waterVertexShader, waterFragmentShader),
-         fragmentShader: verbatimSource
-       }*/
-    );
-  });
-  let makeCausticsProgramSource = Memoize.partialMemoize1(textureRef => {
-    let uniformBlock =
-      getUniforms(textureRef, ref(None), ref(None), ref(None));
-    (
-      uniformBlock,
-      getProgram(uniformBlock, causticsVertexShader, causticsFragmentShader)
-    );
-  });
+  let makeProgramSource =
+    Memoize.partialMemoize4(
+      (textureRef, causticsRef, terrainRef, heightMapRef) => {
+      let uniformBlock =
+        getUniforms(textureRef, causticsRef, terrainRef, heightMapRef, -1.0);
+      (
+        uniformBlock,
+        getProgram(uniformBlock, waterVertexShader, waterFragmentShader)
+        /*
+         {
+           ...getProgram(uniformBlock, waterVertexShader, waterFragmentShader),
+           fragmentShader: verbatimSource
+         }*/
+      );
+    });
+  let makeCausticsProgramSource =
+    Memoize.partialMemoize1(textureRef => {
+      let uniformBlock =
+        getUniforms(textureRef, ref(None), ref(None), ref(None), 1.0);
+      (
+        uniformBlock,
+        getProgram(uniformBlock, causticsVertexShader, causticsFragmentShader)
+      );
+    });
 };
 
 module Water = {

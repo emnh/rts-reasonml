@@ -538,6 +538,15 @@ let getVarOfType = (vart, gf) => {
       | _ => ()
       };
       fmtTransformer.var(t, expr);
+    },
+    rExpr: (t, expr) => {
+      switch expr {
+      | CustomFun((_, _, _, body), _) =>
+        let _ = t.tree(t, body);
+        ();
+      | _ => ()
+      };
+      fmtTransformer.rExpr(t, expr);
     }
   };
   let _ = walkTransformer.tfun(walkTransformer, gf);
