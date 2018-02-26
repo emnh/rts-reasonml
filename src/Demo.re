@@ -54,8 +54,6 @@ let getShaderProgram =
         WebGL2.getVERTEX_SHADER(gl),
         vertexShaderSource
       );
-    Js.log("Vertex shader:");
-    Js.log(MyString.lineNumbers(vertexShaderSource));
     switch vertexShader {
     | Some(_) => ()
     | None =>
@@ -68,8 +66,6 @@ let getShaderProgram =
         WebGL2.getFRAGMENT_SHADER(gl),
         fragmentShaderSource
       );
-    Js.log("Fragment shader:");
-    Js.log(MyString.lineNumbers(fragmentShaderSource));
     switch fragmentShader {
     | Some(_) => ()
     | None =>
@@ -139,7 +135,7 @@ let getGeometryAndBuffers =
 let getCamera = (width, height) => {
   let cameraPosition = (
     ConfigVars.cameraX#get(),
-    ConfigVars.cameraY#get(),
+    ConfigVars.cameraY#get() *. Terrain.getWidth() /. 2.0,
     ConfigVars.cameraZ#get()
   );
   let cameraRotation = (
@@ -428,9 +424,9 @@ let runPipeline = (gl, queryExt, time) => {
   let height = sz;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
-  let renderTarget3 = getWaterRT(gl, 1024, 1024, "wrt3");
+  let renderTargetCaustics = getWaterRT(gl, 1024, 1024, "wrt3");
   let renderTargetTerrain = getWaterRT(gl, 512, 512, "wrt4");
-  let heightMapRT = getWaterRT(gl, 512, 512, "wrt5");
+  let heightMapRT = getWaterRT(gl, 1024, 1024, "wrt5");
   let switchTargets = () => {
     targetIndex := (targetIndex^ + 1) mod 2;
     switch targetIndex^ {
@@ -510,12 +506,12 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
-    Some(renderTarget3),
+    Some(renderTargetCaustics),
     WaterRenderer.Renderer.makeCausticsProgramSource(textureRef),
     "Plane",
     doMeasure(gl, queryExt, "Caustics")
   );
-  causticsRef := Some(renderTarget3.texture);
+  causticsRef := Some(renderTargetCaustics.texture);
   /* Render terrain */
   runFrameBuffer(
     gl,
@@ -540,7 +536,7 @@ let runPipeline = (gl, queryExt, time) => {
   );
   /* Copy to screen for debug */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
-  /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);*/
+  /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy")); */
 };
 
 let runDemo = (gl, time) => {

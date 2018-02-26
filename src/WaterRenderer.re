@@ -24,6 +24,8 @@ let heightMultiplier = heightBaseMultiplier / ShaderCopy.maxHeight;
 
 let u_time = floatuniform("u_time");
 
+let waveHeight = floatuniform("u_waterOffset");
+
 let memGRT =
   Memoize.partialMemoize3((gl, height, offset) =>
     getNewRandomTexture(gl, i =>
@@ -35,25 +37,18 @@ let memGRT =
     )
   );
 
-let registeredWater =
-  registerTextureUniform(
-    water,
-    arg => {
-      let retval =
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get(),
-          ConfigVars.waterOffset#get()
-        );
-      retval;
-    }
-  );
-
 module Renderer = {
   /* TODO: bool */
+  let uvMul =
+    vec22f(f(2.0) / f(Terrain.getWidth()), f(2.0) / f(Terrain.getHeight()));
+  let uvMul3 =
+    vec33f(
+      f(2.0) / f(Terrain.getWidth()),
+      f(1.0),
+      f(2.0) / f(Terrain.getHeight())
+    );
   let isCaustics = floatuniform("u_isCaustics");
   let waterHeight = floatuniform("u_waterHeight");
-  let waterOffset = floatuniform("u_waterOffset");
   let light = vec3uniform("u_light");
   let sphereCenter = vec3uniform("u_sphereCenter");
   let sphereRadius = floatuniform("u_sphereRadius");
@@ -72,7 +67,7 @@ module Renderer = {
   let position = vec3varying("v_position");
   let waterDepth = floatvarying("v_waterDepth");
   /* Set cubeLimit to high number for no walls, 1.0 for standard walls */
-  let cubeLimit = f(5.0);
+  let cubeLimit = f(25.0);
   let wallPosition = cubeLimit - f(0.001);
   let globalCubeMin =
     vec33f(cubeLimit * f(-1.0), f(0.0) - poolHeight, cubeLimit * f(-1.0));
@@ -107,26 +102,12 @@ module Renderer = {
           let p = vec3var("p");
           p =@ crRayOrigin + crRayDelta * t;
           let h = floatvar("h");
-          /*
-           =@ texture(heightMap, fract(p **. xz' * f(0.5) + f(0.5)))
-           */
           h
           =@ texture(heightMap, fract(p **. xz' * f(0.5) + f(0.5)))
           **. x'
           * heightMultiplier
           - poolHeight;
-          /*
-           if (isCaustic < 0.0) {
-             h -= poolHeight;
-           }
-           */
           h =@ min(crRayOrigin **. y', h);
-          /*
-           h =@ texture(heightMap, p **. xz' * f(0.5) + f(0.5)) **. x' - poolHeight;
-           */
-          /*
-           h =@ texture(water, p **. xz' * f(0.5) + f(0.5)) **. r' * (f(0.0) - poolHeight);
-           */
           ifstmt(p **. y' <= h, () =>
             return(t - dt + dt * (lh - ly) / (p **. y' - ly - h + lh))
           );
@@ -146,7 +127,7 @@ module Renderer = {
     );
   let intersectCubeBody =
     body(() => {
-      ifstmt(isCaustics < f(0.0), () => cubeMin **. y' =@ waterDepth);
+      /* ifstmt(isCaustics < f(0.0), () => cubeMin **. y' =@ waterDepth); */
       let tMin = vec3var("tMin");
       tMin =@ (cubeMin - origin) / ray;
       let tMax = vec3var("tMax");
@@ -252,7 +233,7 @@ module Renderer = {
       =@ max(f(0.0), dot(f(0.0) - refractedLight, sphereNormal))
       * f(0.5);
       let info = vec4var("info");
-      info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
+      info =@ texture(water, point **. xz' * f(0.5) * uvMul + f(0.5));
       ifstmt(
         point **. y' < info **. r',
         () => {
@@ -264,6 +245,7 @@ module Renderer = {
                * (
                  point
                  **. xz'
+                 * uvMul
                  - point
                  **. y'
                  * (refractedLight **. xz')
@@ -323,7 +305,7 @@ module Renderer = {
               normal =@ vec33f(f(0.0), f(0.0), f(0.0) - point **. z');
             },
             () => {
-              let uv = fract(point **. xz' * f(0.5) + f(0.5));
+              let uv = fract(point **. xz' * f(0.5) * uvMul + f(0.5));
               let color = texture(terrain, uv);
               let gray =
                 dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
@@ -336,13 +318,15 @@ module Renderer = {
             }
           )
       );
-      scale /= length(point); /* pool ambient occlusion */
-      scale
-      *= (
-        f(1.0)
-        - f(0.9)
-        / pow(length(point - sphereCenter) / sphereRadius, f(4.0))
-      ); /* sphere ambient occlusion */
+      scale /= length(point * uvMul3); /* pool ambient occlusion */
+      /*
+       scale
+       *= (
+         f(1.0)
+         - f(0.9)
+         / pow(length(point - sphereCenter) / sphereRadius, f(4.0))
+       ); /* sphere ambient occlusion */
+       */
       /* caustics */
       let refractedLight = vec3var("refractedLight");
       refractedLight
@@ -355,7 +339,7 @@ module Renderer = {
       let diffuse = floatvar("diffuse");
       diffuse =@ max(f(0.0), dot(refractedLight, normal));
       let info = vec4var("info");
-      info =@ texture(water, point **. xz' * f(0.5) + f(0.5));
+      info =@ texture(water, point **. xz' * f(0.5) * uvMul + f(0.5));
       ifelsestmt(
         point **. y' < info **. r',
         () => {
@@ -366,6 +350,7 @@ module Renderer = {
           * (
             point
             **. xz'
+            * uvMul
             - point
             **. y'
             * (refractedLight **. xz')
@@ -407,33 +392,35 @@ module Renderer = {
           caustic =@ texture(causticTex, causticUV);
           scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
         },
-        () => {
+        () =>
           /* shadow for the rim of the pool */
-          let t = vec2var("t");
-          t
-          =@ intersectCube(point, refractedLight, globalCubeMin, globalCubeMax);
-          diffuse
-          *= (
-            f(1.0)
-            / (
-              f(1.0)
-              + exp(
-                  f(-200.0)
-                  / (f(1.0) + f(10.0) * (t **. y' - t **. x'))
-                  * (
-                    point
-                    **. y'
-                    + refractedLight
-                    **. y'
-                    * (t **. y')
-                    - f(2.0)
-                    / f(12.0)
-                  )
-                )
-            )
-          );
-          scale += diffuse * f(0.5);
-        }
+          /*
+           let t = vec2var("t");
+           t
+           =@ intersectCube(point, refractedLight, globalCubeMin, globalCubeMax);
+           diffuse
+           *= (
+             f(1.0)
+             / (
+               f(1.0)
+               + exp(
+                   f(-200.0)
+                   / (f(1.0) + f(10.0) * (t **. y' - t **. x'))
+                   * (
+                     point
+                     **. y'
+                     + refractedLight
+                     **. y'
+                     * (t **. y')
+                     - f(2.0)
+                     / f(12.0)
+                   )
+                 )
+             )
+           );
+           scale += diffuse * f(0.5);
+           */
+          ()
       );
       return(wallColor * scale);
     });
@@ -470,7 +457,8 @@ module Renderer = {
                 hit **. y' < f(2.0) / f(12.0),
                 () => color =@ getWallColor(hit),
                 () => {
-                  color =@ textureCube(sky, ray) **. rgb';
+                  let uvray = ray * vec33f(uvMul **. x', f(1.0), uvMul **. y');
+                  color =@ textureCube(sky, uvray) **. rgb';
                   color
                   += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
                   * vec33f(f(10.0), f(8.0), f(6.0));
@@ -498,12 +486,12 @@ module Renderer = {
       v_uv =@ a_uv;
       let info = vec4var("info");
       let uvc = vec2var("uvc");
-      uvc =@ gl_Vertex **. xy' * f(0.5) + f(0.5);
+      uvc =@ gl_Vertex **. xy' * f(0.5) * uvMul + f(0.5);
       info =@ texture(water, uvc);
       let height = floatvar("height");
       height =@ texture(heightMap, uvc) **. x';
       let waterHeight2 = floatvar("waterHeight2");
-      waterHeight2 =@ info **. r' * waterOffset;
+      waterHeight2 =@ info **. r';
       position =@ gl_Vertex **. xzy';
       isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
       waterDepth =@ position **. y' + height * heightMultiplier * f(5.0);
@@ -525,7 +513,7 @@ module Renderer = {
       let coord = vec2var("ocoord");
       let ocoord = vec2var("coord");
       let info = vec4var("info");
-      ocoord =@ position **. xz' * f(0.5) + f(0.5);
+      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
       coord =@ ocoord;
       info =@ texture(water, coord);
       /* TODO: int var */
@@ -697,6 +685,7 @@ module Renderer = {
   let causticsVertexShader =
     body(() => {
       let info = vec4var("info");
+      let gl_Vertex = vec3(gl_Vertex **. xy' * uvMul |+| gl_Vertex **. z');
       info =@ texture(water, gl_Vertex **. xy' * f(0.5) + f(0.5));
       info **. ba' *= f(0.5);
       let normal = vec3var("normal");
@@ -832,7 +821,7 @@ module Renderer = {
     r(sphereRadius, (_) => [|0.25|]),
     r(u_isAboveWater, (_) => [|1.0|]),
     r(waterHeight, (_) => [|ConfigVars.waterHeight#get()|]),
-    r(waterOffset, (_) => [|ConfigVars.waterOffset2#get()|]),
+    r(waveHeight, (_) => [|ConfigVars.waveHeight#get()|]),
     r(
       light,
       (_) => {
@@ -867,45 +856,25 @@ module Renderer = {
     registerTextureUniform(terrain, arg =>
       switch terrainRef^ {
       | Some(x) => x
-      | None =>
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get(),
-          ConfigVars.waterOffset#get()
-        )
+      | None => memGRT(arg.gl, 0.0, 0.0)
       }
     ),
     registerTextureUniform(water, arg =>
       switch textureRef^ {
       | Some(x) => x
-      | None =>
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get(),
-          ConfigVars.waterOffset#get()
-        )
+      | None => memGRT(arg.gl, 0.0, 0.0)
       }
     ),
     registerTextureUniform(causticTex, arg =>
       switch causticsRef^ {
       | Some(x) => x
-      | None =>
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get() *. 0.0,
-          ConfigVars.waterOffset#get() *. 0.0
-        )
+      | None => memGRT(arg.gl, 0.0, 0.0)
       }
     ),
     registerTextureUniform(heightMap, arg =>
       switch heightMapRef^ {
       | Some(x) => x
-      | None =>
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get() *. 0.0,
-          ConfigVars.waterOffset#get() *. 0.0
-        )
+      | None => memGRT(arg.gl, 0.0, 0.0)
       }
     ),
     registeredSky
@@ -1004,7 +973,8 @@ module Water = {
     body(() => {
       /* get vertex info */
       let info = vec4var("info");
-      info =@ texture(water, coord);
+      let scale = waveHeight;
+      info =@ texture(water, coord) * scale;
       /* update the normal */
       let dx = vec3var("dx");
       let dy = vec3var("dy");
@@ -1013,6 +983,7 @@ module Water = {
            delta **. x',
            texture(water, vec22f(coord **. x' + delta **. x', coord **. y'))
            **. r'
+           * scale
            - info
            **. r',
            f(0.0)
@@ -1022,6 +993,7 @@ module Water = {
            f(0.0),
            texture(water, vec22f(coord **. x', coord **. y' + delta **. y'))
            **. r'
+           * scale
            - info
            **. r',
            delta **. y'
@@ -1039,15 +1011,11 @@ module Water = {
     r(delta, arg =>
       [|1.0 /. float_of_int(arg.width), 1.0 /. float_of_int(arg.height)|]
     ),
+    r(waveHeight, (_) => [|ConfigVars.waveHeight#get()|]),
     registerTextureUniform(water, arg =>
       switch textureRef^ {
       | Some(x) => x
-      | None =>
-        memGRT(
-          arg.gl,
-          ConfigVars.waterHeight#get(),
-          ConfigVars.waterOffset#get()
-        )
+      | None => memGRT(arg.gl, 0.0, 0.0)
       }
     )
   ];

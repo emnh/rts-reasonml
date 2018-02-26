@@ -31,15 +31,17 @@ let heightMapBody =
 
 let heightMap = x => fundecl1(floatfun("heightmap"), uv, heightMapBody, x);
 
+let uvMul = vec22f(f(2.0) / f(Terrain.getWidth()), f(2.0) / f(Terrain.getHeight()));
+
 let vertexShader =
   body(() => {
     v_uv =@ a_uv;
     let position = vec3var("position");
     position =@ gl_Vertex **. xyz';
     let uv = vec2var("uv");
-    uv =@ position **. xy';
+    uv =@ position **. xy' * f(0.5) * uvMul + f(0.5);
     position **. z' =@ heightMap(uv);
-    position **. xy' *= f(0.3);
+    position **. xy' *= (f(0.3) * uvMul);
     gl_Position
     =@ u_projectionMatrix
     * u_modelViewMatrix
@@ -62,7 +64,7 @@ let registeredTiles =
       let retval =
         switch tilesTexture^ {
         | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
+        | None => getNewTexture(arg.gl, "/resources/grass.jpg")
         };
       tilesTexture := Some(retval);
       retval;

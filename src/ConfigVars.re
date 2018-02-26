@@ -43,9 +43,7 @@ let cameraZ = Config.floatConfigVar(["camera", "position", "z"], 0.01, ());
 
 let waterHeight = Config.floatConfigVar(["water", "height"], 0.1, ());
 
-let waterOffset = Config.floatConfigVar(["water", "offset"], 0.5, ());
-
-let waterOffset2 = Config.floatConfigVar(["water", "runtime", "offset"], 0.5, ());
+let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.5, ());
 
 let objectX = Config.floatConfigVar(["object", "position", "x"], 0.01, ());
 
@@ -65,4 +63,4 @@ let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 0.01, ());
 
 let eyeZ = Config.floatConfigVar(["camera", "eye", "z"], 0.01, ());
 
-let poolHeight = Config.floatConfigVar(["water", "pool", "height"], 1.5, ());
+let poolHeight = Config.floatConfigVar(["water", "poolHeight"], 1.5, ());

@@ -25,9 +25,9 @@ let fragmentShader =
     gl_FragColor **. a' =@ f(1.0);
   });
 
-/* Depends on parameters below */
 let scale = f(0.5);
 
+/* Depends on parameters below */
 let maxHeight = (f(0.1) + f(0.002) + f(0.0005) + f(0.00025)) * scale;
 
 /* TODO: move random shader to another file. shouldn't be in ShaderCopy as it's
