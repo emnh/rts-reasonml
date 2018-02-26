@@ -517,7 +517,7 @@ let runPipeline = (gl, queryExt, time) => {
     gl,
     time,
     Some(renderTargetTerrain),
-    ShaderTerrain.makeProgramSource(),
+    ShaderTerrain.makeProgramSource(heightMapRef),
     "Plane",
     doMeasure(gl, queryExt, "Render terrain")
   );

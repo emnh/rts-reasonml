@@ -30,6 +30,25 @@ let scale = f(0.5);
 /* Depends on parameters below */
 let maxHeight = (f(0.1) + f(0.002) + f(0.0005) + f(0.00025)) * scale;
 
+let uv = vec2arg("uv");
+
+let heightMapBody =
+  body(() => {
+    let value = floatvar("value");
+    value
+    =@ ShaderAshima.snoise(uv * f(1.63))
+    * f(0.1)
+    + ShaderAshima.snoise(uv * f(10.0))
+    * f(0.002)
+    + ShaderAshima.snoise(uv * f(20.0))
+    * f(0.0005)
+    + ShaderAshima.snoise(uv * f(40.0))
+    * f(0.00025);
+    return(value * f(2.0));
+  });
+
+let heightMap = x => fundecl1(floatfun("heightmap"), uv, heightMapBody, x);
+
 /* TODO: move random shader to another file. shouldn't be in ShaderCopy as it's
  * not a copy shader :p */
 let randomFragmentShader = computeNormal =>
@@ -39,8 +58,8 @@ let randomFragmentShader = computeNormal =>
     let value = floatvar("value");
     let delta = vec21f(f(1.0)) / u_resolution;
     let eps = delta **. x';
-    value =@ ShaderTerrain.heightMap(uv);
-    let hm = ShaderTerrain.heightMap;
+    value =@ heightMap(uv);
+    let hm = heightMap;
     let p = uv;
     let a =
       hm(vec22f(p **. x' - eps, p **. y'))

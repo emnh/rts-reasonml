@@ -12,24 +12,7 @@ let input = sampler2Duniform("t_input");
 
 let input2 = sampler2Duniform("t_input2");
 
-let uv = vec2arg("uv");
-
-let heightMapBody =
-  body(() => {
-    let value = floatvar("value");
-    value
-    =@ ShaderAshima.snoise(uv * f(1.63))
-    * f(0.1)
-    + ShaderAshima.snoise(uv * f(10.0))
-    * f(0.002)
-    + ShaderAshima.snoise(uv * f(20.0))
-    * f(0.0005)
-    + ShaderAshima.snoise(uv * f(40.0))
-    * f(0.00025);
-    return(value * f(2.0));
-  });
-
-let heightMap = x => fundecl1(floatfun("heightmap"), uv, heightMapBody, x);
+let heightMap = sampler2Duniform("heightMap");
 
 let uvMul = vec22f(f(2.0) / f(Terrain.getWidth()), f(2.0) / f(Terrain.getHeight()));
 
@@ -40,7 +23,7 @@ let vertexShader =
     position =@ gl_Vertex **. xyz';
     let uv = vec2var("uv");
     uv =@ position **. xy' * f(0.5) * uvMul + f(0.5);
-    position **. z' =@ heightMap(uv);
+    position **. z' =@ texture(heightMap, uv) **. x';
     position **. xy' *= (f(0.3) * uvMul);
     gl_Position
     =@ u_projectionMatrix
@@ -50,7 +33,7 @@ let vertexShader =
 
 let fragmentShader =
   body(() =>
-    gl_FragColor =@ f(1.0) * texture(input, v_uv * f(2.0)) + vec41f(f(0.0))
+    gl_FragColor =@ f(1.0) * texture(input, v_uv * f(10.0)) + vec41f(f(0.0))
   );
 
 let r = registerUniform;
@@ -87,15 +70,21 @@ let registeredTiles2 =
     }
   );
 
-let getUniforms = () => [
+let getUniforms = (texture) => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
   registeredTiles,
-  registeredTiles2
+  registeredTiles2,
+  registerTextureUniform(heightMap, (_) =>
+    switch texture^ {
+    | Some(x) => x
+    | None => raise(Bug("uninitialized shader texture copy"))
+    }
+  )
 ];
 
 let makeProgramSource =
-  Memoize.partialMemoize0(() => {
-    let uniformBlock = getUniforms();
+  Memoize.partialMemoize1((texture) => {
+    let uniformBlock = getUniforms(texture);
     (uniformBlock, getProgram(uniformBlock, vertexShader, fragmentShader));
   });
