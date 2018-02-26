@@ -128,7 +128,7 @@ let getUniformBufferAndLocation =
     (uniformPerSceneBuffer, uniformPerSceneLocation);
   });
 
-let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
+let renderObject = (gl, program, buffers, textures, vao, uniformBlock, measure) => {
   useProgram(gl, program);
   bindVertexArray(gl, vao);
   /* Upload uniforms */
@@ -185,12 +185,14 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock) => {
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
   /* Render */
-  drawElements(
-    gl,
-    getTRIANGLES(gl),
-    buffers.count,
-    getUNSIGNED_INT(gl),
-    buffers.offset
+  measure(() =>
+    drawElements(
+      gl,
+      getTRIANGLES(gl),
+      buffers.count,
+      getUNSIGNED_INT(gl),
+      buffers.offset
+    )
   );
 };
 

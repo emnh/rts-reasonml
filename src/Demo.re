@@ -26,6 +26,8 @@ exception No2D;
 
 exception NoProgram;
 
+exception NoTimerQuery;
+
 exception Bug;
 
 let getShaderExampleProgram =
@@ -165,7 +167,8 @@ let renderObj =
       height,
       time,
       uniforms,
-      twist
+      twist,
+      measure
     ) => {
   let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
   let viewMatrices: Three.viewTransformT =
@@ -181,7 +184,15 @@ let renderObj =
       viewMatrices.projectionMatrix,
       uniforms
     );
-  WebGL2Util.renderObject(gl, program, buffers, textures, vao, uniformBlock);
+  WebGL2Util.renderObject(
+    gl,
+    program,
+    buffers,
+    textures,
+    vao,
+    uniformBlock,
+    measure
+  );
 };
 
 let seedrandom = Math.localSeedRandom();
@@ -211,7 +222,8 @@ let runFrameBuffer =
       time,
       renderTarget: option(WebGL2Util.renderTargetT),
       programSource,
-      geoType
+      geoType,
+      measure
     ) => {
   let (uniforms, shaderProgramSource) = programSource;
   let drawToScreen =
@@ -268,7 +280,8 @@ let runFrameBuffer =
         height,
         time,
         uniforms,
-        twist
+        twist,
+        measure
       );
     if (drawToScreen) {
       rf();
@@ -279,7 +292,7 @@ let runFrameBuffer =
   };
 };
 
-let run = (gl, time, uAndProgram) => {
+let run = (gl, time, uAndProgram, measure) => {
   let geometryType = ConfigVars.geometryType#get();
   let width = state.window.width;
   let height = state.window.height;
@@ -327,7 +340,8 @@ let run = (gl, time, uAndProgram) => {
         height,
         time *. (1.0 +. iseed /. float_of_int(count)) +. iseed,
         uniforms,
-        twist
+        twist,
+        measure
       );
     };
   | (_, None) => raise(NoProgram)
@@ -344,7 +358,71 @@ let heightMapRef = ref(None);
 
 let terrainRenderRef = ref(None);
 
-let runPipeline = (gl, time) => {
+let getMeasure =
+  Memoize.partialMemoize3((gl, ext, _) => {
+    let query = WebGL2.createQuery(gl);
+    let measure = f => {
+      WebGL2.beginQuery(gl, WebGL2.getTIME_ELAPSED_EXT(ext), query);
+      f();
+      WebGL2.endQuery(gl, WebGL2.getTIME_ELAPSED_EXT(ext));
+    };
+    let lastValue = ref(0);
+    let readMeasure = () => {
+      let available =
+        WebGL2.getQueryParameterBool(
+          gl,
+          query,
+          WebGL2.getQUERY_RESULT_AVAILABLE(gl)
+        );
+      let disjoint =
+        WebGL2.getParameterBool(gl, WebGL2.getGPU_DISJOINT_EXT(ext));
+      if (available && ! disjoint) {
+        /* See how much time the rendering of the object took in nanoseconds. */
+        let nanoseconds =
+          WebGL2.getQueryParameterInt(gl, query, WebGL2.getQUERY_RESULT(gl))
+          / 1000;
+        lastValue := nanoseconds;
+        Some(nanoseconds);
+      } else {
+        None;
+      };
+    };
+    measure(() => ());
+    (measure, readMeasure, () => lastValue^);
+  });
+
+let reportElement =
+  Memoize.partialMemoize0(() => {
+    let elem = Document.createElement("div");
+    let _ = Document.appendChild(elem);
+    let style = Document.getStyle(elem);
+    Document.setPosition(style, "fixed");
+    Document.setTop(style, "0px");
+    Document.setLeft(style, "100px");
+    elem;
+  });
+
+let doMeasure = (gl, queryExt, name) => {
+  let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
+  let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
+  let rep = reportElement();
+  let measure =
+    switch (readMeasure()) {
+    | Some(nanoseconds) =>
+      let p = Document.createElement("p");
+      Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds));
+      let _ = Document.appendChild2(rep, p);
+      measure;
+    | None =>
+      let p = Document.createElement("p");
+      Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()));
+      let _ = Document.appendChild2(rep, p);
+      defaultMeasure;
+    };
+  measure;
+};
+
+let runPipeline = (gl, queryExt, time) => {
   let sz = 256;
   let width = sz;
   let height = sz;
@@ -362,6 +440,8 @@ let runPipeline = (gl, time) => {
   };
   let quad = "Quad";
   let renderTarget = switchTargets();
+  let rep = reportElement();
+  Document.setInnerHTML(rep, "");
   /* Compute height map with normals */
   switch heightMapRef^ {
   | Some(_) => ()
@@ -371,7 +451,8 @@ let runPipeline = (gl, time) => {
       time,
       Some(heightMapRT),
       ShaderCopy.makeRandomProgramSource(1.0),
-      quad
+      quad,
+      doMeasure(gl, queryExt, "HeightMap")
     );
     ();
   };
@@ -385,7 +466,8 @@ let runPipeline = (gl, time) => {
       time,
       Some(renderTarget),
       ShaderCopy.makeRandomProgramSource2(-1.0),
-      quad
+      quad,
+      doMeasure(gl, queryExt, "Initial wave")
     );
     ();
   };
@@ -397,7 +479,8 @@ let runPipeline = (gl, time) => {
     time,
     Some(renderTarget),
     getWaterProgram(textureRef),
-    quad
+    quad,
+    doMeasure(gl, queryExt, "Waves")
   );
   textureRef := Some(renderTarget.texture);
   /* Compute waves 2 */
@@ -407,7 +490,8 @@ let runPipeline = (gl, time) => {
     time,
     Some(renderTarget),
     getWaterProgram(textureRef),
-    quad
+    quad,
+    doMeasure(gl, queryExt, "Waves2")
   );
   textureRef := Some(renderTarget.texture);
   /* Compute normals */
@@ -417,7 +501,8 @@ let runPipeline = (gl, time) => {
     time,
     Some(renderTarget),
     getWaterNormalProgram(textureRef),
-    quad
+    quad,
+    doMeasure(gl, queryExt, "Normals")
   );
   /* Next time use previous output as input */
   textureRef := Some(renderTarget.texture);
@@ -427,7 +512,8 @@ let runPipeline = (gl, time) => {
     time,
     Some(renderTarget3),
     WaterRenderer.Renderer.makeCausticsProgramSource(textureRef),
-    "Plane"
+    "Plane",
+    doMeasure(gl, queryExt, "Caustics")
   );
   causticsRef := Some(renderTarget3.texture);
   /* Render terrain */
@@ -436,7 +522,8 @@ let runPipeline = (gl, time) => {
     time,
     Some(renderTargetTerrain),
     ShaderTerrain.makeProgramSource(),
-    "Plane"
+    "Plane",
+    doMeasure(gl, queryExt, "Render terrain")
   );
   /* Render water */
   terrainRenderRef := Some(renderTargetTerrain.texture);
@@ -448,7 +535,8 @@ let runPipeline = (gl, time) => {
       causticsRef,
       terrainRenderRef,
       heightMapRef
-    )
+    ),
+    doMeasure(gl, queryExt, "Render water")
   );
   /* Copy to screen for debug */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
@@ -462,17 +550,19 @@ let runDemo = (gl, time) => {
   run(gl, time, getShaderExampleProgram(fg, bg));
 };
 
-let rec renderLoop = (startTime, canvas, gl, startIteration) => {
+let rec renderLoop = (queryExt, stats, startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
-  runPipeline(gl, t /. 1000.0);
+  Stats.beginStats(stats);
+  runPipeline(gl, queryExt, t /. 1000.0);
+  Stats.endStats(stats);
   /*
    runDemo(gl, t /. 1000.0);
    */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
-     Document.requestAnimationFrame(() =>
-       renderLoop(startTime, canvas, gl, startIteration)
-     );
+    Document.requestAnimationFrame(() =>
+      renderLoop(queryExt, stats, startTime, canvas, gl, startIteration)
+    );
   } else {
     let _ = Document.removeChild(canvas);
     Js.log(
@@ -487,7 +577,19 @@ let main = (_) => {
   let (canvas, gl) = setupDocument();
   let startTime = Date.now();
   let startIteration = Document.iteration(Document.window);
-  renderLoop(startTime, canvas, gl, startIteration);
+  let stats = Stats.createStats();
+  let statsdom = Stats.dom(stats);
+  let _ = Document.appendChild(statsdom);
+  let style = Document.getStyle(statsdom);
+  Document.setMargin(style, "10px");
+  let ext = WebGL2.getExtension(gl, "EXT_disjoint_timer_query_webgl2");
+  let oext = Js.Nullable.to_opt(ext);
+  let queryExt =
+    switch oext {
+    | Some(ext) => ext
+    | None => raise(NoTimerQuery)
+    };
+  renderLoop(queryExt, stats, startTime, canvas, gl, startIteration);
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();

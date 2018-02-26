@@ -22,6 +22,9 @@ external createElement : string => element = "document.createElement";
 [@bs.val]
 external appendChild : element => element = "document.body.appendChild";
 
+[@bs.send]
+external appendChild2 : (element, element) => element = "appendChild";
+
 [@bs.val]
 external removeChild : element => element = "document.body.removeChild";
 
@@ -48,6 +51,12 @@ external addEventListener : (element, string, Events.event => unit) => unit =
 [@bs.set] external setMargin : (styleT, string) => unit = "margin";
 
 [@bs.set] external setOverflow : (styleT, string) => unit = "overflow";
+
+[@bs.set] external setPosition : (styleT, string) => unit = "position";
+
+[@bs.set] external setTop : (styleT, string) => unit = "top";
+
+[@bs.set] external setLeft : (styleT, string) => unit = "left";
 
 [@bs.val]
 external requestAnimationFrame : (unit => unit) => unit =

@@ -137,6 +137,14 @@ type framebufferTypeT;
 
 type colorAttachmentT;
 
+type queryT;
+
+type queryTypeT;
+
+type queryParameterT;
+
+type parameterT;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
@@ -169,6 +177,23 @@ external createShader : (glT, shaderTypeT) => shaderT = "createShader";
 [@bs.send] external createProgram : glT => programT = "createProgram";
 
 [@bs.send] external createBuffer : glT => bufferT = "createBuffer";
+
+[@bs.send] external createQuery : glT => queryT = "createQuery";
+
+[@bs.send]
+external beginQuery : (glT, queryTypeT, queryT) => unit = "beginQuery";
+
+[@bs.send] external endQuery : (glT, queryTypeT) => unit = "endQuery";
+
+[@bs.send]
+external getQueryParameterBool : (glT, queryT, queryParameterT) => bool =
+  "getQueryParameter";
+
+[@bs.send]
+external getQueryParameterInt : (glT, queryT, queryParameterT) => int =
+  "getQueryParameter";
+
+[@bs.send] external getParameterBool : (glT, parameterT) => bool = "getParameter";
 
 [@bs.send] external createTexture : glT => textureT = "createTexture";
 
@@ -383,8 +408,7 @@ external getLINEAR_MIPMAP_LINEAR : glT => textureParameterValueT =
 
 [@bs.get] external getTEXTURE_2D : glT => texture2DT = "TEXTURE_2D";
 
-[@bs.get]
-external getREPEAT : glT => textureParameterValueT = "REPEAT";
+[@bs.get] external getREPEAT : glT => textureParameterValueT = "REPEAT";
 
 [@bs.get]
 external getTEXTURE_WRAP_S : glT => textureParameterT = "TEXTURE_WRAP_S";
@@ -440,3 +464,16 @@ external getTEXTURE_MAG_FILTER : glT => textureParameterT =
 
 [@bs.get]
 external getCOLOR_ATTACHMENT0 : glT => colorAttachmentT = "COLOR_ATTACHMENT0";
+
+[@bs.get]
+external getTIME_ELAPSED_EXT : extensionT => queryTypeT = "TIME_ELAPSED_EXT";
+
+[@bs.get]
+external getQUERY_RESULT_AVAILABLE : glT => queryParameterT =
+  "QUERY_RESULT_AVAILABLE";
+
+[@bs.get] external getQUERY_RESULT : glT => queryParameterT = "QUERY_RESULT";
+
+[@bs.get]
+external getGPU_DISJOINT_EXT : extensionT => parameterT =
+  "QUERY_RESULT_AVAILABLE";
