@@ -431,14 +431,14 @@ let runPipeline = (gl, time) => {
     "Plane"
   );
   causticsRef := Some(renderTarget3.texture);
-  /* Copy to screen for debug */
-  /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
-  runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);
   /* Render terrain */
   runFrameBuffer(gl, time, Some(renderTargetTerrain), ShaderTerrain.makeProgramSource(), "Plane");
   /* Render water */
   terrainRenderRef := Some(renderTargetTerrain.texture);
   run(gl, time, getWaterRendererProgram(textureRef, causticsRef, terrainRenderRef, heightMapRef));
+  /* Copy to screen for debug */
+  /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
+  /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);*/
 };
 
 let runDemo = (gl, time) => {

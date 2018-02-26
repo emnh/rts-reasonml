@@ -48,7 +48,7 @@ let vertexShader =
 
 let fragmentShader =
   body(() =>
-    gl_FragColor =@ f(1.0) * texture(input, v_uv * f(1.0)) + vec41f(f(0.0))
+    gl_FragColor =@ f(1.0) * texture(input, v_uv * f(2.0)) + vec41f(f(0.0))
   );
 
 let r = registerUniform;

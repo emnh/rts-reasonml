@@ -67,12 +67,12 @@ module Renderer = {
   let cubeMax = vec3arg("cubeMax");
   let position = vec3varying("v_position");
   /* Set to high number for no walls, 0.999 for standard walls */
-  let wallPosition = f(4.999);
+  let wallPosition = f(24.999);
   /*
    let globalCubeMin = vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0));
    let globalCubeMax = vec33f(f(1.0), f(2.0), f(1.0));
    */
-  let cubeLimit = f(5.0);
+  let cubeLimit = f(25.0);
   let globalCubeMin =
     vec33f(cubeLimit * f(-1.0), f(0.0) - poolHeight, cubeLimit * f(-1.0));
   let globalCubeMax = vec33f(cubeLimit * f(1.0), f(2.0), cubeLimit * f(1.0));
@@ -319,6 +319,7 @@ module Renderer = {
               let gray =
                 dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
               wallColor =@ vec31f(gray);
+              /* TODO: compute proper normal */
               normal =@ vec33f(f(0.0), f(1.0), f(0.0));
             }
           )
@@ -347,23 +348,51 @@ module Renderer = {
         point **. y' < info **. r',
         () => {
           let caustic = vec4var("caustic");
-          caustic
-          =@ texture(
-               causticTex,
-               fract(
-                 f(0.75)
-                 * (
-                   point
-                   **. xz'
-                   - point
-                   **. y'
-                   * (refractedLight **. xz')
-                   / (refractedLight **. y')
-                 )
-                 * f(0.5)
-                 + f(0.5)
-               )
+          let causticUV = vec2var("causticUV");
+          causticUV
+          =@ f(0.75)
+          * (
+            point
+            **. xz'
+            - point
+            **. y'
+            * (refractedLight **. xz')
+            / (refractedLight **. y')
+          )
+          * f(0.5)
+          + f(0.5);
+          /* Just add some fake repeated caustics at edge of map */
+          /* TODO: do it in a better way */
+          let cl = f(0.25);
+          causticUV
+          **. x'
+          =@ ternary(
+               causticUV **. x' < cl,
+               f(2.0) * cl - causticUV **. x',
+               causticUV **. x'
              );
+          causticUV
+          **. x'
+          =@ ternary(
+               causticUV **. x' > f(1.0) - cl,
+               f(2.0) * (f(1.0) - cl) - causticUV **. x',
+               causticUV **. x'
+             );
+          causticUV
+          **. y'
+          =@ ternary(
+               causticUV **. y' < cl,
+               f(2.0) * cl - causticUV **. y',
+               causticUV **. y'
+             );
+          causticUV
+          **. y'
+          =@ ternary(
+               causticUV **. y' > f(1.0) - cl,
+               f(2.0) * (f(1.0) - cl) - causticUV **. y',
+               causticUV **. y'
+             );
+          caustic =@ texture(causticTex, causticUV);
           scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
         },
         () => {
@@ -712,8 +741,8 @@ module Renderer = {
       =@ intersectCube(
            newPos,
            f(0.0) - refractedLight,
-           vec33f(f(-1.0), f(0.0) - poolHeight, f(-1.0)),
-           vec33f(f(1.0), f(2.0), f(1.0))
+           globalCubeMin,
+           globalCubeMax
          );
       gl_FragColor
       **. r'
