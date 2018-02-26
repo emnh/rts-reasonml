@@ -26,7 +26,8 @@ external appendChild : element => element = "document.body.appendChild";
 external removeChild : element => element = "document.body.removeChild";
 
 [@bs.val]
-external getElementsByClassName : element => array(element) = "getElementsByClassName";
+external getElementsByClassName : element => array(element) =
+  "getElementsByClassName";
 
 [@bs.send]
 external addEventListener : (element, string, Events.event => unit) => unit =
@@ -42,7 +43,7 @@ external addEventListener : (element, string, Events.event => unit) => unit =
 
 [@bs.set] external setInnerHTML : (element, string) => unit = "innerHTML";
 
-[@bs.get] external getStyle : (element) => styleT = "style";
+[@bs.get] external getStyle : element => styleT = "style";
 
 [@bs.set] external setMargin : (styleT, string) => unit = "margin";
 
@@ -52,14 +53,16 @@ external addEventListener : (element, string, Events.event => unit) => unit =
 external requestAnimationFrame : (unit => unit) => unit =
   "requestAnimationFrame";
 
+[@bs.val] external setTimeout : (unit => unit, int) => unit = "setTimeout";
+
 [@bs.new] external createImage : unit => imageT = "Image";
 
 [@bs.set] external setSource : (imageT, string) => unit = "src";
 
 /* TODO: 'a = event type */
-[@bs.set] external setOnLoad : (imageT, ('a => unit)) => unit = "onload";
+[@bs.set] external setOnLoad : (imageT, 'a => unit) => unit = "onload";
 
-let onReady = (f) => {
+let onReady = f => {
   let g = (_) => f();
   let isDone = readyState(document) == "complete";
   if (isDone) {

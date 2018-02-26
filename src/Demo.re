@@ -31,16 +31,6 @@ exception Bug;
 let getShaderExampleProgram =
   Memoize.partialMemoize2((fg, bg) => ShaderExample.makeProgramSource(fg, bg));
 
-let getWaterRendererProgram =
-  Memoize.partialMemoize2((tref, cref) =>
-    WaterRenderer.Renderer.makeProgramSource(tref, cref)
-  );
-
-let getWaterCausticsProgram =
-  Memoize.partialMemoize1(tref =>
-    WaterRenderer.Renderer.makeCausticsProgramSource(tref)
-  );
-
 let getWaterProgram =
   Memoize.partialMemoize1(tref => WaterRenderer.Water.makeProgramSource(tref));
 
@@ -51,9 +41,6 @@ let getWaterNormalProgram =
 
 let getCopyProgram =
   Memoize.partialMemoize1(t => ShaderCopy.makeProgramSource(t));
-
-let getRandomProgram =
-  Memoize.partialMemoize0(() => ShaderCopy.makeRandomProgramSource());
 
 let getShaderProgram =
   Memoize.partialMemoize3((gl, uniforms, programSource: GLSL.programT) => {
@@ -375,19 +362,31 @@ let runPipeline = (gl, time) => {
   };
   let quad = "Quad";
   let renderTarget = switchTargets();
-  /* Compute height map */
+  /* Compute height map with normals */
   switch heightMapRef^ {
   | Some(_) => ()
   | None =>
-    runFrameBuffer(gl, time, Some(heightMapRT), getRandomProgram(), quad);
+    runFrameBuffer(
+      gl,
+      time,
+      Some(heightMapRT),
+      ShaderCopy.makeRandomProgramSource(1.0),
+      quad
+    );
     ();
   };
   heightMapRef := Some(heightMapRT.texture);
-  /* Compute initial wave */
+  /* Compute initial wave, without normals */
   switch textureRef^ {
   | Some(_) => ()
   | None =>
-    runFrameBuffer(gl, time, Some(renderTarget), getRandomProgram(), quad);
+    runFrameBuffer(
+      gl,
+      time,
+      Some(renderTarget),
+      ShaderCopy.makeRandomProgramSource2(-1.0),
+      quad
+    );
     ();
   };
   textureRef := Some(renderTarget.texture);
@@ -427,15 +426,30 @@ let runPipeline = (gl, time) => {
     gl,
     time,
     Some(renderTarget3),
-    getWaterCausticsProgram(textureRef),
+    WaterRenderer.Renderer.makeCausticsProgramSource(textureRef),
     "Plane"
   );
   causticsRef := Some(renderTarget3.texture);
   /* Render terrain */
-  runFrameBuffer(gl, time, Some(renderTargetTerrain), ShaderTerrain.makeProgramSource(), "Plane");
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTargetTerrain),
+    ShaderTerrain.makeProgramSource(),
+    "Plane"
+  );
   /* Render water */
   terrainRenderRef := Some(renderTargetTerrain.texture);
-  run(gl, time, getWaterRendererProgram(textureRef, causticsRef, terrainRenderRef, heightMapRef));
+  run(
+    gl,
+    time,
+    WaterRenderer.Renderer.makeProgramSource(
+      textureRef,
+      causticsRef,
+      terrainRenderRef,
+      heightMapRef
+    )
+  );
   /* Copy to screen for debug */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
   /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad);*/
@@ -456,9 +470,9 @@ let rec renderLoop = (startTime, canvas, gl, startIteration) => {
    */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
-    Document.requestAnimationFrame(() =>
-      renderLoop(startTime, canvas, gl, startIteration)
-    );
+     Document.requestAnimationFrame(() =>
+       renderLoop(startTime, canvas, gl, startIteration)
+     );
   } else {
     let _ = Document.removeChild(canvas);
     Js.log(

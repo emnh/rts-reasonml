@@ -62,7 +62,7 @@ let registeredTiles =
       let retval =
         switch tilesTexture^ {
         | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "/resources/grass.jpg")
+        | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
         };
       tilesTexture := Some(retval);
       retval;
