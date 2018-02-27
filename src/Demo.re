@@ -540,6 +540,24 @@ let runPipeline = (gl, queryExt, time) => {
     "Plane",
     doMeasure(gl, queryExt, "Render terrain")
   );
+  /* Test render water */
+  /*
+  terrainRenderRef := Some(renderTargetTerrain.texture);
+  runFrameBuffer(
+    gl,
+    time,
+    Some(renderTargetTerrain2),
+    WaterRenderer.Renderer.makeProgramSource(
+      textureRef,
+      causticsRef,
+      terrainRenderRef,
+      heightMapRef
+    ),
+    "Plane",
+    doMeasure(gl, queryExt, "Render water")
+  );
+  terrainRenderRef := Some(renderTargetTerrain2.texture);
+  */
   /* Render water */
   terrainRenderRef := Some(renderTargetTerrain.texture);
   run(

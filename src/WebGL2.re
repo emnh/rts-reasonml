@@ -476,4 +476,4 @@ external getQUERY_RESULT_AVAILABLE : glT => queryParameterT =
 
 [@bs.get]
 external getGPU_DISJOINT_EXT : extensionT => parameterT =
-  "QUERY_RESULT_AVAILABLE";
+  "GPU_DISJOINT_EXT";
