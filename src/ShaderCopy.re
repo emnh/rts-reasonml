@@ -44,6 +44,12 @@ let heightMapBody =
     * f(0.0005)
     + ShaderAshima.snoise(uv * f(40.0))
     * f(0.00025);
+    /*
+    + ShaderAshima.snoise(uv * f(40.0))
+    * f(0.002);
+    + ShaderAshima.snoise(uv * f(20.0))
+    * f(0.01);
+    */
     return(value * f(2.0));
   });
 

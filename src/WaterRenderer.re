@@ -358,7 +358,7 @@ module Renderer = {
         },
         () => ()
       );
-      return(wallColor * scale);
+      return(wallColor * scale * f(1.5));
     });
   let getWallColor = pt =>
     fundecl1(vec3fun("getWallColor"), point, getWallColorBody, pt);
