@@ -4,6 +4,8 @@ open GLSLUniforms;
 
 exception Bug(string);
 
+let u_time = floatuniform("u_time");
+
 let a_uv = vec2attr("a_uv");
 
 let v_uv = vec2varying("v_uv");
@@ -14,7 +16,12 @@ let input2 = sampler2Duniform("t_input2");
 
 let heightMap = sampler2Duniform("heightMap");
 
-let uvMul = vec22f(f(2.0) / f(Terrain.getWidth()), f(2.0) / f(Terrain.getHeight()));
+let uvMul =
+  vec22f(f(2.0) / f(Terrain.getWidth()), f(2.0) / f(Terrain.getHeight()));
+
+let vNormal = vec3varying("v_normal");
+
+let light = vec3uniform("light");
 
 let vertexShader =
   body(() => {
@@ -23,7 +30,12 @@ let vertexShader =
     position =@ gl_Vertex **. xyz';
     let uv = vec2var("uv");
     uv =@ position **. xy' * f(0.5) * uvMul + f(0.5);
-    position **. z' =@ texture(heightMap, uv) **. x';
+    let hn = vec4var("heightNormal");
+    hn =@ texture(heightMap, uv);
+    let normal = vec3var("normal");
+    normal =@ hn **. yzw';
+    vNormal =@ normal;
+    position **. z' =@ hn **. x';
     position **. xy' *= (f(0.3) * uvMul);
     gl_Position
     =@ u_projectionMatrix
@@ -32,9 +44,19 @@ let vertexShader =
   });
 
 let fragmentShader =
-  body(() =>
-    gl_FragColor =@ f(1.0) * texture(input, v_uv * f(10.0)) + vec41f(f(0.0))
-  );
+  body(() => {
+    let color = vec3var("color");
+    color =@ texture(input, v_uv * f(10.0)) **. rgb';
+    let diffuse = vec3var("diffuse");
+    let clouds =
+      ShaderAshima.snoise(
+        v_uv * f(5.0) + ShaderAshima.snoise(v_uv + u_time / f(10.0))
+      )
+      * f(0.5)
+      + f(1.2);
+    diffuse =@ color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
+    gl_FragColor =@ vec4(diffuse |+| f(1.0));
+  });
 
 let r = registerUniform;
 
@@ -70,9 +92,22 @@ let registeredTiles2 =
     }
   );
 
-let getUniforms = (texture) => [
+let getUniforms = texture => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
+  r(u_time, arg => [|arg.time|]),
+  r(
+    light,
+    (_) => {
+      let (x, y, z) = (
+        ConfigVars.lightX#get(),
+        ConfigVars.lightY#get(),
+        ConfigVars.lightZ#get()
+      );
+      let (x, y, z) = ShaderLib.normalize(x, y, z);
+      [|x, y, z|];
+    }
+  ),
   registeredTiles,
   registeredTiles2,
   registerTextureUniform(heightMap, (_) =>
@@ -84,7 +119,7 @@ let getUniforms = (texture) => [
 ];
 
 let makeProgramSource =
-  Memoize.partialMemoize1((texture) => {
+  Memoize.partialMemoize1(texture => {
     let uniformBlock = getUniforms(texture);
     (uniformBlock, getProgram(uniformBlock, vertexShader, fragmentShader));
   });

@@ -743,11 +743,7 @@ module Renderer = {
           ConfigVars.lightY#get(),
           ConfigVars.lightZ#get()
         );
-        let normalize = (x, y, z) => {
-          let length = Math.sqrt(x *. x +. y *. y +. z *. z);
-          (x /. length, y /. length, z /. length);
-        };
-        let (x, y, z) = normalize(x, y, z);
+        let (x, y, z) = ShaderLib.normalize(x, y, z);
         [|x, y, z|];
       }
     ),
