@@ -79,7 +79,10 @@ module Renderer = {
   let globalCubeMin =
     vec33f(cubeLimit * f(-1.0), f(0.0) - poolHeight, cubeLimit * f(-1.0));
   let globalCubeMax = vec33f(cubeLimit * f(1.0), f(2.0), cubeLimit * f(1.0));
+  /*
   let sky = samplerCubeUniform("u_sky");
+  */
+  let sky = sampler2Duniform("u_sky");
   /* TODO: bool */
   let u_isAboveWater = floatuniform("u_isAboveWater");
   /*
@@ -399,7 +402,10 @@ module Renderer = {
             () => color =@ getWallColor(hit),
             () => {
               let uvray = ray * vec33f(uvMul **. x', f(1.0), uvMul **. y');
+              /*
               color =@ textureCube(sky, uvray) **. rgb';
+              */
+              color =@ texture(sky, uvray **. xz') **. rgb';
               color
               += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
               * vec33f(f(10.0), f(8.0), f(6.0));
@@ -422,39 +428,38 @@ module Renderer = {
   let transitionDelta = f(0.0);
   let isWater = floatvarying("isWater");
   let waterVertexShader =
-    body(()
-      => {
-        v_uv =@ a_uv;
-        position =@ gl_Vertex **. xzy';
-        ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
-        let origin = vec33f(f(0.0), f(0.0), f(0.0));
-        let worldPosition = u_modelMatrix * vec4(origin |+| f(1.0));
-        hmOffset =@ worldPosition **. xz' * f(0.5) * hmMul;
-        let info = vec4var("info");
-        let uvc = vec2var("uvc");
-        uvc =@ ocoord * hmMul + hmOffset;
-        ocoord =@ uvc;
-        info =@ texture(water, uvc);
-        let height = floatvar("height");
-        height =@ texture(heightMap, uvc) **. x';
-        let waterHeight2 = floatvar("waterHeight2");
-        waterHeight2 =@ info **. r';
-        isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
-        waterDepth =@ position **. y' + height * heightMultiplier * f(5.0);
-        /* waterDepth =@ position **. y' - poolHeight; */
-        ifelsestmt(
-          isWater < f(0.0),
-          () => position **. y' += height * heightMultiplier,
-          () => position **. y' += waterHeight2 * heightMultiplier
-        );
-        gl_Position
-        =@ u_projectionMatrix
-        * u_modelViewMatrix
-        * vec4(position **. xyz' |+| f(1.0));
-      });
-      /*
-       position **. xz' =@ ocoord;
-       */
+    body(() => {
+      v_uv =@ a_uv;
+      position =@ gl_Vertex **. xzy';
+      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
+      let origin = vec33f(f(0.0), f(0.0), f(0.0));
+      let worldPosition = u_modelMatrix * vec4(origin |+| f(1.0));
+      hmOffset =@ worldPosition **. xz' * f(0.5) * hmMul;
+      let info = vec4var("info");
+      let uvc = vec2var("uvc");
+      uvc =@ ocoord * hmMul + hmOffset;
+      ocoord =@ uvc;
+      info =@ texture(water, uvc);
+      let height = floatvar("height");
+      height =@ texture(heightMap, uvc) **. x';
+      let waterHeight2 = floatvar("waterHeight2");
+      waterHeight2 =@ info **. r';
+      isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
+      waterDepth =@ position **. y' + height * heightMultiplier * f(5.0);
+      /* waterDepth =@ position **. y' - poolHeight; */
+      ifelsestmt(
+        isWater < f(0.0),
+        () => position **. y' += height * heightMultiplier,
+        () => position **. y' += waterHeight2 * heightMultiplier
+      );
+      gl_Position
+      =@ u_projectionMatrix
+      * u_modelViewMatrix
+      * vec4(position **. xyz' |+| f(1.0));
+    });
+  /*
+   position **. xz' =@ ocoord;
+   */
   let waterFragmentShader =
     body(() => {
       let position2 = vec3var("position2");
@@ -535,13 +540,13 @@ module Renderer = {
           let reflectedColor = vec3var("reflectedColor2");
           let refractedColor = vec3var("refractedColor2");
           /*
-          let abovewaterColor =
-            vec3(
-              sin(ocoord * f(10.0))
-              * f(5.0)
-              |+| f(2.0)
-              * (sin(u_time * f(1.0)) + f(1.0))
-            );*/
+           let abovewaterColor =
+             vec3(
+               sin(ocoord * f(10.0))
+               * f(5.0)
+               |+| f(2.0)
+               * (sin(u_time * f(1.0)) + f(1.0))
+             );*/
           reflectedColor
           =@ getSurfaceRayColor(position2, reflectedRay, abovewaterColor);
           refractedColor
@@ -777,8 +782,7 @@ module Renderer = {
     ),
     r(
       eye,
-      arg => {
-        let (x, y, z) = arg.eye;
+      (_) => {
         let (x, y, z) = (
           ConfigVars.eyeX#get(),
           ConfigVars.eyeY#get(),
@@ -788,7 +792,7 @@ module Renderer = {
       }
     ),
     r(u_time, arg => [|arg.time|]),
-    r(poolHeight, arg => [|ConfigVars.poolHeight#get()|]),
+    r(poolHeight, (_) => [|ConfigVars.poolHeight#get()|]),
     registeredTiles,
     registerTextureUniform(terrain, arg =>
       switch terrainRef^ {
