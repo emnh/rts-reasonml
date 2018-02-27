@@ -7,7 +7,8 @@ type uniformInputT = {
   modelMatrix: array(float),
   modelViewMatrix: array(float),
   projectionMatrix: array(float),
-  eye: (float, float, float)
+  eye: (float, float, float),
+  objectId: int
 };
 
 /*
@@ -148,7 +149,7 @@ let uploadImage = (gl, texture, img) => {
 
 /* TODO: Preallocate and refill array */
 let computeUniformBlock =
-    (gl, time, width, height, eye, modelMatrix, modelViewMatrix, projectionMatrix, uniforms) => {
+    (gl, time, width, height, eye, modelMatrix, modelViewMatrix, projectionMatrix, objectId, uniforms) => {
   let uniformArg = {
     gl,
     time,
@@ -158,7 +159,8 @@ let computeUniformBlock =
     height,
     modelMatrix,
     modelViewMatrix,
-    projectionMatrix
+    projectionMatrix,
+    objectId
   };
   let alignAt2 = l =>
     switch (Array.length(l) mod 2) {

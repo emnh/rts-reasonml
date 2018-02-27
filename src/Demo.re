@@ -164,7 +164,8 @@ let renderObj =
       time,
       uniforms,
       twist,
-      measure
+      measure,
+      objectId
     ) => {
   let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
   let viewMatrices: Three.viewTransformT =
@@ -179,6 +180,7 @@ let renderObj =
       Three.getElements(obj.matrixWorld),
       viewMatrices.modelViewMatrix,
       viewMatrices.projectionMatrix,
+      objectId,
       uniforms
     );
   WebGL2Util.renderObject(
@@ -278,7 +280,8 @@ let runFrameBuffer =
         time,
         uniforms,
         twist,
-        measure
+        measure,
+        0
       );
     if (drawToScreen) {
       rf();
@@ -289,11 +292,12 @@ let runFrameBuffer =
   };
 };
 
-let run = (gl, time, uAndProgram, measure) => {
+let run = (gl, time, uAndProgram, measure, geometryType, count) => {
+  /*
   let geometryType = ConfigVars.geometryType#get();
+  */
   let width = state.window.width;
   let height = state.window.height;
-  let count = Terrain.getTileWidth() * Terrain.getTileHeight();
   /* ConfigVars.count#get(); */
   let (uniforms, shaderProgramSource) = uAndProgram;
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
@@ -302,15 +306,16 @@ let run = (gl, time, uAndProgram, measure) => {
     Document.debug(Document.window, gl);
     Document.debug(Document.window, uniforms);
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
-    WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     /*
-    let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
-    */
+     let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
+     */
+    /*
     let irows = Terrain.getTileWidth();
+    */
     for (i in 1 to count) {
-      let ix = (i - 1) mod irows;
-      let iy = (i - 1) / irows;
+      let ix = 0; /* (i - 1) mod irows; */
+      let iy = 0; /* (i - 1) / irows; */
       let (cx, cy, cz) = (
         ConfigVars.objectX#get(),
         ConfigVars.objectY#get(),
@@ -350,7 +355,8 @@ let run = (gl, time, uAndProgram, measure) => {
         time *. (1.0 +. iseed /. float_of_int(count)) +. iseed,
         uniforms,
         twist,
-        measure
+        measure,
+        i
       );
     };
   | (_, None) => raise(NoProgram)
@@ -542,24 +548,27 @@ let runPipeline = (gl, queryExt, time) => {
   );
   /* Test render water */
   /*
-  terrainRenderRef := Some(renderTargetTerrain.texture);
-  runFrameBuffer(
-    gl,
-    time,
-    Some(renderTargetTerrain2),
-    WaterRenderer.Renderer.makeProgramSource(
-      textureRef,
-      causticsRef,
-      terrainRenderRef,
-      heightMapRef
-    ),
-    "Plane",
-    doMeasure(gl, queryExt, "Render water")
-  );
-  terrainRenderRef := Some(renderTargetTerrain2.texture);
-  */
+   terrainRenderRef := Some(renderTargetTerrain.texture);
+   runFrameBuffer(
+     gl,
+     time,
+     Some(renderTargetTerrain2),
+     WaterRenderer.Renderer.makeProgramSource(
+       textureRef,
+       causticsRef,
+       terrainRenderRef,
+       heightMapRef
+     ),
+     "Plane",
+     doMeasure(gl, queryExt, "Render water")
+   );
+   terrainRenderRef := Some(renderTargetTerrain2.texture);
+   */
   /* Render water */
   terrainRenderRef := Some(renderTargetTerrain.texture);
+  WebGL2Util.preRender(gl, state.window.width, state.window.height);
+  let count = Terrain.getTileWidth() * Terrain.getTileHeight();
+  let geometryType = ConfigVars.geometryType#get();
   run(
     gl,
     time,
@@ -569,8 +578,27 @@ let runPipeline = (gl, queryExt, time) => {
       terrainRenderRef,
       heightMapRef
     ),
-    doMeasure(gl, queryExt, "Render water")
+    doMeasure(gl, queryExt, "Render water"),
+    geometryType,
+    count
   );
+  /* Render trees */
+  /*
+  WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE(gl));
+  */
+  WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE_MINUS_SRC_ALPHA(gl));
+  WebGL2.enable(gl, WebGL2.getBLEND(gl));
+  WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
+  run(
+    gl,
+    time,
+    ShaderTrees.makeProgramSource(heightMapRef),
+    doMeasure(gl, queryExt, "Render trees"),
+    "Quad",
+    100
+  );
+  WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
+  WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
   /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy")); */

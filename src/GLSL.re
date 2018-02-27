@@ -1394,6 +1394,8 @@ let return = l => add(Return(u(l)));
 
 let returnVoid = () => add(ReturnVoid);
 
+let discard = () => add(Discard);
+
 /* float var declaration and initialization */
 /* TODO: figure out how to do this properly */
 let floatif = a =>

@@ -145,6 +145,10 @@ type queryParameterT;
 
 type parameterT;
 
+type blend1T;
+
+type blend2T;
+
 [@bs.send]
 external getUniformLocation : (glT, programT, string) => uniformLocationT =
   "getUniformLocation";
@@ -193,7 +197,8 @@ external getQueryParameterBool : (glT, queryT, queryParameterT) => bool =
 external getQueryParameterInt : (glT, queryT, queryParameterT) => int =
   "getQueryParameter";
 
-[@bs.send] external getParameterBool : (glT, parameterT) => bool = "getParameter";
+[@bs.send]
+external getParameterBool : (glT, parameterT) => bool = "getParameter";
 
 [@bs.send] external createTexture : glT => textureT = "createTexture";
 
@@ -306,6 +311,8 @@ external texParameteri :
 
 [@bs.send] external enable : (glT, enableT) => unit = "enable";
 
+[@bs.send] external disable : (glT, enableT) => unit = "disable";
+
 [@bs.send]
 external texImage2D :
   (glT, texture2DT, int, rgbaT, rgbaT, primitiveT, Document.imageT) => unit =
@@ -395,6 +402,16 @@ external getDEPTH_BUFFER_BIT : glT => depthBufferBitT = "DEPTH_BUFFER_BIT";
 
 [@bs.get] external getDEPTH_TEST : glT => enableT = "DEPTH_TEST";
 
+[@bs.get] external getBLEND : glT => enableT = "BLEND";
+
+[@bs.get] external getSRC_ALPHA : glT => blend1T = "SRC_ALPHA";
+
+[@bs.get] external getONE_MINUS_SRC_ALPHA : glT => blend1T = "ONE_MINUS_SRC_ALPHA";
+
+[@bs.get] external getONE : glT => blend1T = "ONE";
+
+[@bs.send] external blendFunc : (glT, blend1T, blend1T) => unit = "blendFunc";
+
 [@bs.get]
 external getCLAMP_TO_EDGE : glT => textureParameterValueT = "CLAMP_TO_EDGE";
 
@@ -475,5 +492,4 @@ external getQUERY_RESULT_AVAILABLE : glT => queryParameterT =
 [@bs.get] external getQUERY_RESULT : glT => queryParameterT = "QUERY_RESULT";
 
 [@bs.get]
-external getGPU_DISJOINT_EXT : extensionT => parameterT =
-  "GPU_DISJOINT_EXT";
+external getGPU_DISJOINT_EXT : extensionT => parameterT = "GPU_DISJOINT_EXT";
