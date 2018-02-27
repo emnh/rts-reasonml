@@ -4,6 +4,7 @@ type uniformInputT = {
   tick: float,
   width: int,
   height: int,
+  modelMatrix: array(float),
   modelViewMatrix: array(float),
   projectionMatrix: array(float),
   eye: (float, float, float)
@@ -147,7 +148,7 @@ let uploadImage = (gl, texture, img) => {
 
 /* TODO: Preallocate and refill array */
 let computeUniformBlock =
-    (gl, time, width, height, eye, modelViewMatrix, projectionMatrix, uniforms) => {
+    (gl, time, width, height, eye, modelMatrix, modelViewMatrix, projectionMatrix, uniforms) => {
   let uniformArg = {
     gl,
     time,
@@ -155,6 +156,7 @@ let computeUniformBlock =
     tick: 0.0,
     width,
     height,
+    modelMatrix,
     modelViewMatrix,
     projectionMatrix
   };

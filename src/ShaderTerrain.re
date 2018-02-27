@@ -46,15 +46,30 @@ let vertexShader =
 let fragmentShader =
   body(() => {
     let color = vec3var("color");
-    color =@ texture(input, v_uv * f(10.0)) **. rgb';
     let diffuse = vec3var("diffuse");
-    let clouds =
-      ShaderAshima.snoise(
-        v_uv * f(5.0) + ShaderAshima.snoise(v_uv + u_time / f(10.0))
-      )
-      * f(0.5)
-      + f(1.2);
+    let clouds = floatvar("clouds");
+    let uv = vec2var("uv");
+    uv =@ v_uv;
+    color =@ texture(input, uv * f(10.0)) **. rgb';
+    clouds
+    =@ ShaderAshima.snoise(
+         uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
+       )
+    * f(0.5)
+    + f(1.2);
     diffuse =@ color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
+    /*
+    uv =@ vec22f(f(1.0) - v_uv**.x', v_uv**.y');
+    color =@ texture(input, uv * f(10.0)) **. rgb';
+    clouds
+    =@ ShaderAshima.snoise(
+         uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
+       )
+    * f(0.5)
+    + f(1.2);
+    diffuse += color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
+    diffuse /= f(2.0);
+    */
     gl_FragColor =@ vec4(diffuse |+| f(1.0));
   });
 

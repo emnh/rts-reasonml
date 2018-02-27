@@ -50,6 +50,7 @@ include GLSLSwizzleFormat;
 type glslVariantTypeT =
   [
     | `Void
+    | `Bool
     | `Int
     | `Float
     | `Vec2
@@ -1048,6 +1049,8 @@ let a_uv = vec2attr("a_uv");
 
 let v_uv = vec2varying("v_uv");
 
+let u_modelMatrix = mat4uniform("modelMatrix");
+
 let u_modelViewMatrix = mat4uniform("modelViewMatrix");
 
 let u_projectionMatrix = mat4uniform("projectionMatrix");
@@ -1107,6 +1110,8 @@ let g1 = genericexpr1;
 
 let g2 = genericexpr2;
 
+let g2b = genericexpr2;
+
 let glist = genericexprlist;
 
 /*
@@ -1146,23 +1151,23 @@ let (-) = (l, r) =>
 
 let (-=) = (l, r) => l =@ l - r;
 
-let (<) = (l, r) => g2(l, r, LessThan(u(l), u(r)));
+let (<) = (l, r) => g2b(l, r, LessThan(u(l), u(r)));
 
-let (>) = (l, r) => g2(l, r, GreaterThan(u(l), u(r)));
+let (>) = (l, r) => g2b(l, r, GreaterThan(u(l), u(r)));
 
-let (<=) = (l, r) => g2(l, r, LessThanOrEqual(u(l), u(r)));
+let (<=) = (l, r) => g2b(l, r, LessThanOrEqual(u(l), u(r)));
 
-let (>=) = (l, r) => g2(l, r, GreaterThanOrEqual(u(l), u(r)));
+let (>=) = (l, r) => g2b(l, r, GreaterThanOrEqual(u(l), u(r)));
 
-let (==) = (l, r) => g2(l, r, Equal(u(l), u(r)));
+let (==) = (l, r) => g2b(l, r, Equal(u(l), u(r)));
 
-let (!=) = (l, r) => g2(l, r, NotEqual(u(l), u(r)));
+let (!=) = (l, r) => g2b(l, r, NotEqual(u(l), u(r)));
 
-let (&&) = (l, r) => g2(l, r, And(u(l), u(r)));
+let (&&) = (l, r) => g2b(l, r, And(u(l), u(r)));
 
-let (||) = (l, r) => g2(l, r, Or(u(l), u(r)));
+let (||) = (l, r) => g2b(l, r, Or(u(l), u(r)));
 
-let (^^) = (l, r) => g2(l, r, Xor(u(l), u(r)));
+let (^^) = (l, r) => g2b(l, r, Xor(u(l), u(r)));
 
 let ( **. ) = (var, st) => {
   let (swizzletype, swizzle, validator) = st;

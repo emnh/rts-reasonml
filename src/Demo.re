@@ -176,6 +176,7 @@ let renderObj =
       width,
       height,
       cameraPosition,
+      Three.getElements(obj.matrixWorld),
       viewMatrices.modelViewMatrix,
       viewMatrices.projectionMatrix,
       uniforms
@@ -292,7 +293,8 @@ let run = (gl, time, uAndProgram, measure) => {
   let geometryType = ConfigVars.geometryType#get();
   let width = state.window.width;
   let height = state.window.height;
-  let count = ConfigVars.count#get();
+  let count = Terrain.getTileWidth() * Terrain.getTileHeight();
+  /* ConfigVars.count#get(); */
   let (uniforms, shaderProgramSource) = uAndProgram;
   switch (getShaderProgram(gl, uniforms, shaderProgramSource)) {
   | (uniforms, Some(program)) =>
@@ -302,11 +304,22 @@ let run = (gl, time, uAndProgram, measure) => {
     let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
+    /*
+    let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
+    */
+    let irows = Terrain.getTileWidth();
     for (i in 1 to count) {
-      let (bx, by, bz) = (
+      let ix = (i - 1) mod irows;
+      let iy = (i - 1) / irows;
+      let (cx, cy, cz) = (
         ConfigVars.objectX#get(),
         ConfigVars.objectY#get(),
         ConfigVars.objectZ#get()
+      );
+      let (bx, by, bz) = (
+        cx +. float_of_int(ix) *. Terrain.getWidth(),
+        cy,
+        cz +. float_of_int(iy) *. Terrain.getHeight()
       );
       let (x, y, z) =
         getPosition(i, ConfigVars.seed#get(), ConfigVars.spread#get());
@@ -322,7 +335,7 @@ let run = (gl, time, uAndProgram, measure) => {
       let sz = ConfigVars.size#get();
       let iseed = float_of_int(i);
       let (camera, cameraPos) = getCamera(width, height);
-      Three.cameraLookAt3(camera, x, y, z);
+      Three.cameraLookAt3(camera, 0.0, 0.0, 0.0);
       renderObj(
         gl,
         program,

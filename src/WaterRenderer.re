@@ -47,6 +47,12 @@ module Renderer = {
       f(1.0),
       f(2.0) / f(Terrain.getHeight())
     );
+  let hmMul =
+    vec22f(
+      f(1.0) / f(float_of_int(Terrain.getTileWidth())),
+      f(1.0) / f(float_of_int(Terrain.getTileHeight()))
+    );
+  let hmOffset = vec2varying("heightMapOffset");
   let ocoord = vec2varying("ocoord");
   let isCaustics = floatuniform("u_isCaustics");
   let waterHeight = floatuniform("u_waterHeight");
@@ -288,9 +294,9 @@ module Renderer = {
       let uv = vec2var("uv");
       uv =@ point **. xz' * f(0.5) * uvMul + f(0.5);
       /* Triangle wave to tile terrain. */
-      /* uv =@ abs(fmod(uv, f(2.0)) - f(1.0)); */
+      uv =@ abs(fmod(uv, f(2.0)) - f(1.0));
       /* Sine wave to tile terrain. Hacky, but looks better for now. */
-      uv =@ sin(uv);
+      /* uv =@ sin(uv); */
       let color = texture(terrain, uv);
       let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
       wallColor =@ vec31f(gray);
@@ -418,15 +424,20 @@ module Renderer = {
   let waterVertexShader =
     body(() => {
       v_uv =@ a_uv;
+      position =@ gl_Vertex **. xzy';
+      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
+      let origin = vec33f(f(0.0), f(0.0), f(0.0));
+      let worldPosition = u_modelMatrix * vec4(origin |+| f(1.0));
+      hmOffset =@ worldPosition **. xz' * f(0.5) * hmMul;
       let info = vec4var("info");
       let uvc = vec2var("uvc");
-      uvc =@ gl_Vertex **. xy' * f(0.5) * uvMul + f(0.5);
+      uvc =@ ocoord * hmMul + hmOffset;
+      ocoord =@ uvc;
       info =@ texture(water, uvc);
       let height = floatvar("height");
       height =@ texture(heightMap, uvc) **. x';
       let waterHeight2 = floatvar("waterHeight2");
       waterHeight2 =@ info **. r';
-      position =@ gl_Vertex **. xzy';
       isWater =@ waterHeight2 - (f(1.0) - transitionDelta) * height;
       waterDepth =@ position **. y' + height * heightMultiplier * f(5.0);
       /* waterDepth =@ position **. y' - poolHeight; */
@@ -435,11 +446,13 @@ module Renderer = {
         () => position **. y' += height * heightMultiplier,
         () => position **. y' += waterHeight2 * heightMultiplier
       );
-      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
       * vec4(position **. xyz' |+| f(1.0));
+      /*
+      position **. xz' =@ ocoord;
+      */
     });
   let waterFragmentShader =
     body(() => {
@@ -730,6 +743,7 @@ module Renderer = {
       }
     );
   let getUniforms = (textureRef, causticsRef, terrainRef, heightMapRef, isc) => [
+    r(u_modelMatrix, arg => arg.modelMatrix),
     r(u_modelViewMatrix, arg => arg.modelViewMatrix),
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     /* r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]), */
