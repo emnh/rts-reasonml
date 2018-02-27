@@ -398,7 +398,7 @@ let reportElement =
     elem;
   });
 
-let doMeasure = (gl, queryExt, name) => {
+let doMeasure2 = (gl, queryExt, name) => {
   let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
   let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
   let rep = reportElement();
@@ -418,13 +418,19 @@ let doMeasure = (gl, queryExt, name) => {
   measure;
 };
 
+/*
+ let doMeasure = (_, _, _, f) => f();
+ */
+let doMeasure = doMeasure2;
+
 let runPipeline = (gl, queryExt, time) => {
   let sz = 256;
   let width = sz;
   let height = sz;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
-  let renderTargetCaustics = getWaterRT(gl, 1024, 1024, "wrt3");
+  let csz = 1024;
+  let renderTargetCaustics = getWaterRT(gl, csz, csz, "wrt3");
   let renderTargetTerrain = getWaterRT(gl, 512, 512, "wrt4");
   let heightMapRT = getWaterRT(gl, 1024, 1024, "wrt5");
   let switchTargets = () => {
@@ -448,7 +454,7 @@ let runPipeline = (gl, queryExt, time) => {
       Some(heightMapRT),
       ShaderCopy.makeRandomProgramSource(1.0),
       quad,
-      doMeasure(gl, queryExt, "HeightMap")
+      doMeasure2(gl, queryExt, "HeightMap")
     );
     ();
   };
@@ -556,9 +562,14 @@ let rec renderLoop = (queryExt, stats, startTime, canvas, gl, startIteration) =>
    */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
-    Document.requestAnimationFrame(() =>
-      renderLoop(queryExt, stats, startTime, canvas, gl, startIteration)
-    );
+    Document.requestAnimationFrame(()
+      => renderLoop(queryExt, stats, startTime, canvas, gl, startIteration));
+      /*
+       Document.setTimeout(
+         () => renderLoop(queryExt, stats, startTime, canvas, gl, startIteration),
+         0
+       );
+       */
   } else {
     let _ = Document.removeChild(canvas);
     Js.log(

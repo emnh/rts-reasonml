@@ -47,6 +47,7 @@ module Renderer = {
       f(1.0),
       f(2.0) / f(Terrain.getHeight())
     );
+  let ocoord = vec2varying("ocoord");
   let isCaustics = floatuniform("u_isCaustics");
   let waterHeight = floatuniform("u_waterHeight");
   let light = vec3uniform("u_light");
@@ -284,49 +285,12 @@ module Renderer = {
       wallColor =@ vec31f(f(0.0));
       let normal = vec3var("normal");
       normal =@ vec31f(f(0.0));
-      ifelsestmt(
-        abs(point **. x') > wallPosition,
-        () => {
-          wallColor
-          =@ texture(tiles, point **. yz' * f(0.5) + vec22f(f(1.0), f(0.5)))
-          **. rgb';
-          normal =@ vec33f(f(0.0) - point **. x', f(0.0), f(0.0));
-        },
-        () =>
-          ifelsestmt(
-            abs(point **. z') > wallPosition,
-            () => {
-              wallColor
-              =@ texture(
-                   tiles,
-                   point **. yx' * f(0.5) + vec22f(f(1.0), f(0.5))
-                 )
-              **. rgb';
-              normal =@ vec33f(f(0.0), f(0.0), f(0.0) - point **. z');
-            },
-            () => {
-              let uv = fract(point **. xz' * f(0.5) * uvMul + f(0.5));
-              let color = texture(terrain, uv);
-              let gray =
-                dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
-              wallColor =@ vec31f(gray);
-              /* TODO: compute proper normal */
-              /*
-               normal =@ vec33f(f(0.0), f(1.0), f(0.0));
-               */
-              normal =@ texture(heightMap, uv) **. yzw';
-            }
-          )
-      );
+      let uv = fract(point **. xz' * f(0.5) * uvMul + f(0.5));
+      let color = texture(terrain, uv);
+      let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
+      wallColor =@ vec31f(gray);
+      normal =@ texture(heightMap, uv) **. yzw';
       scale /= length(point * uvMul3); /* pool ambient occlusion */
-      /*
-       scale
-       *= (
-         f(1.0)
-         - f(0.9)
-         / pow(length(point - sphereCenter) / sphereRadius, f(4.0))
-       ); /* sphere ambient occlusion */
-       */
       /* caustics */
       let refractedLight = vec3var("refractedLight");
       refractedLight
@@ -392,35 +356,7 @@ module Renderer = {
           caustic =@ texture(causticTex, causticUV);
           scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
         },
-        () =>
-          /* shadow for the rim of the pool */
-          /*
-           let t = vec2var("t");
-           t
-           =@ intersectCube(point, refractedLight, globalCubeMin, globalCubeMax);
-           diffuse
-           *= (
-             f(1.0)
-             / (
-               f(1.0)
-               + exp(
-                   f(-200.0)
-                   / (f(1.0) + f(10.0) * (t **. y' - t **. x'))
-                   * (
-                     point
-                     **. y'
-                     + refractedLight
-                     **. y'
-                     * (t **. y')
-                     - f(2.0)
-                     / f(12.0)
-                   )
-                 )
-             )
-           );
-           scale += diffuse * f(0.5);
-           */
-          ()
+        () => ()
       );
       return(wallColor * scale);
     });
@@ -433,39 +369,32 @@ module Renderer = {
     body(() => {
       let color = vec3var("color");
       color =@ vec31f(f(0.0));
-      let q = floatvar("q");
-      q =@ intersectSphere(origin, ray, sphereCenter, sphereRadius);
       ifelsestmt(
-        q < f(1.0e6),
-        () => color =@ getSphereColor(origin + ray * q),
-        () =>
+        ray **. y' < f(0.0),
+        () => {
+          let t = vec2var("t1");
+          t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
+          let hit = vec3var("hit1");
+          hit =@ origin + ray * (t **. y');
+          color =@ getWallColor(hit);
+        },
+        () => {
+          let t = vec2var("t2");
+          t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
+          let hit = vec3var("hit2");
+          hit =@ origin + ray * (t **. y');
           ifelsestmt(
-            ray **. y' < f(0.0),
+            hit **. y' < f(2.0) / f(12.0),
+            () => color =@ getWallColor(hit),
             () => {
-              let t = vec2var("t1");
-              t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
-              let hit = vec3var("hit1");
-              hit =@ origin + ray * (t **. y');
-              color =@ getWallColor(hit);
-            },
-            () => {
-              let t = vec2var("t2");
-              t =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
-              let hit = vec3var("hit2");
-              hit =@ origin + ray * (t **. y');
-              ifelsestmt(
-                hit **. y' < f(2.0) / f(12.0),
-                () => color =@ getWallColor(hit),
-                () => {
-                  let uvray = ray * vec33f(uvMul **. x', f(1.0), uvMul **. y');
-                  color =@ textureCube(sky, uvray) **. rgb';
-                  color
-                  += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
-                  * vec33f(f(10.0), f(8.0), f(6.0));
-                }
-              );
+              let uvray = ray * vec33f(uvMul **. x', f(1.0), uvMul **. y');
+              color =@ textureCube(sky, uvray) **. rgb';
+              color
+              += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
+              * vec33f(f(10.0), f(8.0), f(6.0));
             }
-          )
+          );
+        }
       );
       ifstmt(ray **. y' < f(0.0), () => color *= waterColor);
       return(color);
@@ -501,6 +430,7 @@ module Renderer = {
         () => position **. y' += height * heightMultiplier,
         () => position **. y' += waterHeight2 * heightMultiplier
       );
+      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
@@ -511,23 +441,23 @@ module Renderer = {
       let position2 = vec3var("position2");
       position2 =@ position;
       let coord = vec2var("ocoord");
-      let ocoord = vec2var("coord");
       let info = vec4var("info");
-      ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
       coord =@ ocoord;
-      info =@ texture(water, coord);
-      /* TODO: int var */
-      let i = floatvar("i");
+      info =@ texture(water, ocoord);
       /* make water look more "peaked" */
-      forstmt(
-        () => i =@ f(0.0),
-        i < f(5.0),
-        () => i += f(1.0),
-        () => {
-          coord += info **. ba' * f(0.005);
-          info =@ texture(water, coord);
-        }
-      );
+      /*
+       /* TODO: int var */
+       let i = floatvar("i");
+       forstmt(
+         () => i =@ f(0.0),
+         i < f(5.0),
+         () => i += f(1.0),
+         () => {
+           coord += info **. ba' * f(0.005);
+           info =@ texture(water, coord);
+         }
+       );
+       */
       let normal = vec3var("normal");
       let incomingRay = vec3var("incomingRay");
       normal
@@ -591,26 +521,9 @@ module Renderer = {
           =@ getSurfaceRayColor(position2, refractedRay, abovewaterColor);
           gl_FragColor
           =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
-          ifstmt(
-            isWater < f(0.0),
-            () => {
-              let color = texture(terrain, ocoord) **. rgb';
-              /*
-               reflectedColor
-               =@ getSurfaceRayColor(position2, reflectedRay, color);
-               refractedColor
-               =@ getSurfaceRayColor(position2, refractedRay, color);
-               gl_FragColor
-               =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
-               */
-              gl_FragColor =@ vec4(color |+| f(1.0));
-            }
-          );
-          /*mix(
-              gl_FragColor,
-              texture(terrain, ocoord),
-              f(1.0) - min(f(1.0), f(100.0) * isWater)
-            )*/
+          let color = texture(terrain, ocoord) **. rgb';
+          gl_FragColor
+          =@ ternary(isWater < f(0.0), vec4(color |+| f(1.0)), gl_FragColor);
         }
       );
     });
