@@ -51,6 +51,8 @@ let fragmentShader =
     let uv = vec2var("uv");
     uv =@ v_uv;
     color =@ texture(input, uv * f(10.0)) **. rgb';
+    let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
+    color *= (pow(gray, ShaderLib.rand(uv)) * f(2.0));
     clouds
     =@ ShaderAshima.snoise(
          uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
