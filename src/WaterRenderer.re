@@ -285,7 +285,12 @@ module Renderer = {
       wallColor =@ vec31f(f(0.0));
       let normal = vec3var("normal");
       normal =@ vec31f(f(0.0));
-      let uv = fract(point **. xz' * f(0.5) * uvMul + f(0.5));
+      let uv = vec2var("uv");
+      uv =@ point **. xz' * f(0.5) * uvMul + f(0.5);
+      /* Triangle wave to tile terrain. */
+      /* uv =@ abs(fmod(uv, f(2.0)) - f(1.0)); */
+      /* Sine wave to tile terrain. Hacky, but looks better for now. */
+      uv =@ sin(uv);
       let color = texture(terrain, uv);
       let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
       wallColor =@ vec31f(gray);
