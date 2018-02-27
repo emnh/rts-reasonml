@@ -465,7 +465,7 @@ let runPipeline = (gl, queryExt, time) => {
       gl,
       time,
       Some(heightMapRT),
-      ShaderCopy.makeRandomProgramSource(1.0),
+      ShaderCopy.makeRandomProgramSource(),
       quad,
       doMeasure2(gl, queryExt, "HeightMap")
     );
@@ -480,7 +480,7 @@ let runPipeline = (gl, queryExt, time) => {
       gl,
       time,
       Some(renderTarget),
-      ShaderCopy.makeRandomProgramSource2(-1.0),
+      ShaderCopy.makeRandomProgramSource2(),
       quad,
       doMeasure(gl, queryExt, "Initial wave")
     );

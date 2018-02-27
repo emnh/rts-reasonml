@@ -539,7 +539,7 @@ module Renderer = {
           =@ getSurfaceRayColor(position2, refractedRay, abovewaterColor);
           gl_FragColor
           =@ vec4(mix(refractedColor, reflectedColor, fresnel) |+| f(1.0));
-          let color = texture(terrain, ocoord) **. rgb';
+          let color = texture(terrain, fract(ocoord * f(1.0))) **. rgb';
           gl_FragColor
           =@ ternary(isWater < f(0.0), vec4(color |+| f(1.0)), gl_FragColor);
         }
