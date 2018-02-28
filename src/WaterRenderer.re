@@ -74,8 +74,8 @@ module Renderer = {
     vec33f(cubeLimit * f(-1.0), f(0.0) - poolHeight, cubeLimit * f(-1.0));
   let globalCubeMax = vec33f(cubeLimit * f(1.0), f(2.0), cubeLimit * f(1.0));
   /*
-  let sky = samplerCubeUniform("u_sky");
-  */
+   let sky = samplerCubeUniform("u_sky");
+   */
   let sky = sampler2Duniform("u_sky");
   /* TODO: bool */
   let u_isAboveWater = floatuniform("u_isAboveWater");
@@ -290,9 +290,13 @@ module Renderer = {
       normal =@ vec31f(f(0.0));
       let uv = vec2var("uv");
       uv =@ point **. xz' * f(0.5) * uvMul + f(0.5);
+      /* Tiling */
+      let ixy = vec2var("ixy");
+      ixy =@ Terrain.getIXY(objectId);
+      uv =@ (uv + ixy) * Terrain.getHMMul();
       /* Triangle wave to tile terrain. */
       uv =@ abs(fmod(uv, f(2.0)) - f(1.0));
-      /* Sine wave to tile terrain. Hacky, but looks better for now. */
+      /* Sine wave to tile terrain. */
       /* uv =@ sin(uv); */
       let color = texture(terrain, uv);
       let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
@@ -396,10 +400,16 @@ module Renderer = {
             () => color =@ getWallColor(hit),
             () => {
               let uvray = ray * vec33f(uvMul **. x', f(1.0), uvMul **. y');
+              let uv = vec2var("uv");
+              uv =@ uvray **. xz';
+              /* Tiling */
+              let ixy = vec2var("ixy");
+              ixy =@ Terrain.getIXY(objectId);
+              uv =@ (uv + ixy) * Terrain.getHMMul();
               /*
-              color =@ textureCube(sky, uvray) **. rgb';
-              */
-              color =@ texture(sky, uvray **. xz') **. rgb';
+               color =@ textureCube(sky, uvray) **. rgb';
+               */
+              color =@ texture(sky, uv) **. rgb';
               color
               += vec31f(pow(max(f(0.0), dot(light, ray)), f(5000.0)))
               * vec33f(f(10.0), f(8.0), f(6.0));
@@ -449,6 +459,7 @@ module Renderer = {
       let glposition = vec3var("glposition");
       glposition =@ position;
       glposition **. xz' += Terrain.getTiledOffset(objectId);
+      position =@ glposition;
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
@@ -465,6 +476,8 @@ module Renderer = {
       let info = vec4var("info");
       coord =@ ocoord;
       info =@ texture(water, ocoord);
+      let hdiff =
+        f(0.5) * ShaderAshima.snoise(position **. xz' * f(40.0) + u_time);
       /* make water look more "peaked" */
       /*
        /* TODO: int var */
@@ -487,6 +500,11 @@ module Renderer = {
            sqrt(f(1.0) - dot(info **. ba', info **. ba')),
            info **. a'
          );
+      /*
+      position2 **. y' += hdiff;
+      normal **. y' += hdiff;
+      normal =@ normalize(normal);
+      */
       incomingRay =@ normalize(position2 - eye);
       ifelsestmt(
         u_isAboveWater < f(0.0),

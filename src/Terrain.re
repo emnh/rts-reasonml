@@ -4,7 +4,7 @@ let width = sz;
 
 let height = sz;
 
-let tiles = 8;
+let tiles = 1;
 
 let tileWidth = tiles;
 

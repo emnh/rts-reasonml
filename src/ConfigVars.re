@@ -64,3 +64,5 @@ let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 0.01, ());
 let eyeZ = Config.floatConfigVar(["camera", "eye", "z"], 0.01, ());
 
 let poolHeight = Config.floatConfigVar(["water", "poolHeight"], 1.5, ());
+
+let terrainScale = Config.floatConfigVar(["terrain", "scale"], 0.25, ());

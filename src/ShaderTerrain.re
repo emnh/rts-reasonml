@@ -21,6 +21,10 @@ let vNormal = vec3varying("v_normal");
 
 let light = vec3uniform("light");
 
+let height = floatvarying("height");
+
+let terrainScale = floatuniform("u_terrainScale");
+
 let vertexShader =
   body(() => {
     v_uv =@ a_uv;
@@ -28,13 +32,20 @@ let vertexShader =
     position =@ gl_Vertex **. xyz';
     let uv = vec2var("uv");
     uv =@ position **. xy' * f(0.5) * uvMul + f(0.5);
+    /*
+     position **. x' =@ f(0.0) - position **. x';
+     position **. xy' =@ position **. yx';
+     */
     let hn = vec4var("heightNormal");
     hn =@ texture(heightMap, uv);
     let normal = vec3var("normal");
     normal =@ hn **. yzw';
     vNormal =@ normal;
-    position **. z' =@ hn **. x';
-    position **. xy' *= (f(0.3) * uvMul);
+    /*
+     position **. z' =@ hn **. x';
+     */
+    height =@ hn **. x';
+    position **. xy' *= (terrainScale * uvMul);
     gl_Position
     =@ u_projectionMatrix
     * u_modelViewMatrix
@@ -53,6 +64,13 @@ let fragmentShader =
     let uv = vec2var("uv");
     uv =@ v_uv;
     color =@ texture(input, uv * f(10.0)) **. rgb';
+    let threshold = f(0.015);
+    let diff = max(threshold - height, f(0.0));
+    let hdiff = f(5.0) * diff * Terrain.heightMultiplier;
+    color **. r' += hdiff;
+    color
+    **. g'
+    =@ mix(color **. g', color **. r' / f(2.5), min(diff * f(100.0), f(1.0)));
     let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
     color *= (pow(gray, ShaderLib.rand(uv)) * f(2.0));
     diffuse
@@ -111,6 +129,7 @@ let getUniforms = texture => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
   r(u_time, arg => [|arg.time|]),
+  r(terrainScale, (_) => [|ConfigVars.terrainScale#get()|]),
   r(
     light,
     (_) => {

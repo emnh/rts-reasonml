@@ -19,7 +19,9 @@ let vertexShader =
 let fragmentShader =
   body(() => {
     gl_FragColor =@ texture(input, gl_FragCoord **. xy' / u_resolution);
-    /* XXX: for debug */
+    /* XXX: for debug 
+      gl_FragColor **. gba' =@ vec33f(f(0.0), f(0.0), f(1.0));
+     */
     gl_FragColor **. a' =@ f(1.0);
   });
 
@@ -44,9 +46,9 @@ let heightMapBody =
     + ShaderAshima.snoise(uv * f(40.0))
     * f(0.00025)
     /*
-    + ShaderAshima.snoise(uv * f(40.0))
-    * f(0.002)
-    * */
+     + ShaderAshima.snoise(uv * f(40.0))
+     * f(0.002)
+     * */
     + ShaderAshima.snoise(uv * f(20.0))
     * f(0.01);
     return(value * f(2.0));
@@ -67,6 +69,10 @@ let heightMapBody2 =
     * f(0.0005)
     + ShaderAshima.snoise(uv * f(40.0))
     * f(0.00025);
+    let rnd = ShaderAshima.snoise(uv * f(1.0));
+    ifstmt(rnd < f(0.0), () =>
+      value += ShaderAshima.snoise(uv * f(40.0)) * f(0.005)
+    );
     return(value * f(2.0));
   });
 

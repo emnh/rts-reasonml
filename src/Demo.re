@@ -137,8 +137,8 @@ let getGeometryAndBuffers =
 let getCamera = (width, height) => {
   let cameraPosition = (
     ConfigVars.cameraX#get(),
-    ConfigVars.cameraY#get() *. Terrain.getWidth() /. 2.0,
-    ConfigVars.cameraZ#get()
+    ConfigVars.cameraY#get() *. float_of_int(Terrain.getTileWidth()),
+    ConfigVars.cameraZ#get() *. float_of_int(Terrain.getTileHeight())
   );
   let cameraRotation = (
     ConfigVars.cameraRotationX#get(),
@@ -448,14 +448,20 @@ let doMeasure2 = (gl, queryExt, name) => {
 let doMeasure = doMeasure2;
 
 let runPipeline = (gl, queryExt, time) => {
-  let sz = 256;
+  let sz = 128 * Terrain.getTileWidth();
+  let sz =
+    if (sz < 1024) {
+      1024;
+    } else {
+      sz;
+    };
   let width = sz;
   let height = sz;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
   let csz = 1024;
   let renderTargetCaustics = getWaterRT(gl, csz, csz, "wrt3");
-  let renderTargetTerrain = getWaterRT(gl, 512, 512, "wrt4");
+  let renderTargetTerrain = getWaterRT(gl, 1024, 1024, "wrt4");
   let heightMapRT = getWaterRT(gl, 1024, 1024, "wrt5");
   let switchTargets = () => {
     targetIndex := (targetIndex^ + 1) mod 2;
@@ -600,6 +606,17 @@ let runPipeline = (gl, queryExt, time) => {
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */
+  /*
+  runFrameBuffer(
+    gl,
+    time,
+    None,
+    getCopyProgram(terrainRenderRef),
+    quad,
+    doMeasure(gl, queryExt, "Copy"),
+    1
+  );
+  */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
   /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy")); */
 };
