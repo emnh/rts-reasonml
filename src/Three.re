@@ -127,7 +127,13 @@ let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
 let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
 
-let protoPlane = createPlaneBufferGeometry(Terrain.getWidth(), Terrain.getHeight(), 1024, 1024);
+let protoPlane =
+  createPlaneBufferGeometry(
+    Terrain.getWidth(),
+    Terrain.getHeight(),
+    1024,
+    1024
+  );
 
 let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
 
@@ -175,24 +181,43 @@ let createQuadGeometry = () => {
     index: reInt32(getInt32Array(getIndex(box)))
   };
 };
+
 let createTreesGeometry = () => {
   let box = protoQuad;
-  let duplicateI32 = ar => {
-    let count = 100;
-    let len = Int32Array.length(ar);
-    let position = Int32Array.createSize(len * count);
-    for (i in 0 to count) {
-      for (j in 0 to len) {
-        let value = Int32Array.get(ar, j);
-        Int32Array.set(position, i * len + j, value);
+  let count = 1000;
+  let duplicateF32 = ar => {
+    let len = Float32Array.length(ar);
+    let newar = Float32Array.createSize(len * count);
+    for (i in 0 to count - 1) {
+      for (j in 0 to len - 1) {
+        let value = Float32Array.get(ar, j);
+        Float32Array.set(newar, i * len + j, value);
       };
     };
-    ar;
+    newar;
   };
+  let duplicateI32 = (ar, poslen) => {
+    let len = Int32Array.length(ar);
+    let newar = Int32Array.createSize(len * count);
+    for (i in 0 to count - 1) {
+      for (j in 0 to len - 1) {
+        /* Change indices to point to duplicates vertices */
+        let value = Int32Array.get(ar, j) + i * poslen;
+        Int32Array.set(newar, i * len + j, value);
+      };
+    };
+    newar;
+  };
+  let position = getFloat32Array(getPosition(getAttributes(box)));
+  let posSize = 3;
   {
-    position: getFloat32Array(getPosition(getAttributes(box))),
-    uv: getFloat32Array(getUV(getAttributes(box))),
-    index: duplicateI32(reInt32(getInt32Array(getIndex(box))))
+    position: duplicateF32(position),
+    uv: duplicateF32(getFloat32Array(getUV(getAttributes(box)))),
+    index:
+      duplicateI32(
+        reInt32(getInt32Array(getIndex(box))),
+        Float32Array.length(position) / posSize
+      )
   };
 };
 

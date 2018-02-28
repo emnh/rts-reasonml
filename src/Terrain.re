@@ -15,3 +15,7 @@ let getHeight = () => height;
 let getTileWidth = () => tileWidth;
 
 let getTileHeight = () => tileHeight;
+
+let heightBaseMultiplier = GLSL.f(0.1);
+
+let heightMultiplier = GLSL.(/)(heightBaseMultiplier, ShaderCopy.maxHeight);

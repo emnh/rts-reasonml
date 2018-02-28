@@ -18,9 +18,7 @@ let water = sampler2Duniform("t_water");
 
 let heightMap = sampler2Duniform("t_heightmap");
 
-let heightBaseMultiplier = f(0.1);
-
-let heightMultiplier = heightBaseMultiplier / ShaderCopy.maxHeight;
+let heightMultiplier = Terrain.heightMultiplier;
 
 let u_time = floatuniform("u_time");
 

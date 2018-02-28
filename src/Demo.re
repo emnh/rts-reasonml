@@ -589,14 +589,16 @@ let runPipeline = (gl, queryExt, time) => {
   */
   WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE_MINUS_SRC_ALPHA(gl));
   WebGL2.enable(gl, WebGL2.getBLEND(gl));
+  /*
   WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
+  */
   run(
     gl,
     time,
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",
-    100
+    10
   );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));

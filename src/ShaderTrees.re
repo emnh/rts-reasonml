@@ -18,25 +18,38 @@ let vertexShader =
   body(() => {
     v_uv =@ f(1.0) - a_uv;
     let position = vec3var("position");
-    position =@ gl_Vertex **. xyz' * f(0.08);
+    let quadMul = f(0.08);
+    let treeHeightMul = f(2.0);
+    position =@ gl_Vertex **. xyz' * quadMul;
     let uv = vec2var("uv");
     let c = f(2.0);
     /* Trees are not square */
-    position **. y' *= f(2.0);
-    let objectId = objectId + int2float(a_IndexId);
-    position
-    **. x'
-    += c
+    position **. y' *= treeHeightMul;
+    let objectId =
+      objectId + int2float(gl_VertexId) - fmod(int2float(gl_VertexId), f(4.0));
+    let xoffset = floatvar("xoffset");
+    xoffset
+    =@ c
     * (ShaderLib.rand(vec22f(objectId, objectId + f(1.43243))) - f(0.5));
     let objectId = fmod(objectId, f(1.2345));
-    position
-    **. z'
-    += c
+    let zoffset = floatvar("zoffset");
+    zoffset
+    =@ c
     * (ShaderLib.rand(vec22f(objectId, objectId + f(3.7812314))) - f(0.5));
-    uv =@ position **. xz' * f(0.5) + f(0.5);
+    position **. x' += xoffset;
+    position **. z' += zoffset;
+    uv =@ vec22f(xoffset, zoffset) * f(0.5) + f(0.5);
     let hn = vec4var("heightNormal");
     hn =@ texture(heightMap, uv);
-    position **. y' += hn **. x';
+    let quadMinY = f(1.0) * quadMul * treeHeightMul;
+    let yoffset = floatvar("yoffset");
+    yoffset =@ (hn **. x' * Terrain.heightMultiplier + quadMinY);
+    /* TODO: get water height from somewhere else. lake map. */
+    ifelsestmt(yoffset > f(0.2), () => {
+      position **. y' += yoffset;
+    }, () => {
+      position **. y' =@ f(1000.0);
+    });
     gl_Position
     =@ u_projectionMatrix
     * u_modelViewMatrix
