@@ -1200,6 +1200,15 @@ let min = (l, r) => g2(l, r, BuiltinFun2("min", u(l), u(r)));
 /* TODO: better type check */
 let fmod = (l, r) => Typed(getType(l), BuiltinFun2("mod", u(l), u(r)));
 
+/* TODO: better type check */
+let imod = (l, r) => Typed(getType(l), BuiltinFun2("mod", u(l), u(r)));
+
+/* TODO: better type check */
+let iminus = (l, r) => Typed(getType(l), Minus(u(l), u(r)));
+
+/* TODO: better type check */
+let idiv = (l, r) => Typed(getType(l), Div(u(l), u(r)));
+
 let mix = (l, r1, r2) =>
   mixexpr3(l, r1, r2, BuiltinFun3("mix", u(l), u(r1), u(r2)));
 

@@ -45,11 +45,7 @@ module Renderer = {
       f(1.0),
       f(2.0) / f(Terrain.getHeight())
     );
-  let hmMul =
-    vec22f(
-      f(1.0) / f(float_of_int(Terrain.getTileWidth())),
-      f(1.0) / f(float_of_int(Terrain.getTileHeight()))
-    );
+  let objectId = floatuniform("objectId");
   let hmOffset = vec2varying("heightMapOffset");
   let ocoord = vec2varying("ocoord");
   let isCaustics = floatuniform("u_isCaustics");
@@ -430,12 +426,12 @@ module Renderer = {
       v_uv =@ a_uv;
       position =@ gl_Vertex **. xzy';
       ocoord =@ position **. xz' * f(0.5) * uvMul + f(0.5);
-      let origin = vec33f(f(0.0), f(0.0), f(0.0));
-      let worldPosition = u_modelMatrix * vec4(origin |+| f(1.0));
-      hmOffset =@ worldPosition **. xz' * f(0.5) * hmMul;
+      let ixy = vec2var("ixy");
+      ixy =@ Terrain.getIXY(objectId);
+      let hmOffset = Terrain.getHMMul() * ixy;
       let info = vec4var("info");
       let uvc = vec2var("uvc");
-      uvc =@ ocoord * hmMul + hmOffset;
+      uvc =@ ocoord * Terrain.getHMMul() + hmOffset;
       ocoord =@ uvc;
       info =@ texture(water, uvc);
       let height = floatvar("height");
@@ -450,10 +446,13 @@ module Renderer = {
         () => position **. y' += height * heightMultiplier,
         () => position **. y' += waterHeight2 * heightMultiplier
       );
+      let glposition = vec3var("glposition");
+      glposition =@ position;
+      glposition **. xz' += Terrain.getTiledOffset(objectId);
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
-      * vec4(position **. xyz' |+| f(1.0));
+      * vec4(glposition **. xyz' |+| f(1.0));
     });
   /*
    position **. xz' =@ ocoord;
@@ -760,6 +759,7 @@ module Renderer = {
     r(u_projectionMatrix, arg => arg.projectionMatrix),
     /* r(sphereCenter, (_) => [|(-0.4), (-0.75), 2.0|]), */
     /* r(sphereCenter, (_) => [|0.0, -0.75, 0.0|]), */
+    r(objectId, arg => [|float_of_int(arg.objectId)|]),
     r(isCaustics, (_) => [|isc|]),
     r(sphereCenter, (_) => [|10.0, 0.0, 10.0|]),
     r(sphereRadius, (_) => [|0.25|]),

@@ -20,5 +20,7 @@ external globalSeedRandom :
 
 [@bs.val] external ceil : float => float = "Math.ceil";
 
+[@bs.val] external max : (float, float) => float = "Math.max";
+
 let getRandomInt = max =>
   int_of_float(floor(random() *. floor(float_of_int(max))));

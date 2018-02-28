@@ -124,6 +124,7 @@ let getGeometryAndBuffers =
       | "Box" => Three.createBoxGeometry()
       | "Sphere" => Three.createSphereGeometry()
       | "Plane" => Three.createPlaneGeometry()
+      | "BigPlane" => Three.createBigPlaneGeometry()
       | "Quad" => Three.createQuadGeometry()
       | "Trees" => Three.createTreesGeometry()
       | _ => Three.createBoxGeometry()
@@ -223,7 +224,8 @@ let runFrameBuffer =
       renderTarget: option(WebGL2Util.renderTargetT),
       programSource,
       geoType,
-      measure
+      measure,
+      count
     ) => {
   let (uniforms, shaderProgramSource) = programSource;
   let drawToScreen =
@@ -263,7 +265,7 @@ let runFrameBuffer =
     let (rx, ry, rz) = (0.0, 0.0, 0.0);
     let sz = 2.0;
     let cameraPosition = (0.0, 0.0, 0.0);
-    let rf = () =>
+    let rf = i =>
       renderObj(
         gl,
         program,
@@ -282,12 +284,14 @@ let runFrameBuffer =
         uniforms,
         twist,
         measure,
-        0
+        i
       );
-    if (drawToScreen) {
-      rf();
-    } else {
-      WebGL2Util.renderToTarget(gl, getRenderTarget(), rf);
+    for (i in 0 to count - 1) {
+      if (drawToScreen) {
+        rf(i);
+      } else {
+        WebGL2Util.renderToTarget(gl, getRenderTarget(), () => rf(i));
+      };
     };
   | (_, None) => raise(NoProgram)
   };
@@ -295,8 +299,8 @@ let runFrameBuffer =
 
 let run = (gl, time, uAndProgram, measure, geometryType, count) => {
   /*
-  let geometryType = ConfigVars.geometryType#get();
-  */
+   let geometryType = ConfigVars.geometryType#get();
+   */
   let width = state.window.width;
   let height = state.window.height;
   /* ConfigVars.count#get(); */
@@ -312,8 +316,8 @@ let run = (gl, time, uAndProgram, measure, geometryType, count) => {
      let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
      */
     /*
-    let irows = Terrain.getTileWidth();
-    */
+     let irows = Terrain.getTileWidth();
+     */
     for (i in 1 to count) {
       let ix = 0; /* (i - 1) mod irows; */
       let iy = 0; /* (i - 1) / irows; */
@@ -357,7 +361,7 @@ let run = (gl, time, uAndProgram, measure, geometryType, count) => {
         uniforms,
         twist,
         measure,
-        i
+        i - 1
       );
     };
   | (_, None) => raise(NoProgram)
@@ -474,7 +478,8 @@ let runPipeline = (gl, queryExt, time) => {
       Some(heightMapRT),
       ShaderCopy.makeRandomProgramSource(),
       quad,
-      doMeasure2(gl, queryExt, "HeightMap")
+      doMeasure2(gl, queryExt, "HeightMap"),
+      1
     );
     ();
   };
@@ -489,7 +494,8 @@ let runPipeline = (gl, queryExt, time) => {
       Some(renderTarget),
       ShaderCopy.makeRandomProgramSource2(),
       quad,
-      doMeasure(gl, queryExt, "Initial wave")
+      doMeasure(gl, queryExt, "Initial wave"),
+      1
     );
     ();
   };
@@ -502,7 +508,8 @@ let runPipeline = (gl, queryExt, time) => {
     Some(renderTarget),
     getWaterProgram(textureRef),
     quad,
-    doMeasure(gl, queryExt, "Waves")
+    doMeasure(gl, queryExt, "Waves"),
+    1
   );
   textureRef := Some(renderTarget.texture);
   /* Compute waves 2 */
@@ -513,7 +520,8 @@ let runPipeline = (gl, queryExt, time) => {
     Some(renderTarget),
     getWaterProgram(textureRef),
     quad,
-    doMeasure(gl, queryExt, "Waves2")
+    doMeasure(gl, queryExt, "Waves2"),
+    1
   );
   textureRef := Some(renderTarget.texture);
   /* Compute normals */
@@ -524,7 +532,8 @@ let runPipeline = (gl, queryExt, time) => {
     Some(renderTarget),
     getWaterNormalProgram(textureRef),
     quad,
-    doMeasure(gl, queryExt, "Normals")
+    doMeasure(gl, queryExt, "Normals"),
+    1
   );
   /* Next time use previous output as input */
   textureRef := Some(renderTarget.texture);
@@ -535,7 +544,8 @@ let runPipeline = (gl, queryExt, time) => {
     Some(renderTargetCaustics),
     WaterRenderer.Renderer.makeCausticsProgramSource(textureRef),
     "Plane",
-    doMeasure(gl, queryExt, "Caustics")
+    doMeasure(gl, queryExt, "Caustics"),
+    1
   );
   causticsRef := Some(renderTargetCaustics.texture);
   /* Render terrain */
@@ -544,31 +554,14 @@ let runPipeline = (gl, queryExt, time) => {
     time,
     Some(renderTargetTerrain),
     ShaderTerrain.makeProgramSource(heightMapRef),
-    "Plane",
-    doMeasure(gl, queryExt, "Render terrain")
+    "BigPlane",
+    doMeasure(gl, queryExt, "Render terrain"),
+    1
   );
-  /* Test render water */
-  /*
-   terrainRenderRef := Some(renderTargetTerrain.texture);
-   runFrameBuffer(
-     gl,
-     time,
-     Some(renderTargetTerrain2),
-     WaterRenderer.Renderer.makeProgramSource(
-       textureRef,
-       causticsRef,
-       terrainRenderRef,
-       heightMapRef
-     ),
-     "Plane",
-     doMeasure(gl, queryExt, "Render water")
-   );
-   terrainRenderRef := Some(renderTargetTerrain2.texture);
-   */
   /* Render water */
+  let count = Terrain.getTileWidth() * Terrain.getTileHeight();
   terrainRenderRef := Some(renderTargetTerrain.texture);
   WebGL2Util.preRender(gl, state.window.width, state.window.height);
-  let count = Terrain.getTileWidth() * Terrain.getTileHeight();
   let geometryType = ConfigVars.geometryType#get();
   run(
     gl,
@@ -585,20 +578,24 @@ let runPipeline = (gl, queryExt, time) => {
   );
   /* Render trees */
   /*
-  WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE(gl));
-  */
-  WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE_MINUS_SRC_ALPHA(gl));
+   WebGL2.blendFunc(gl, WebGL2.getSRC_ALPHA(gl), WebGL2.getONE(gl));
+   */
+  WebGL2.blendFunc(
+    gl,
+    WebGL2.getSRC_ALPHA(gl),
+    WebGL2.getONE_MINUS_SRC_ALPHA(gl)
+  );
   WebGL2.enable(gl, WebGL2.getBLEND(gl));
   /*
-  WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
-  */
+   WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
+   */
   run(
     gl,
     time,
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",
-    20
+    count
   );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));

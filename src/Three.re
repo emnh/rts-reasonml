@@ -125,14 +125,17 @@ let protoBoxMaterial = createBasicMaterial();
 
 let protoMesh = createMesh(protoBox, protoBoxMaterial);
 
-let protoSphere = createSphereBufferGeometry(1.0, 32, 32);
+let protoSphere = createSphereBufferGeometry(1.0, 256, 256);
 
 let protoPlane =
+  createPlaneBufferGeometry(Terrain.getWidth(), Terrain.getHeight(), 128, 128);
+
+let protoBigPlane =
   createPlaneBufferGeometry(
     Terrain.getWidth(),
     Terrain.getHeight(),
-    1024,
-    1024
+    128 * Terrain.getTileWidth(),
+    128 * Terrain.getTileHeight()
   );
 
 let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
@@ -166,6 +169,15 @@ let createBoxGeometry = () => {
 
 let createPlaneGeometry = () => {
   let box = protoPlane;
+  {
+    position: getFloat32Array(getPosition(getAttributes(box))),
+    uv: getFloat32Array(getUV(getAttributes(box))),
+    index: reInt32(getInt32Array(getIndex(box)))
+  };
+};
+
+let createBigPlaneGeometry = () => {
+  let box = protoBigPlane;
   {
     position: getFloat32Array(getPosition(getAttributes(box))),
     uv: getFloat32Array(getUV(getAttributes(box))),
