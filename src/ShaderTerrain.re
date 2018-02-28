@@ -4,8 +4,6 @@ open GLSLUniforms;
 
 exception Bug(string);
 
-let u_time = floatuniform("u_time");
-
 let a_uv = vec2attr("a_uv");
 
 let v_uv = vec2varying("v_uv");
@@ -43,35 +41,35 @@ let vertexShader =
     * vec4(position |+| f(1.0));
   });
 
+let getClouds = (uv, u_time) =>
+  ShaderAshima.snoise(uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0)))
+  * f(0.5)
+  + f(1.2);
+
 let fragmentShader =
   body(() => {
     let color = vec3var("color");
     let diffuse = vec3var("diffuse");
-    let clouds = floatvar("clouds");
     let uv = vec2var("uv");
     uv =@ v_uv;
     color =@ texture(input, uv * f(10.0)) **. rgb';
     let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
     color *= (pow(gray, ShaderLib.rand(uv)) * f(2.0));
-    clouds
-    =@ ShaderAshima.snoise(
-         uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
-       )
-    * f(0.5)
-    + f(1.2);
-    diffuse =@ color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
+    diffuse
+    =@ color
+    * clamp(dot(vNormal, light) * getClouds(uv, u_time), f(0.0), f(1.5));
     /*
-    uv =@ vec22f(f(1.0) - v_uv**.x', v_uv**.y');
-    color =@ texture(input, uv * f(10.0)) **. rgb';
-    clouds
-    =@ ShaderAshima.snoise(
-         uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
-       )
-    * f(0.5)
-    + f(1.2);
-    diffuse += color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
-    diffuse /= f(2.0);
-    */
+     uv =@ vec22f(f(1.0) - v_uv**.x', v_uv**.y');
+     color =@ texture(input, uv * f(10.0)) **. rgb';
+     clouds
+     =@ ShaderAshima.snoise(
+          uv * f(5.0) + ShaderAshima.snoise(uv + u_time / f(10.0))
+        )
+     * f(0.5)
+     + f(1.2);
+     diffuse += color * clamp(dot(vNormal, light) * clouds, f(0.0), f(1.5));
+     diffuse /= f(2.0);
+     */
     gl_FragColor =@ vec4(diffuse |+| f(1.0));
   });
 

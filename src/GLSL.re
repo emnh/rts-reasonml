@@ -1055,6 +1055,8 @@ let outColor = vec4output("outColor");
 
 let gl_FragColor = outColor;
 
+let u_time = floatuniform("u_time");
+
 let a_uv = vec2attr("a_uv");
 
 let a_IndexId = intattr("a_IndexId");
