@@ -44,6 +44,7 @@ type glBuffersT = {
   positionBuffer: bufferT,
   uvBuffer: bufferT,
   indexBuffer: bufferT,
+  indexIdBuffer: bufferT,
   offset: int,
   count: int
 };
@@ -59,17 +60,24 @@ let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
   let positions = geometry.position;
   let index = geometry.index;
   let positionBuffer = createBuffer(gl);
+  let indexId = Uint32Array.createSize(Int32Array.length(index));
+  for (i in 0 to Int32Array.length(index)) {
+    Uint32Array.set(indexId, i, i);
+  };
   bindBuffer(gl, getARRAY_BUFFER(gl), positionBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), positions, getSTATIC_DRAW(gl));
   let uvBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
+  let indexIdBuffer = createBuffer(gl);
+  bindBuffer(gl, getARRAY_BUFFER(gl), indexIdBuffer);
+  bufferDataUint32(gl, getARRAY_BUFFER(gl), indexId, getSTATIC_DRAW(gl));
   let indexBuffer = createBuffer(gl);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
   bufferDataInt32(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
   let offset = 0;
   let count = Int32Array.length(index);
-  {positionBuffer, uvBuffer, indexBuffer, offset, count};
+  {positionBuffer, uvBuffer, indexBuffer, indexIdBuffer, offset, count};
 };
 
 let createAttributes = (gl, program, buffers) => {
@@ -116,6 +124,26 @@ let createAttributes = (gl, program, buffers) => {
   } else {
     ();
       /* Js.log("warning: unused a_uv"); */
+  };
+  bindBuffer(gl, getARRAY_BUFFER(gl), buffers.indexIdBuffer);
+  let indexIdAttributeLocation = getAttribLocation(gl, program, "a_IndexId");
+  if (indexIdAttributeLocation != (-1)) {
+    enableVertexAttribArray(gl, indexIdAttributeLocation);
+    let size = 1;
+    let normalize = Js.Boolean.to_js_boolean(false);
+    let stride = 0;
+    let offset = 0;
+    vertexAttribPointer(
+      gl,
+      indexIdAttributeLocation,
+      size,
+      getUNSIGNED_INT(gl),
+      normalize,
+      stride,
+      offset
+    );
+  } else {
+    ();
   };
   vao;
 };

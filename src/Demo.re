@@ -125,6 +125,7 @@ let getGeometryAndBuffers =
       | "Sphere" => Three.createSphereGeometry()
       | "Plane" => Three.createPlaneGeometry()
       | "Quad" => Three.createQuadGeometry()
+      | "Trees" => Three.createTreesGeometry()
       | _ => Three.createBoxGeometry()
       };
     let buffers = WebGL2Util.createBuffers(gl, geometry);
@@ -594,7 +595,7 @@ let runPipeline = (gl, queryExt, time) => {
     time,
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
-    "Quad",
+    "Trees",
     100
   );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));

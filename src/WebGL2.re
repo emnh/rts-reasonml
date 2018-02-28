@@ -275,6 +275,10 @@ external bufferDataInt32 : (glT, arrayBufferTypeT, Int32Array.t, drawT) => unit 
   "bufferData";
 
 [@bs.send]
+external bufferDataUint32 : (glT, arrayBufferTypeT, Uint32Array.t, drawT) => unit =
+  "bufferData";
+
+[@bs.send]
 external bindBufferBase : (glT, arrayBufferTypeT, int, bufferT) => unit =
   "bindBufferBase";
 
@@ -385,6 +389,8 @@ external getUNIFORM_BUFFER : glT => uniformBufferTypeT = "UNIFORM_BUFFER";
 [@bs.get] external getUNSIGNED_BYTE : glT => primitiveT = "UNSIGNED_BYTE";
 
 [@bs.get] external getUNSIGNED_SHORT : glT => primitiveT = "UNSIGNED_SHORT";
+
+[@bs.get] external getINT : glT => primitiveT = "INT";
 
 [@bs.get] external getUNSIGNED_INT : glT => primitiveT = "UNSIGNED_INT";
 

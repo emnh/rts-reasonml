@@ -175,6 +175,26 @@ let createQuadGeometry = () => {
     index: reInt32(getInt32Array(getIndex(box)))
   };
 };
+let createTreesGeometry = () => {
+  let box = protoQuad;
+  let duplicateI32 = ar => {
+    let count = 100;
+    let len = Int32Array.length(ar);
+    let position = Int32Array.createSize(len * count);
+    for (i in 0 to count) {
+      for (j in 0 to len) {
+        let value = Int32Array.get(ar, j);
+        Int32Array.set(position, i * len + j, value);
+      };
+    };
+    ar;
+  };
+  {
+    position: getFloat32Array(getPosition(getAttributes(box))),
+    uv: getFloat32Array(getUV(getAttributes(box))),
+    index: duplicateI32(reInt32(getInt32Array(getIndex(box))))
+  };
+};
 
 let getObjectMatrix = (position, scale, rotation) => {
   let mesh = protoMesh;
