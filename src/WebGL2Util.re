@@ -78,7 +78,15 @@ let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
         let len = Int32Array.length(x);
         let ar = Float32Array.createSize(len);
         for (i in 0 to len - 1) {
-          Float32Array.set(ar, i, float_of_int(Int32Array.get(x, i)));
+          /*
+           Float32Array.set(ar, 2 * i + 0, float_of_int(Int32Array.get(x, i)));
+           Float32Array.set(ar, 2 * i + 1, float_of_int(Int32Array.get(x, i) / 4) /. 200000.0 +. 0.5);
+           */
+          Float32Array.set(
+            ar,
+            i,
+            float_of_int(i)
+          );
         };
         ar;
       };
@@ -131,13 +139,11 @@ let createAttributes = (gl, program, buffers) => {
       None;
     };
   switch buffers.floatIndexBuffer {
-  | Some(b) =>
-    /*
-    bindAttribLocation(gl, program, 0, "a_VertexIDFloat");
-    */
-    bindBuffer(gl, getARRAY_BUFFER(gl), b);
+  | Some(b) => bindBuffer(gl, getARRAY_BUFFER(gl), b)
   | None =>
-    Js.log("no floatIndexBuffer");
+    if (WebGL2.getMY_VERSION(gl) < 2) {
+      Js.log("no floatIndexBuffer");
+    };
     ();
   };
   let floatIndexAttributeLocation =
@@ -145,13 +151,11 @@ let createAttributes = (gl, program, buffers) => {
       (-1);
     } else {
       getAttribLocation(gl, program, "a_VertexIDFloat");
-      /*
-      0;
-       */
     };
   if (floatIndexAttributeLocation != (-1)) {
-    Js.log(("floatIndex", floatIndexAttributeLocation));
-    enableVertexAttribArray(gl, floatIndexAttributeLocation);
+    /*
+     enableVertexAttribArray(gl, floatIndexAttributeLocation);
+     */
     let size = 1;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
@@ -167,13 +171,15 @@ let createAttributes = (gl, program, buffers) => {
     );
   } else {
     ();
-    /* Js.log("warning: unused a_VertexIDFloat"); */
+      /* Js.log("warning: unused a_VertexIDFloat"); */
   };
-  let positionAttributeLocation = getAttribLocation(gl, program, Names.positionAttrName);
+  let positionAttributeLocation =
+    getAttribLocation(gl, program, Names.positionAttrName);
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   if (positionAttributeLocation != (-1)) {
-    Js.log(("position", positionAttributeLocation));
-    enableVertexAttribArray(gl, positionAttributeLocation);
+    /*
+     enableVertexAttribArray(gl, positionAttributeLocation);
+     */
     let size = 3;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
@@ -194,8 +200,9 @@ let createAttributes = (gl, program, buffers) => {
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   if (uvAttributeLocation != (-1)) {
-    Js.log(("uv", uvAttributeLocation));
-    enableVertexAttribArray(gl, uvAttributeLocation);
+    /*
+     enableVertexAttribArray(gl, uvAttributeLocation);
+     */
     let size = 2;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
@@ -229,9 +236,11 @@ let getUniformBufferAndLocation =
     (uniformPerSceneBuffer, uniformPerSceneLocation);
   });
 
-let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock, measure) => {
+let renderObject =
+    (gl, program, buffers, textures, _, uniforms, uniformBlock, measure) => {
   useProgram(gl, program);
   /* Enable attributes */
+  let vao = createAttributes(gl, program, buffers);
   switch vao.vao {
   | Some(vao) => bindVertexArray(gl, vao)
   | None =>
@@ -239,10 +248,13 @@ let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock,
       /*
        Js.log("enabling float index");
        */
-      enableVertexAttribArray(gl, vao.floatIndex);
+      enableVertexAttribArray(
+        gl,
+        vao.floatIndex
+      );
     } else {
-      /* Js.log("no float index"); */
       ();
+        /* Js.log("no float index"); */
     };
     if (vao.position != (-1)) {
       enableVertexAttribArray(gl, vao.position);
@@ -299,6 +311,15 @@ let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock,
     getTEXTURE14(gl),
     getTEXTURE15(gl)
   ];
+  /*
+   List.iteri(
+     (_, textureIndex) => {
+       activeTexture(gl, textureIndex);
+       bindTexture2(gl, getTEXTURE_2D(gl), Js.Nullable.null);
+     }
+     , textureIndices
+     );
+     */
   List.iteri(
     (index, (name, texture)) => {
       let uniformLocation = getUniformLocation(gl, program, name);
@@ -338,6 +359,25 @@ let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock,
      );
    };
    */
+  /* Disable attributes */
+  switch vao.vao {
+  | Some(_) => () /* TODO?: disableVertexArray(gl, vao) */
+  | None =>
+    if (vao.floatIndex != (-1)) {
+      disableVertexAttribArray(gl, vao.floatIndex);
+    } else {
+      ();
+    };
+    if (vao.position != (-1)) {
+      disableVertexAttribArray(gl, vao.position);
+    } else {
+      Js.log("no position");
+    };
+    if (vao.uv != (-1)) {
+      disableVertexAttribArray(gl, vao.uv);
+    };
+    ();
+  };
 };
 
 type renderTargetT = {

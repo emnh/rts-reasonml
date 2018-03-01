@@ -230,6 +230,10 @@ var cacheDefault = {
   }
   window.iteration++;
 
+  if (window.memoizeId === undefined) {
+    window.memoizeId = 0;
+  }
+
   if (window.destroy !== undefined) {
     window.destroy();
   }

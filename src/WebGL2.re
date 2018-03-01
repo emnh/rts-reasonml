@@ -296,6 +296,9 @@ external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 external bindTexture : (glT, texture2DT, textureT) => unit = "bindTexture";
 
 [@bs.send]
+external bindTexture2 : (glT, texture2DT, Js.Nullable.t(textureT)) => unit = "bindTexture";
+
+[@bs.send]
 external bindFramebuffer :
   (glT, framebufferTypeT, Js.Nullable.t(framebufferT)) => unit =
   "bindFramebuffer";
@@ -327,6 +330,10 @@ external bindVertexArray : (glT, vertexArrayT) => unit = "bindVertexArray";
 [@bs.send]
 external enableVertexAttribArray : (glT, attributeLocationT) => unit =
   "enableVertexAttribArray";
+
+[@bs.send]
+external disableVertexAttribArray : (glT, attributeLocationT) => unit =
+  "disableVertexAttribArray";
 
 [@bs.send]
 external vertexAttribPointer :

@@ -1,5 +1,7 @@
 type optionsT;
 
+exception Bug;
+
 [@bs.val] external memoize : (int, 'a) => 'a = "window.memoize";
 
 [@bs.val]
@@ -34,14 +36,24 @@ external partialMemoize44 :
   "window.partialMemoize4";
 
 [@bs.get]
-external getMemoizeIdentity : 'a => Js.Undefined.t(float) = "memoizeId";
+external getMemoizeIdentity : 'a => Js_null_undefined.t(int) = "memoizeId";
 
-[@bs.set] external setMemoizeIdentity : ('a, float) => unit = "memoizeId";
+[@bs.set] external setMemoizeIdentity : ('a, int) => unit = "memoizeId";
 
 /* TODO: Use global identifier instead of Math.random */
 let setMemoizeId = x => {
   let om = getMemoizeIdentity(x);
-  if (om == Js.undefined) {
-    setMemoizeIdentity(x, Math.random());
+  switch (Js_null_undefined.to_opt(om)) {
+  | None =>
+    let id = getMemoizeIdentity(Document.window);
+    let id =
+      switch (Js_null_undefined.to_opt(id)) {
+      | Some(id) => id + 1
+      | None => raise(Bug)
+      };
+    Js.log(("id", id));
+    setMemoizeIdentity(x, id);
+    setMemoizeIdentity(Document.window, id);
+  | Some(_) => ()
   };
 };

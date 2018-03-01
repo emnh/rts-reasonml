@@ -20,10 +20,15 @@ let vertexShader =
   body(() => {
     v_uv =@ f(1.0) - a_uv;
     let vertexId = floatvar("vertexId");
+    /*
+     vertexId =@ gl_VertexID;
+      */
     vertexId =@ int2float(idiv(gl_VertexId, i(4))) / f(100000.0);
     /*
-    vertexId =@ int2float(gl_VertexId) - fmod(int2float(gl_VertexId), f(4.0));
-    */
+     vertexId =@ floor(int2float(gl_VertexId) / f(4.0) + f(0.5)) / f(100000.0);
+     vertexId =@ floor(int2float(idiv(gl_VertexId, i(4))) + f(0.5)) / f(100000.0);
+     vertexId =@ int2float(gl_VertexId) - fmod(int2float(gl_VertexId), f(4.0));
+     */
     let position = vec3var("position");
     let rand1 = vertexId * f(0.239543) + f(0.243254);
     let rand2 = fmod(rand1, f(1.2345));

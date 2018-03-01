@@ -100,7 +100,7 @@ let setupDocument = () => {
       Memoize.setMemoizeId(gl);
       (gl, 2);
     | None =>
-      switch (Js.Nullable.to_opt(WebGL2.getContextPDB(canvas, "webgl"))) {
+      switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl"))) {
       | Some(gl) =>
         Memoize.setMemoizeId(gl);
         (gl, 1);
@@ -131,7 +131,7 @@ let setupDocument = () => {
 };
 
 let getGeometryAndBuffers =
-  Memoize.partialMemoize3((gl, program, gt) => {
+  Memoize.partialMemoize2((gl, gt) => {
     let geometry =
       switch gt {
       | "Box" => Three.createBoxGeometry()
@@ -143,8 +143,10 @@ let getGeometryAndBuffers =
       | _ => Three.createBoxGeometry()
       };
     let buffers = WebGL2Util.createBuffers(gl, geometry);
-    let vao = WebGL2Util.createAttributes(gl, program, buffers);
-    (geometry, buffers, vao);
+    /*
+     let vao = WebGL2Util.createAttributes(gl, program, buffers);
+     */
+    (geometry, buffers, ());
   });
 
 let getCamera = (width, height) => {
@@ -272,7 +274,7 @@ let runFrameBuffer =
      let buffers = WebGL2Util.createBuffers(gl, geometry);
      let vao = WebGL2Util.createAttributes(gl, program, buffers);
      */
-    let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geoType);
+    let (_, buffers, vao) = getGeometryAndBuffers(gl, geoType);
     WebGL2Util.preRender(gl, width, height);
     Math.globalSeedRandom(ConfigVars.seed#get());
     let (x, y, z) = (0.0, 0.0, (-1.0));
@@ -324,7 +326,6 @@ let run = (gl, time, uAndProgram, measure, geometryType, count) => {
     Memoize.setMemoizeId(program);
     Document.debug(Document.window, gl);
     Document.debug(Document.window, uniforms);
-    let (_, buffers, vao) = getGeometryAndBuffers(gl, program, geometryType);
     Math.globalSeedRandom(ConfigVars.seed#get());
     /*
      let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
@@ -332,6 +333,7 @@ let run = (gl, time, uAndProgram, measure, geometryType, count) => {
     /*
      let irows = Terrain.getTileWidth();
      */
+    let (_, buffers, vao) = getGeometryAndBuffers(gl, geometryType);
     for (i in 1 to count) {
       let ix = 0; /* (i - 1) mod irows; */
       let iy = 0; /* (i - 1) / irows; */
@@ -421,6 +423,7 @@ let getMeasure =
         None;
       };
     };
+    /* Initial zero measurement, to start the read loop */
     measure(() => ());
     (measure, readMeasure, () => lastValue^);
   });
@@ -645,7 +648,8 @@ let runDemo = (gl, time) => {
   run(gl, time, getShaderExampleProgram(fg, bg));
 };
 
-let rec renderLoop = (queryExt, stats, startTime, canvas, gl, startIteration) => {
+let rec renderLoop =
+        (reset, queryExt, stats, startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
   Stats.beginStats(stats);
   runPipeline(gl, queryExt, t /. 1000.0);
@@ -655,15 +659,17 @@ let rec renderLoop = (queryExt, stats, startTime, canvas, gl, startIteration) =>
    */
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
-    Document.requestAnimationFrame(()
-      => renderLoop(queryExt, stats, startTime, canvas, gl, startIteration));
-      /*
-       Document.setTimeout(
-         () => renderLoop(queryExt, stats, startTime, canvas, gl, startIteration),
-         0
-       );
-       */
+    /* reset(); */
+    Document.requestAnimationFrame(() =>
+      renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration)
+    );
   } else {
+    /*
+     Document.setTimeout(
+       () => renderLoop(queryExt, stats, startTime, canvas, gl, startIteration),
+       0
+     );
+     */
     let _ = Document.removeChild(canvas);
     Js.log(
       "exiting render loop "
@@ -685,6 +691,7 @@ let main = (_) => {
   let ext = WebGL2.getExtension(gl, "EXT_disjoint_timer_query_webgl2");
   let oext = Js.Nullable.to_opt(ext);
   let queryExt = oext;
+  let reset = GLReset.createReset(gl);
   if (WebGL2.getMY_VERSION(gl) == 1) {
     let ext2 = WebGL2.getExtension(gl, "OES_standard_derivatives");
     if (ext2 == Js.Nullable.null) {
@@ -697,7 +704,7 @@ let main = (_) => {
       raise(NoElementIndexExtension);
     };
   };
-  renderLoop(queryExt, stats, startTime, canvas, gl, startIteration);
+  renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration);
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();

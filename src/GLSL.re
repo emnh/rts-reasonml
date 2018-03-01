@@ -25,7 +25,8 @@ let vertexPrelude1 = {|
 let extraAttributes1 = {|
 attribute highp float a_VertexIDFloat;
 
-#define gl_VertexID int(a_VertexIDFloat)
+#define gl_VertexID (int(a_VertexIDFloat))
+#define gl_VertexID2F (a_VertexIDFloat.y)
 |};
 
 let fragmentPrelude = {|
@@ -1136,6 +1137,8 @@ let samplerCubeUniform = name =>
 let gl_Vertex = vec4attr(Names.positionAttrName);
 
 let gl_VertexId = intbuiltin("gl_VertexID");
+
+let gl_VertexIdFloat = floatbuiltin("gl_VertexID2F");
 
 let gl_Position = vec4builtin("gl_Position");
 
