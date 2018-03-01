@@ -36,21 +36,23 @@ let uv = vec2arg("uv");
 let heightMapBody =
   body(() => {
     let value = floatvar("value");
+    /*
     let uv = vec3(uv |+| u_time / f(20.0));
+    */
     value
-    =@ ShaderAshima3.snoise(uv * f(1.63))
+    =@ ShaderAshima.snoise(uv * f(1.63))
     * f(0.1)
-    + ShaderAshima3.snoise(uv * f(10.0))
+    + ShaderAshima.snoise(uv * f(10.0))
     * f(0.002)
-    + ShaderAshima3.snoise(uv * f(20.0))
+    + ShaderAshima.snoise(uv * f(20.0))
     * f(0.0005)
-    + ShaderAshima3.snoise(uv * f(40.0))
+    + ShaderAshima.snoise(uv * f(40.0))
     * f(0.00025)
     /*
      + ShaderAshima.snoise(uv * f(40.0))
      * f(0.002)
      * */
-    + ShaderAshima3.snoise(uv * f(20.0))
+    + ShaderAshima.snoise(uv * f(20.0))
     * f(0.01);
     return(value * f(2.0));
   });
