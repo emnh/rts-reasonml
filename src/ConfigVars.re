@@ -1,7 +1,7 @@
 let geometryType =
   Config.stringConfigVar(
     ["object", "geometry"],
-    "Box",
+    "Plane",
     ~choices=Config.Choices([|"Box", "Sphere", "Plane"|]),
     ()
   );
@@ -14,36 +14,36 @@ let foregroundColor =
 
 let seed = Config.stringConfigVar(["object", "seed"], "hello", ());
 
-let spread = Config.floatConfigVar(["object", "spread"], 2.01, ());
+let spread = Config.floatConfigVar(["object", "spread"], 0.0, ());
 
 let rotationSpread =
-  Config.floatConfigVar(["object", "rotationSpread"], Math.pi, ());
+  Config.floatConfigVar(["object", "rotationSpread"], 0.0, ());
 
 let rotationSpeed =
-  Config.floatConfigVar(["object", "rotationSpeed"], 1.0, ());
+  Config.floatConfigVar(["object", "rotationSpeed"], 0.0, ());
 
-let count = Config.intConfigVar(["object", "count"], 100, ());
+let count = Config.intConfigVar(["object", "count"], 1, ());
 
-let size = Config.floatConfigVar(["object", "size"], 1.5, ());
+let size = Config.floatConfigVar(["object", "size"], 1.0, ());
 
 let cameraRotationX =
-  Config.floatConfigVar(["camera", "rotation", "x"], 0.01, ());
+  Config.floatConfigVar(["camera", "rotation", "x"], 0.0, ());
 
 let cameraRotationY =
-  Config.floatConfigVar(["camera", "rotation", "y"], 0.01, ());
+  Config.floatConfigVar(["camera", "rotation", "y"], 0.0, ());
 
 let cameraRotationZ =
-  Config.floatConfigVar(["camera", "rotation", "z"], -5.01, ());
+  Config.floatConfigVar(["camera", "rotation", "z"], 0.0, ());
 
-let cameraX = Config.floatConfigVar(["camera", "position", "x"], 0.01, ());
+let cameraX = Config.floatConfigVar(["camera", "position", "x"], 0.0, ());
 
-let cameraY = Config.floatConfigVar(["camera", "position", "y"], 0.01, ());
+let cameraY = Config.floatConfigVar(["camera", "position", "y"], 2.0, ());
 
-let cameraZ = Config.floatConfigVar(["camera", "position", "z"], 0.01, ());
+let cameraZ = Config.floatConfigVar(["camera", "position", "z"], -2.0, ());
 
-let waterHeight = Config.floatConfigVar(["water", "height"], 0.1, ());
+let waterHeight = Config.floatConfigVar(["water", "height"], 1.0, ());
 
-let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.5, ());
+let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.03, ());
 
 let objectX = Config.floatConfigVar(["object", "position", "x"], 0.01, ());
 
@@ -51,18 +51,18 @@ let objectY = Config.floatConfigVar(["object", "position", "y"], 0.01, ());
 
 let objectZ = Config.floatConfigVar(["object", "position", "z"], 0.01, ());
 
-let lightX = Config.floatConfigVar(["light", "position", "x"], 0.01, ());
+let lightX = Config.floatConfigVar(["light", "position", "x"], 0.5, ());
 
-let lightY = Config.floatConfigVar(["light", "position", "y"], 0.01, ());
+let lightY = Config.floatConfigVar(["light", "position", "y"], 1.0, ());
 
-let lightZ = Config.floatConfigVar(["light", "position", "z"], 0.01, ());
+let lightZ = Config.floatConfigVar(["light", "position", "z"], 0.2, ());
 
-let eyeX = Config.floatConfigVar(["camera", "eye", "x"], 0.01, ());
+let eyeX = Config.floatConfigVar(["camera", "eye", "x"], 0.0, ());
 
-let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 0.01, ());
+let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 3.5, ());
 
-let eyeZ = Config.floatConfigVar(["camera", "eye", "z"], 0.01, ());
+let eyeZ = Config.floatConfigVar(["camera", "eye", "z"], 0.0, ());
 
 let poolHeight = Config.floatConfigVar(["water", "poolHeight"], 1.5, ());
 
-let terrainScale = Config.floatConfigVar(["terrain", "scale"], 0.25, ());
+let terrainScale = Config.floatConfigVar(["terrain", "scale"], 0.21, ());

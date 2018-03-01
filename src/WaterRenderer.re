@@ -752,7 +752,7 @@ module Renderer = {
         let retval =
           switch tilesTexture^ {
           | Some(texture) => texture
-          | None => getNewTexture(arg.gl, "/resources/tiles.jpg")
+          | None => getNewTexture(arg.gl, "resources/tiles.jpg")
           };
         tilesTexture := Some(retval);
         retval;
@@ -767,7 +767,7 @@ module Renderer = {
         let retval =
           switch tilesTexture5^ {
           | Some(texture) => texture
-          | None => getNewTexture(arg.gl, "/resources/ypos.jpg")
+          | None => getNewTexture(arg.gl, "resources/ypos.jpg")
           };
         tilesTexture5 := Some(retval);
         retval;

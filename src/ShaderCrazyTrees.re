@@ -152,7 +152,7 @@ let registeredTrees =
       let retval =
         switch treeTexture^ {
         | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "/resources/tree.png")
+        | None => getNewTexture(arg.gl, "resources/tree.png")
         };
       treeTexture := Some(retval);
       retval;
