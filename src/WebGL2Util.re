@@ -153,9 +153,9 @@ let createAttributes = (gl, program, buffers) => {
       getAttribLocation(gl, program, "a_VertexIDFloat");
     };
   if (floatIndexAttributeLocation != (-1)) {
-    /*
-     enableVertexAttribArray(gl, floatIndexAttributeLocation);
-     */
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      enableVertexAttribArray(gl, floatIndexAttributeLocation);
+    };
     let size = 1;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
@@ -177,9 +177,9 @@ let createAttributes = (gl, program, buffers) => {
     getAttribLocation(gl, program, Names.positionAttrName);
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   if (positionAttributeLocation != (-1)) {
-    /*
-     enableVertexAttribArray(gl, positionAttributeLocation);
-     */
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      enableVertexAttribArray(gl, positionAttributeLocation);
+    };
     let size = 3;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
@@ -200,9 +200,9 @@ let createAttributes = (gl, program, buffers) => {
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   if (uvAttributeLocation != (-1)) {
-    /*
-     enableVertexAttribArray(gl, uvAttributeLocation);
-     */
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      enableVertexAttribArray(gl, uvAttributeLocation);
+    };
     let size = 2;
     let normalize = Js.Boolean.to_js_boolean(false);
     let stride = 0;
