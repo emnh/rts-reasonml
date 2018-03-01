@@ -17,9 +17,13 @@ let vertexPrelude = {|
 |};
 
 let vertexPrelude1 = {|
-#define VARYING varying
+#extension GL_OES_standard_derivatives : enable
 
-attribute float a_VertexIDFloat;
+#define VARYING varying
+|};
+
+let extraAttributes1 = {|
+attribute highp float a_VertexIDFloat;
 
 #define gl_VertexID int(a_VertexIDFloat)
 |};
@@ -32,9 +36,15 @@ let fragmentPrelude1 = {|
 
 #define VARYING varying|};
 
-let precisionQuantifier = "mediump";
+let precisionQuantifier = "highp";
 
-let precision = "precision " ++ precisionQuantifier ++ " float;";
+let precision =
+  "precision "
+  ++ precisionQuantifier
+  ++ " float;"
+  ++ "precision "
+  ++ precisionQuantifier
+  ++ " int;";
 
 let newline = "\n";
 
@@ -552,8 +562,10 @@ let fmtTransformer = {
 
 let fmtFun = gf => fmtTransformer.tfun(fmtTransformer, gf);
 
-let orderVars = (fmt, vars) =>
-  List.map(fmt, List.sort_uniq(Pervasives.compare, vars));
+let orderVars = (fmt, vars) => {
+  let cmpf = ((_, n1), (_, n2)) => Pervasives.compare(n2, n1);
+  List.map(fmt, List.sort_uniq(cmpf, vars));
+};
 
 let getVarOfType = (vart, gf) => {
   let ar = ref([]);
@@ -736,7 +748,7 @@ let formatOutputs = attrs => {
   };
 };
 
-let getShader = (prelude, uniforms, varyings, main) => {
+let getShader = (prelude, uniforms, varyings, main, isVertex) => {
   let s =
     getVersion()
     ++ newline
@@ -745,6 +757,13 @@ let getShader = (prelude, uniforms, varyings, main) => {
     ++ newline
     ++ precision
     ++ formatAttributes(getAttributes(main))
+    ++ (
+      if (! isGL2() && isVertex) {
+        newline ++ newline ++ extraAttributes1;
+      } else {
+        "";
+      }
+    )
     ++ newline
     ++ newline
     ++ formatVaryings(varyings)
@@ -814,8 +833,9 @@ let getProgram = (uniformBlock, vsmain, fsmain) => {
     outputs: getOutputs(fsmain),
     uniforms,
     varyings,
-    vertexShader: getShader(vertexPrelude, uniforms, varyings, vsmain),
-    fragmentShader: getShader(fragmentPrelude, uniforms, varyings, fsmain)
+    vertexShader: getShader(vertexPrelude, uniforms, varyings, vsmain, true),
+    fragmentShader:
+      getShader(fragmentPrelude, uniforms, varyings, fsmain, false)
   };
 };
 
@@ -1113,7 +1133,7 @@ let samplerCubeUniform = name =>
 /*
  let gl_Vertex = vec4builtin("gl_Vertex");
  */
-let gl_Vertex = vec4attr("a_position");
+let gl_Vertex = vec4attr(Names.positionAttrName);
 
 let gl_VertexId = intbuiltin("gl_VertexID");
 

@@ -132,7 +132,9 @@ let createAttributes = (gl, program, buffers) => {
     };
   switch buffers.floatIndexBuffer {
   | Some(b) =>
+    /*
     bindAttribLocation(gl, program, 0, "a_VertexIDFloat");
+    */
     bindBuffer(gl, getARRAY_BUFFER(gl), b);
   | None =>
     Js.log("no floatIndexBuffer");
@@ -142,12 +144,13 @@ let createAttributes = (gl, program, buffers) => {
     if (WebGL2.getMY_VERSION(gl) == 2) {
       (-1);
     } else {
-      0;
+      getAttribLocation(gl, program, "a_VertexIDFloat");
       /*
-       getAttribLocation(gl, program, "a_VertexIDFloat");
+      0;
        */
     };
   if (floatIndexAttributeLocation != (-1)) {
+    Js.log(("floatIndex", floatIndexAttributeLocation));
     enableVertexAttribArray(gl, floatIndexAttributeLocation);
     let size = 1;
     let normalize = Js.Boolean.to_js_boolean(false);
@@ -164,11 +167,12 @@ let createAttributes = (gl, program, buffers) => {
     );
   } else {
     ();
-      /* Js.log("warning: unused a_index"); */
+    /* Js.log("warning: unused a_VertexIDFloat"); */
   };
-  let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
+  let positionAttributeLocation = getAttribLocation(gl, program, Names.positionAttrName);
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   if (positionAttributeLocation != (-1)) {
+    Js.log(("position", positionAttributeLocation));
     enableVertexAttribArray(gl, positionAttributeLocation);
     let size = 3;
     let normalize = Js.Boolean.to_js_boolean(false);
@@ -185,11 +189,12 @@ let createAttributes = (gl, program, buffers) => {
     );
   } else {
     ();
-      /* Js.log("warning: unused a_position"); */
+    Js.log("warning: unused " ++ Names.positionAttrName);
   };
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.uvBuffer);
   let uvAttributeLocation = getAttribLocation(gl, program, "a_uv");
   if (uvAttributeLocation != (-1)) {
+    Js.log(("uv", uvAttributeLocation));
     enableVertexAttribArray(gl, uvAttributeLocation);
     let size = 2;
     let normalize = Js.Boolean.to_js_boolean(false);
@@ -234,13 +239,15 @@ let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock,
       /*
        Js.log("enabling float index");
        */
-      bindAttribLocation(gl, program, vao.floatIndex, "a_VertexIDFloat");
       enableVertexAttribArray(gl, vao.floatIndex);
     } else {
-      Js.log("no float index");
+      /* Js.log("no float index"); */
+      ();
     };
     if (vao.position != (-1)) {
       enableVertexAttribArray(gl, vao.position);
+    } else {
+      Js.log("no position");
     };
     if (vao.uv != (-1)) {
       enableVertexAttribArray(gl, vao.uv);

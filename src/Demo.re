@@ -100,7 +100,7 @@ let setupDocument = () => {
       Memoize.setMemoizeId(gl);
       (gl, 2);
     | None =>
-      switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl"))) {
+      switch (Js.Nullable.to_opt(WebGL2.getContextPDB(canvas, "webgl"))) {
       | Some(gl) =>
         Memoize.setMemoizeId(gl);
         (gl, 1);

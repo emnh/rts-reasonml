@@ -165,7 +165,8 @@ external uniformBlockBinding : (glT, programT, uniformBlockIndexT, int) => unit 
 external uniform1i : (glT, uniformLocationT, int) => unit = "uniform1i";
 
 [@bs.send]
-external uniform1iv : (glT, uniformLocationT, array(int)) => unit = "uniform1iv";
+external uniform1iv : (glT, uniformLocationT, array(int)) => unit =
+  "uniform1iv";
 
 [@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
@@ -193,6 +194,16 @@ external uniformMatrix4fv : (glT, uniformLocationT, bool, array(float)) => unit 
 [@bs.send]
 external uniform2f : (glT, uniformLocationT, float, float) => unit =
   "uniform2f";
+
+[@bs.send]
+external getContextPDB :
+  (
+    Document.element,
+    string,
+    [@bs.as {json|{ "preserveDrawingBuffer": true }|json}] _
+  ) =>
+  Js.Nullable.t(glT) =
+  "getContext";
 
 [@bs.send]
 external getContext : (Document.element, string) => Js.Nullable.t(glT) =
