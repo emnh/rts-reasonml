@@ -1,3 +1,6 @@
 [submodule "phantom_algebra"]
 	path = phantom_algebra
 	url = https://github.com/emnh/phantom_algebra
+[submodule "resources"]
+	path = resources
+	url = https://github.com/emnh/rts-reasonml-resources
