@@ -120,6 +120,7 @@ and trT('a) =
   | Typed('a, rT)
   | Untyped(rT)
 and statementT =
+  | InlineGLSL(string)
   | Assignment(lT, rT)
   | DeclAssignment(glslTypeT, lT, rT)
   | ForStatement(gRootT, rT, gRootT, gRootT)
@@ -438,6 +439,7 @@ let fmtTransformer = {
             [
               indent,
               switch stmt {
+              | InlineGLSL(s) => s
               | Assignment(left, right) =>
                 t.combine(t, [t.lExpr(t, left), " = ", t.rExpr(t, right)])
               | DeclAssignment(vart, left, right) =>
@@ -1418,6 +1420,8 @@ let return = l => add(Return(u(l)));
 let returnVoid = () => add(ReturnVoid);
 
 let discard = () => add(Discard);
+
+let inline = s => add(InlineGLSL(s));
 
 /* float var declaration and initialization */
 /* TODO: figure out how to do this properly */
