@@ -1,14 +1,36 @@
 module SS = Set.Make(String);
 
-let version = "#version 300 es";
+let webGLVersion = ref(2);
+
+let isGL2 = () => webGLVersion^ == 2;
+
+let getVersion = () =>
+  if (isGL2()) {
+    "#version 300 es";
+  } else {
+    "";
+  };
 
 let vertexPrelude = {|
 #define VARYING out
 
 |};
 
+let vertexPrelude1 = {|
+#define VARYING varying
+
+attribute float a_VertexIDFloat;
+
+#define gl_VertexID int(a_VertexIDFloat)
+|};
+
 let fragmentPrelude = {|
 #define VARYING in|};
+
+let fragmentPrelude1 = {|
+#extension GL_OES_standard_derivatives : enable
+
+#define VARYING varying|};
 
 let precisionQuantifier = "mediump";
 
@@ -635,7 +657,17 @@ let formatFunctions = attrs => {
 let formatAttributes = attrs => {
   let formatAttribute = attr => {
     let (t, name) = attr;
-    "in " ++ glslTypeString(t) ++ " " ++ name ++ ";";
+    (
+      if (isGL2()) {
+        "in ";
+      } else {
+        "attribute ";
+      }
+    )
+    ++ glslTypeString(t)
+    ++ " "
+    ++ name
+    ++ ";";
   };
   String.concat(newline, orderVars(formatAttribute, attrs));
 };
@@ -652,7 +684,13 @@ let formatUniforms = attrs => {
   let formatUniform = attr => {
     let (t, name) = attr;
     indent
-    ++ precisionQuantifier
+    ++ (
+      if (isGL2()) {
+        precisionQuantifier;
+      } else {
+        "uniform";
+      }
+    )
     ++ " "
     ++ glslTypeString(t)
     ++ " "
@@ -670,11 +708,17 @@ let formatUniforms = attrs => {
     | _ => true
     };
   let (notSamplerAttrs, samplerAttrs) = List.partition(filterSamplers, attrs);
-  "layout(std140) uniform u_PerScene {"
+  let (ufprelude, ufafter) =
+    if (isGL2()) {
+      ("layout(std140) uniform u_PerScene {", "};");
+    } else {
+      ("", "");
+    };
+  ufprelude
   ++ newline
   ++ String.concat(newline, List.map(formatUniform, notSamplerAttrs))
   ++ newline
-  ++ "};"
+  ++ ufafter
   ++ newline
   ++ String.concat(newline, List.map(formatUniform2, samplerAttrs))
   ++ newline;
@@ -685,32 +729,47 @@ let formatOutputs = attrs => {
     let (t, name) = attr;
     "out " ++ glslTypeString(t) ++ " " ++ name ++ ";";
   };
-  String.concat(newline, orderVars(formatAttribute, attrs));
+  if (isGL2()) {
+    String.concat(newline, orderVars(formatAttribute, attrs));
+  } else {
+    newline ++ "// no output vars in WebGL 1" ++ newline;
+  };
 };
 
-let getShader = (prelude, uniforms, varyings, main) =>
-  version
-  ++ newline
-  ++ newline
-  ++ prelude
-  ++ newline
-  ++ precision
-  ++ formatAttributes(getAttributes(main))
-  ++ newline
-  ++ newline
-  ++ formatVaryings(varyings)
-  ++ newline
-  ++ newline
-  ++ formatUniforms(uniforms)
-  ++ newline
-  ++ newline
-  ++ formatOutputs(getOutputs(main))
-  ++ newline
-  ++ newline
-  ++ formatFunctions(getFunctions(main))
-  ++ newline
-  ++ newline
-  ++ fmtFun(main);
+let getShader = (prelude, uniforms, varyings, main) => {
+  let s =
+    getVersion()
+    ++ newline
+    ++ newline
+    ++ prelude
+    ++ newline
+    ++ precision
+    ++ formatAttributes(getAttributes(main))
+    ++ newline
+    ++ newline
+    ++ formatVaryings(varyings)
+    ++ newline
+    ++ newline
+    ++ formatUniforms(uniforms)
+    ++ newline
+    ++ newline
+    ++ formatOutputs(getOutputs(main))
+    ++ newline
+    ++ newline
+    ++ formatFunctions(getFunctions(main))
+    ++ newline
+    ++ newline
+    ++ fmtFun(main);
+  let s =
+    if (isGL2()) {
+      s;
+    } else {
+      let s = MyString.replaceRe(s, [%bs.re "/outColor/g"], "gl_FragColor");
+      let s = MyString.replaceRe(s, [%bs.re "/texture/g"], "texture2D");
+      s;
+    };
+  s;
+};
 
 type programT = {
   attributes: list((glslTypeT, string)),
@@ -738,6 +797,18 @@ let getProgram = (uniformBlock, vsmain, fsmain) => {
   };
   let uniforms = List.map(uf, uniformBlock);
   let varyings = List.concat([getVaryings(vsmain), getVaryings(fsmain)]);
+  let vertexPrelude =
+    if (isGL2()) {
+      vertexPrelude;
+    } else {
+      vertexPrelude1;
+    };
+  let fragmentPrelude =
+    if (isGL2()) {
+      fragmentPrelude;
+    } else {
+      fragmentPrelude1;
+    };
   {
     attributes: getAttributes(vsmain),
     outputs: getOutputs(fsmain),

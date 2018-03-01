@@ -11,6 +11,8 @@ type uniformInputT = {
   objectId: int
 };
 
+exception NotImplementedException;
+
 /*
  type uniformTextureT = {
     wrapS: WebGL2.glT => WebGL2.clampT,
@@ -114,12 +116,12 @@ let uploadImage = (gl, texture, img) => {
     WebGL2.getREPEAT(gl)
   );
   /*
-  WebGL2.texParameteri(
-    gl,
-    t2d,
-    WebGL2.getTEXTURE_MIN_FILTER(gl),
-    WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
-  );*/
+   WebGL2.texParameteri(
+     gl,
+     t2d,
+     WebGL2.getTEXTURE_MIN_FILTER(gl),
+     WebGL2.getLINEAR_MIPMAP_LINEAR(gl)
+   );*/
   /* the largest mip */
   let mipLevel = 0;
   /* format we want in the texture */
@@ -149,7 +151,18 @@ let uploadImage = (gl, texture, img) => {
 
 /* TODO: Preallocate and refill array */
 let computeUniformBlock =
-    (gl, time, width, height, eye, modelMatrix, modelViewMatrix, projectionMatrix, objectId, uniforms) => {
+    (
+      gl,
+      time,
+      width,
+      height,
+      eye,
+      modelMatrix,
+      modelViewMatrix,
+      projectionMatrix,
+      objectId,
+      uniforms
+    ) => {
   let uniformArg = {
     gl,
     time,
@@ -210,6 +223,46 @@ let computeUniformBlock =
       uniforms
     );
   let uniformBlock = Float32Array.create(l);
+  let setUniforms = program =>
+    if (WebGL2.getMY_VERSION(gl) < 2) {
+      let l =
+        List.iter(
+          ((u, f)) => {
+            let (t, name) =
+              switch u {
+              | GLSL.RVar((_, t2, name)) => (t2, name)
+              | _ => raise(GLSL.GLSLTypeError("not rvar"))
+              };
+            let location = WebGL2.getUniformLocation(gl, program, name);
+            switch f {
+            | UniformFloatArray(f2) =>
+              switch t {
+              | GLSL.Void => ()
+              | GLSL.Int =>
+                WebGL2.uniform1iv(
+                  gl,
+                  location,
+                  Array.map(int_of_float, f2(uniformArg))
+                )
+              | GLSL.UInt => raise(NotImplementedException)
+              | GLSL.Float => WebGL2.uniform1fv(gl, location, f2(uniformArg))
+              | GLSL.Vec2 => WebGL2.uniform2fv(gl, location, f2(uniformArg))
+              | GLSL.Vec3 => WebGL2.uniform3fv(gl, location, f2(uniformArg))
+              | GLSL.Vec4 => WebGL2.uniform4fv(gl, location, f2(uniformArg))
+              | GLSL.Mat2 => raise(NotImplementedException)
+              | GLSL.Mat3 => raise(NotImplementedException)
+              | GLSL.Mat4 =>
+                WebGL2.uniformMatrix4fv(gl, location, false, f2(uniformArg))
+              | GLSL.Sampler2D => raise(NotImplementedException)
+              | GLSL.SamplerCube => raise(NotImplementedException)
+              }
+            | _ => ()
+            };
+          },
+          uniforms
+        );
+      ();
+    };
   let textures =
     List.fold_right(
       ((_, f), r) =>
@@ -220,7 +273,7 @@ let computeUniformBlock =
       uniforms,
       []
     );
-  (uniformBlock, textures);
+  (setUniforms, uniformBlock, textures);
 };
 
 let getNewTexture = (gl, path) => {
@@ -237,7 +290,12 @@ let getNewRandomTexture = (gl, randf) => {
   setupTexture(gl, texture);
   let t2d = WebGL2.getTEXTURE_2D(gl);
   let level = 0;
-  let internalFormat = WebGL2.getRGBA32F(gl);
+  let internalFormat =
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      WebGL2.getRGBA32F(gl);
+    } else {
+      WebGL2.getRGBA(gl);
+    };
   let width = 256;
   let height = 256;
   let border = 0;
@@ -250,8 +308,8 @@ let getNewRandomTexture = (gl, randf) => {
   };
   /* TODO: memoize */
   /*
-  let _ = WebGL2.getExtension(gl, "OES_texture_float");
-  */
+   let _ = WebGL2.getExtension(gl, "OES_texture_float");
+   */
   WebGL2.texImage2DdataFloat(
     gl,
     t2d,

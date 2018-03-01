@@ -28,6 +28,10 @@ exception NoProgram;
 
 exception NoTimerQuery;
 
+exception NoDerivativesExtension;
+
+exception NoElementIndexExtension;
+
 exception Bug;
 
 let getShaderExampleProgram =
@@ -80,24 +84,33 @@ let getShaderProgram =
     (uniforms, program);
   });
 
+let showError = msg => {
+  let body = Document.body;
+  Document.setInnerHTML(body, "<h1 style='color: red;'>" ++ msg ++ "</h1>");
+};
+
 let setupDocument = () => {
   Document.setMargin(Document.getStyle(Document.body), "0px");
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
-  let showError = msg => {
-    let body = Document.body;
-    Document.setInnerHTML(body, "<h1 style='color: red;'>" ++ msg ++ "</h1>");
-  };
   let _ = Document.appendChild(canvas);
-  let gl =
+  let (gl, version) =
     switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl2"))) {
     | Some(gl) =>
       Memoize.setMemoizeId(gl);
-      gl;
+      (gl, 2);
     | None =>
-      showError("No WebGL2!");
-      raise(NoGL);
+      switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl"))) {
+      | Some(gl) =>
+        Memoize.setMemoizeId(gl);
+        (gl, 1);
+      | None =>
+        showError("No WebGL2!");
+        raise(NoGL);
+      }
     };
+  WebGL2.setMY_VERSION(gl, version);
+  GLSL.webGLVersion := version;
   let setCanvasSize = (_) => {
     let width = Document.getWidth(Document.window);
     let height = Document.getHeight(Document.window);
@@ -172,7 +185,7 @@ let renderObj =
   let obj: Three.objectTransformT = Three.getObjectMatrix(pos, size, rot);
   let viewMatrices: Three.viewTransformT =
     Three.getViewMatrices(camera, obj.matrixWorld, twist);
-  let (uniformBlock, textures) =
+  let (uniforms, uniformBlock, textures) =
     GLSLUniforms.computeUniformBlock(
       gl,
       time,
@@ -191,6 +204,7 @@ let renderObj =
     buffers,
     textures,
     vao,
+    uniforms,
     uniformBlock,
     measure
   );
@@ -422,25 +436,28 @@ let reportElement =
     elem;
   });
 
-let doMeasure2 = (gl, queryExt, name) => {
-  let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
-  let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
-  let rep = reportElement();
-  let measure =
-    switch (readMeasure()) {
-    | Some(nanoseconds) =>
-      let p = Document.createElement("p");
-      Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds));
-      let _ = Document.appendChild2(rep, p);
-      measure;
-    | None =>
-      let p = Document.createElement("p");
-      Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()));
-      let _ = Document.appendChild2(rep, p);
-      defaultMeasure;
-    };
-  measure;
-};
+let doMeasure2 = (gl, queryExt, name) =>
+  switch queryExt {
+  | Some(queryExt) =>
+    let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
+    let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
+    let rep = reportElement();
+    let measure =
+      switch (readMeasure()) {
+      | Some(nanoseconds) =>
+        let p = Document.createElement("p");
+        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds));
+        let _ = Document.appendChild2(rep, p);
+        measure;
+      | None =>
+        let p = Document.createElement("p");
+        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()));
+        let _ = Document.appendChild2(rep, p);
+        defaultMeasure;
+      };
+    measure;
+  | None => (f => f())
+  };
 
 /*
  let doMeasure = (_, _, _, f) => f();
@@ -607,16 +624,16 @@ let runPipeline = (gl, queryExt, time) => {
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */
   /*
-  runFrameBuffer(
-    gl,
-    time,
-    None,
-    getCopyProgram(terrainRenderRef),
-    quad,
-    doMeasure(gl, queryExt, "Copy"),
-    1
-  );
-  */
+   runFrameBuffer(
+     gl,
+     time,
+     None,
+     getCopyProgram(terrainRenderRef),
+     quad,
+     doMeasure(gl, queryExt, "Copy"),
+     1
+   );
+   */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
   /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy")); */
 };
@@ -667,11 +684,19 @@ let main = (_) => {
   Document.setMargin(style, "10px");
   let ext = WebGL2.getExtension(gl, "EXT_disjoint_timer_query_webgl2");
   let oext = Js.Nullable.to_opt(ext);
-  let queryExt =
-    switch oext {
-    | Some(ext) => ext
-    | None => raise(NoTimerQuery)
+  let queryExt = oext;
+  if (WebGL2.getMY_VERSION(gl) == 1) {
+    let ext2 = WebGL2.getExtension(gl, "OES_standard_derivatives");
+    if (ext2 == Js.Nullable.null) {
+      showError("No OES_standard_derivatives extension to WebGL1!");
+      raise(NoDerivativesExtension);
     };
+    let ext3 = WebGL2.getExtension(gl, "OES_element_index_uint");
+    if (ext3 == Js.Nullable.null) {
+      showError("No OES_element_index_uint extension to WebGL1!");
+      raise(NoElementIndexExtension);
+    };
+  };
   renderLoop(queryExt, stats, startTime, canvas, gl, startIteration);
   () => {
     Js.log("destroying last app generation");

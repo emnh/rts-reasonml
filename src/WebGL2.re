@@ -125,7 +125,7 @@ type textureParameterT;
 
 type textureParameterValueT;
 
-type rgbaT;
+type rgbaT = int;
 
 type textureIndexT;
 
@@ -165,7 +165,30 @@ external uniformBlockBinding : (glT, programT, uniformBlockIndexT, int) => unit 
 external uniform1i : (glT, uniformLocationT, int) => unit = "uniform1i";
 
 [@bs.send]
+external uniform1iv : (glT, uniformLocationT, array(int)) => unit = "uniform1iv";
+
+[@bs.send]
 external uniform1f : (glT, uniformLocationT, float) => unit = "uniform1f";
+
+[@bs.send]
+external uniform1fv : (glT, uniformLocationT, array(float)) => unit =
+  "uniform1fv";
+
+[@bs.send]
+external uniform2fv : (glT, uniformLocationT, array(float)) => unit =
+  "uniform2fv";
+
+[@bs.send]
+external uniform3fv : (glT, uniformLocationT, array(float)) => unit =
+  "uniform3fv";
+
+[@bs.send]
+external uniform4fv : (glT, uniformLocationT, array(float)) => unit =
+  "uniform4fv";
+
+[@bs.send]
+external uniformMatrix4fv : (glT, uniformLocationT, bool, array(float)) => unit =
+  "uniformMatrix4fv";
 
 [@bs.send]
 external uniform2f : (glT, uniformLocationT, float, float) => unit =
@@ -252,6 +275,10 @@ external getAttribLocation : (glT, programT, string) => attributeLocationT =
   "getAttribLocation";
 
 [@bs.send]
+external bindAttribLocation : (glT, programT, int, string) => unit =
+  "bindAttribLocation";
+
+[@bs.send]
 external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 
 [@bs.send]
@@ -275,7 +302,8 @@ external bufferDataInt32 : (glT, arrayBufferTypeT, Int32Array.t, drawT) => unit 
   "bufferData";
 
 [@bs.send]
-external bufferDataUint32 : (glT, arrayBufferTypeT, Uint32Array.t, drawT) => unit =
+external bufferDataUint32 :
+  (glT, arrayBufferTypeT, Uint32Array.t, drawT) => unit =
   "bufferData";
 
 [@bs.send]
@@ -412,7 +440,8 @@ external getDEPTH_BUFFER_BIT : glT => depthBufferBitT = "DEPTH_BUFFER_BIT";
 
 [@bs.get] external getSRC_ALPHA : glT => blend1T = "SRC_ALPHA";
 
-[@bs.get] external getONE_MINUS_SRC_ALPHA : glT => blend1T = "ONE_MINUS_SRC_ALPHA";
+[@bs.get]
+external getONE_MINUS_SRC_ALPHA : glT => blend1T = "ONE_MINUS_SRC_ALPHA";
 
 [@bs.get] external getONE : glT => blend1T = "ONE";
 
@@ -450,6 +479,8 @@ external getTEXTURE_MAG_FILTER : glT => textureParameterT =
 [@bs.get] external getRGBA : glT => rgbaT = "RGBA";
 
 [@bs.get] external getRGBA32F : glT => rgbaT = "RGBA32F";
+
+[@bs.get] external getRGBA16F_EXT : extensionT => rgbaT = "RGBA16F_EXT";
 
 [@bs.get] external getTEXTURE0 : glT => textureIndexT = "TEXTURE0";
 
@@ -499,3 +530,7 @@ external getQUERY_RESULT_AVAILABLE : glT => queryParameterT =
 
 [@bs.get]
 external getGPU_DISJOINT_EXT : extensionT => parameterT = "GPU_DISJOINT_EXT";
+
+[@bs.set] external setMY_VERSION : (glT, int) => unit = "MY_VERSION";
+
+[@bs.get] external getMY_VERSION : glT => int = "MY_VERSION";

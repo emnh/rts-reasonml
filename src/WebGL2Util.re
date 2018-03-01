@@ -5,7 +5,7 @@ exception WebGL2Exception(string);
 exception CacheNotWorking;
 
 let createShader = (gl, stype, source) => {
-  let shader = createShader(gl, stype);
+  let shader = WebGL2.createShader(gl, stype);
   shaderSource(gl, shader, source);
   compileShader(gl, shader);
   let success = getShaderParameter(gl, shader, getCOMPILE_STATUS(gl));
@@ -44,8 +44,16 @@ type glBuffersT = {
   positionBuffer: bufferT,
   uvBuffer: bufferT,
   indexBuffer: bufferT,
+  floatIndexBuffer: option(bufferT),
   offset: int,
   count: int
+};
+
+type glAttributesT = {
+  vao: option(vertexArrayT),
+  floatIndex: attributeLocationT,
+  position: attributeLocationT,
+  uv: attributeLocationT
 };
 
 let cbCounter = ref(0);
@@ -64,17 +72,100 @@ let createBuffers = (gl, geometry: Three.geometryBuffersT) => {
   let uvBuffer = createBuffer(gl);
   bindBuffer(gl, getARRAY_BUFFER(gl), uvBuffer);
   bufferData(gl, getARRAY_BUFFER(gl), geometry.uv, getSTATIC_DRAW(gl));
+  let floatIndexBuffer =
+    if (WebGL2.getMY_VERSION(gl) == 1) {
+      let reF32 = x => {
+        let len = Int32Array.length(x);
+        let ar = Float32Array.createSize(len);
+        for (i in 0 to len - 1) {
+          Float32Array.set(ar, i, float_of_int(Int32Array.get(x, i)));
+        };
+        ar;
+      };
+      let floatIndex = reF32(index);
+      let floatIndexBuffer = createBuffer(gl);
+      bindBuffer(gl, getARRAY_BUFFER(gl), floatIndexBuffer);
+      bufferData(gl, getARRAY_BUFFER(gl), floatIndex, getSTATIC_DRAW(gl));
+      Some(floatIndexBuffer);
+    } else {
+      None;
+    };
   let indexBuffer = createBuffer(gl);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), indexBuffer);
+  /*
+   if (WebGL2.getMY_VERSION(gl) == 2) {
+     */
   bufferDataInt32(gl, getELEMENT_ARRAY_BUFFER(gl), index, getSTATIC_DRAW(gl));
+  /*
+   } else {
+     let reInt16 = x => {
+       let len = Int32Array.length(x);
+       Js.log(("len", len));
+       let ar = Int16Array.createSize(len);
+       for (i in 0 to len - 1) {
+         Int16Array.set(ar, i, Int32Array.get(x, i));
+       };
+       ar;
+     };
+     let index2 = reInt16(index);
+     bufferDataInt16(
+       gl,
+       getELEMENT_ARRAY_BUFFER(gl),
+       index2,
+       getSTATIC_DRAW(gl)
+     );
+   };
+   */
   let offset = 0;
   let count = Int32Array.length(index);
-  {positionBuffer, uvBuffer, indexBuffer, offset, count};
+  {positionBuffer, uvBuffer, indexBuffer, floatIndexBuffer, offset, count};
 };
 
 let createAttributes = (gl, program, buffers) => {
-  let vao = createVertexArray(gl);
-  bindVertexArray(gl, vao);
+  let vao =
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      let vao = createVertexArray(gl);
+      bindVertexArray(gl, vao);
+      Some(vao);
+    } else {
+      None;
+    };
+  switch buffers.floatIndexBuffer {
+  | Some(b) =>
+    bindAttribLocation(gl, program, 0, "a_VertexIDFloat");
+    bindBuffer(gl, getARRAY_BUFFER(gl), b);
+  | None =>
+    Js.log("no floatIndexBuffer");
+    ();
+  };
+  let floatIndexAttributeLocation =
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      (-1);
+    } else {
+      0;
+      /*
+       getAttribLocation(gl, program, "a_VertexIDFloat");
+       */
+    };
+  if (floatIndexAttributeLocation != (-1)) {
+    enableVertexAttribArray(gl, floatIndexAttributeLocation);
+    let size = 1;
+    let normalize = Js.Boolean.to_js_boolean(false);
+    let stride = 0;
+    let offset = 0;
+    vertexAttribPointer(
+      gl,
+      floatIndexAttributeLocation,
+      size,
+      getFLOAT(gl),
+      normalize,
+      stride,
+      offset
+    );
+  } else {
+    ();
+      /* Js.log("warning: unused a_index"); */
+  };
   let positionAttributeLocation = getAttribLocation(gl, program, "a_position");
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   if (positionAttributeLocation != (-1)) {
@@ -117,7 +208,12 @@ let createAttributes = (gl, program, buffers) => {
     ();
       /* Js.log("warning: unused a_uv"); */
   };
-  vao;
+  {
+    vao,
+    position: positionAttributeLocation,
+    uv: uvAttributeLocation,
+    floatIndex: floatIndexAttributeLocation
+  };
 };
 
 let getUniformBufferAndLocation =
@@ -128,31 +224,55 @@ let getUniformBufferAndLocation =
     (uniformPerSceneBuffer, uniformPerSceneLocation);
   });
 
-let renderObject = (gl, program, buffers, textures, vao, uniformBlock, measure) => {
+let renderObject = (gl, program, buffers, textures, vao, uniforms, uniformBlock, measure) => {
   useProgram(gl, program);
-  bindVertexArray(gl, vao);
+  /* Enable attributes */
+  switch vao.vao {
+  | Some(vao) => bindVertexArray(gl, vao)
+  | None =>
+    if (vao.floatIndex != (-1)) {
+      /*
+       Js.log("enabling float index");
+       */
+      bindAttribLocation(gl, program, vao.floatIndex, "a_VertexIDFloat");
+      enableVertexAttribArray(gl, vao.floatIndex);
+    } else {
+      Js.log("no float index");
+    };
+    if (vao.position != (-1)) {
+      enableVertexAttribArray(gl, vao.position);
+    };
+    if (vao.uv != (-1)) {
+      enableVertexAttribArray(gl, vao.uv);
+    };
+    ();
+  };
   /* Upload uniforms */
-  let (uniformPerSceneBuffer, uniformPerSceneLocation) =
-    getUniformBufferAndLocation(gl, program);
-  /*
-   Js.log((uniformPerSceneBuffer, uniformPerSceneLocation));
-   */
-  let uniformBlockBindingIndex = 0;
-  uniformBlockBinding(
-    gl,
-    program,
-    uniformPerSceneLocation,
-    uniformBlockBindingIndex
-  );
-  bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
-  bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getDYNAMIC_DRAW(gl));
-  bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
-  bindBufferBase(
-    gl,
-    getUNIFORM_BUFFER(gl),
-    uniformBlockBindingIndex,
-    uniformPerSceneBuffer
-  );
+  if (WebGL2.getMY_VERSION(gl) == 2) {
+    let (uniformPerSceneBuffer, uniformPerSceneLocation) =
+      getUniformBufferAndLocation(gl, program);
+    /*
+     Js.log((uniformPerSceneBuffer, uniformPerSceneLocation));
+     */
+    let uniformBlockBindingIndex = 0;
+    uniformBlockBinding(
+      gl,
+      program,
+      uniformPerSceneLocation,
+      uniformBlockBindingIndex
+    );
+    bindBuffer(gl, getUNIFORM_BUFFER(gl), uniformPerSceneBuffer);
+    bufferData(gl, getUNIFORM_BUFFER(gl), uniformBlock, getDYNAMIC_DRAW(gl));
+    bindBuffer(gl, getUNIFORM_BUFFER(gl), Js.Nullable.null);
+    bindBufferBase(
+      gl,
+      getUNIFORM_BUFFER(gl),
+      uniformBlockBindingIndex,
+      uniformPerSceneBuffer
+    );
+  } else {
+    uniforms(program);
+  };
   /* Bind textures */
   let textureIndices = [
     getTEXTURE0(gl),
@@ -185,6 +305,9 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock, measure) 
   bindBuffer(gl, getARRAY_BUFFER(gl), buffers.positionBuffer);
   bindBuffer(gl, getELEMENT_ARRAY_BUFFER(gl), buffers.indexBuffer);
   /* Render */
+  /*
+   if (WebGL2.getMY_VERSION(gl) == 2) {
+   */
   measure(() =>
     drawElements(
       gl,
@@ -194,6 +317,20 @@ let renderObject = (gl, program, buffers, textures, vao, uniformBlock, measure) 
       buffers.offset
     )
   );
+  /*
+   } else {
+     measure(() =>
+       drawElements(
+         gl,
+         getTRIANGLES(gl),
+         buffers.count,
+         /* TODO: reshape array */
+         getUNSIGNED_SHORT(gl),
+         buffers.offset
+       )
+     );
+   };
+   */
 };
 
 type renderTargetT = {
@@ -204,15 +341,49 @@ type renderTargetT = {
 };
 
 let createRenderTarget = (gl, width, height) => {
-  /* TODO: memoize? */
+  /* TODO: memoize extensions? */
+  let internalFormat = ref(getRGBA32F(gl));
+  if (WebGL2.getMY_VERSION(gl) == 1) {
+    let c = WebGL2.getExtension(gl, "OES_texture_float");
+    switch (Js.Nullable.to_opt(c)) {
+    | Some(_) => internalFormat := WebGL2.getRGBA(gl)
+    | None =>
+      /*
+       Js.log("missing extension OES_texture_float, trying half_float instead");
+       */
+      let c = WebGL2.getExtension(gl, "OES_texture_half_float");
+      switch (Js.Nullable.to_opt(c)) {
+      | Some(c) => internalFormat := WebGL2.getRGBA16F_EXT(c)
+      | None =>
+        raise(
+          WebGL2Exception("missing extension OES_texture_float and half_foat")
+        )
+      };
+    };
+    ();
+  };
   let a = WebGL2.getExtension(gl, "OES_texture_float_linear");
   if (a == Js.Nullable.null) {
     raise(WebGL2Exception("missing extension OES_texture_float_linear"));
   };
   let b = WebGL2.getExtension(gl, "EXT_color_buffer_float");
-  if (b == Js.Nullable.null) {
-    raise(WebGL2Exception("missing extension EXT_color_buffer_float"));
-  };
+  let _ =
+    if (b == Js.Nullable.null) {
+      /*
+       Js.log(
+         "missing extension EXT_color_buffer_float, trying half_float instead"
+       );
+       */
+      let b = WebGL2.getExtension(gl, "EXT_color_buffer_half_float");
+      if (b == Js.Nullable.null) {
+        raise(
+          WebGL2Exception("missing extension EXT_color_buffer_half_float")
+        );
+      };
+      b;
+    } else {
+      b;
+    };
   /* create to render to */
   let targetTextureWidth = width;
   let targetTextureHeight = height;
@@ -220,16 +391,18 @@ let createRenderTarget = (gl, width, height) => {
   bindTexture(gl, getTEXTURE_2D(gl), targetTexture);
   /* define size and format of level 0 */
   let level = 0;
-  let internalFormat = getRGBA32F(gl);
   let border = 0;
   let format = getRGBA(gl);
   let ttype = getFLOAT(gl);
   let data = Js.Nullable.null;
+  /*
+   Js.log(("internalFormat", internalFormat));
+   */
   texImage2DdataFloat(
     gl,
     getTEXTURE_2D(gl),
     level,
-    internalFormat,
+    internalFormat^,
     targetTextureWidth,
     targetTextureHeight,
     border,

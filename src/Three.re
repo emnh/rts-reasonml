@@ -142,8 +142,9 @@ let protoQuad = createPlaneBufferGeometry(1.0, 1.0, 1, 1);
 
 let reInt32 = x => {
   /* TODO: optimize, don't expand all arrays to 32 bit */
-  let ar = Int32Array.createSize(Int32Array.length(x));
-  for (i in 0 to Int32Array.length(ar)) {
+  let len = Int32Array.length(x);
+  let ar = Int32Array.createSize(len);
+  for (i in 0 to len - 1) {
     Int32Array.set(ar, i, Int32Array.get(x, i));
   };
   ar;
