@@ -459,7 +459,9 @@ module Renderer = {
       let glposition = vec3var("glposition");
       glposition =@ position;
       glposition **. xz' += Terrain.getTiledOffset(objectId);
+      /*
       position =@ glposition;
+      */
       gl_Position
       =@ u_projectionMatrix
       * u_modelViewMatrix
