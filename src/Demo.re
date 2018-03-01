@@ -450,8 +450,8 @@ let doMeasure = doMeasure2;
 let runPipeline = (gl, queryExt, time) => {
   let sz = 128 * Terrain.getTileWidth();
   let sz =
-    if (sz < 1024) {
-      1024;
+    if (sz < 256) {
+      256;
     } else {
       sz;
     };

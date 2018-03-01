@@ -36,20 +36,21 @@ let uv = vec2arg("uv");
 let heightMapBody =
   body(() => {
     let value = floatvar("value");
+    let uv = vec3(uv |+| u_time / f(20.0));
     value
-    =@ ShaderAshima.snoise(uv * f(1.63))
+    =@ ShaderAshima3.snoise(uv * f(1.63))
     * f(0.1)
-    + ShaderAshima.snoise(uv * f(10.0))
+    + ShaderAshima3.snoise(uv * f(10.0))
     * f(0.002)
-    + ShaderAshima.snoise(uv * f(20.0))
+    + ShaderAshima3.snoise(uv * f(20.0))
     * f(0.0005)
-    + ShaderAshima.snoise(uv * f(40.0))
+    + ShaderAshima3.snoise(uv * f(40.0))
     * f(0.00025)
     /*
      + ShaderAshima.snoise(uv * f(40.0))
      * f(0.002)
      * */
-    + ShaderAshima.snoise(uv * f(20.0))
+    + ShaderAshima3.snoise(uv * f(20.0))
     * f(0.01);
     return(value * f(2.0));
   });
@@ -135,7 +136,8 @@ let getUniforms = texture => [
 let getUniforms2 = () => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
-  r(u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|])
+  r(u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|]),
+  r(u_time, arg => [|arg.time|])
 ];
 
 let makeProgramSource = texture => {

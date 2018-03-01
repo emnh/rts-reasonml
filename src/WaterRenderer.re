@@ -920,7 +920,7 @@ module Water = {
        info **. g' *= f(0.9995);
        */
       /* move the vertex along the velocity */
-      info **. r' += info **. g' * f(1.0);
+      info **. r' += info **. g' * f(0.1);
       gl_FragColor =@ info;
     });
   /* XXX: debug */
