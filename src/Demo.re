@@ -94,11 +94,19 @@ let setupDocument = () => {
   Document.setOverflow(Document.getStyle(Document.body), "hidden");
   let canvas = Document.createElement("canvas");
   let _ = Document.appendChild(canvas);
-  let (gl, version) =
-    switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl2"))) {
+  Js.log(Document.userAgent);
+  let (gl, version) = {
+    let (ngl, tryversion) =
+      if (MyString.indexOf(Document.userAgent, "Chromium/62") != (-1)
+          || MyString.indexOf(Document.userAgent, "Windows") == (-1)) {
+        (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl")), 1);
+      } else {
+        (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl2")), 2);
+      };
+    switch ngl {
     | Some(gl) =>
       Memoize.setMemoizeId(gl);
-      (gl, 2);
+      (gl, tryversion);
     | None =>
       switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl"))) {
       | Some(gl) =>
@@ -109,6 +117,30 @@ let setupDocument = () => {
         raise(NoGL);
       }
     };
+  };
+  let showLink = () => {
+    let elem = Document.createElement("div");
+    let _ = Document.appendChild(elem);
+    let style = Document.getStyle(elem);
+    Document.setPosition(style, "fixed");
+    Document.setTop(style, "80px");
+    Document.setLeft(style, "0px");
+    Document.setInnerHTML(
+      elem,
+      "<a href=\"https://github.com/emnh/rts-reasonml\">GitHub</<a>"
+    );
+  };
+  let showVersion = () => {
+    let elem = Document.createElement("div");
+    let _ = Document.appendChild(elem);
+    let style = Document.getStyle(elem);
+    Document.setPosition(style, "fixed");
+    Document.setTop(style, "100px");
+    Document.setLeft(style, "0px");
+    Document.setInnerHTML(elem, "Using WebGL ver: " ++ string_of_int(version));
+  };
+  showLink();
+  showVersion();
   WebGL2.setMY_VERSION(gl, version);
   GLSL.webGLVersion := version;
   let setCanvasSize = (_) => {
@@ -434,8 +466,8 @@ let reportElement =
     let _ = Document.appendChild(elem);
     let style = Document.getStyle(elem);
     Document.setPosition(style, "fixed");
-    Document.setTop(style, "0px");
-    Document.setLeft(style, "100px");
+    Document.setTop(style, "140px");
+    Document.setLeft(style, "0");
     elem;
   });
 
@@ -449,12 +481,12 @@ let doMeasure2 = (gl, queryExt, name) =>
       switch (readMeasure()) {
       | Some(nanoseconds) =>
         let p = Document.createElement("p");
-        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds));
+        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds) ++ "ms");
         let _ = Document.appendChild2(rep, p);
         measure;
       | None =>
         let p = Document.createElement("p");
-        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()));
+        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()) ++ "ms");
         let _ = Document.appendChild2(rep, p);
         defaultMeasure;
       };

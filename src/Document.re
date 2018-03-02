@@ -16,6 +16,8 @@ let body: element = [%bs.raw "window.document.body"];
 
 [@bs.set] external debug : (element, 'a) => unit = "debug";
 
+[@bs.val] external userAgent : string = "navigator.userAgent";
+
 [@bs.val]
 external createElement : string => element = "document.createElement";
 

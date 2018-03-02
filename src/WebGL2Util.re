@@ -387,6 +387,16 @@ type renderTargetT = {
   texture: textureT
 };
 
+let showWarning = Memoize.partialMemoize1((msg) => {
+  let elem = Document.createElement("div");
+  let _ = Document.appendChild(elem);
+  let style = Document.getStyle(elem);
+  Document.setPosition(style, "fixed");
+  Document.setTop(style, "120px");
+  Document.setLeft(style, "0px");
+  Document.setInnerHTML(elem, msg);
+});
+
 let createRenderTarget = (gl, width, height) => {
   /* TODO: memoize extensions? */
   let internalFormat = ref(getRGBA32F(gl));
@@ -413,7 +423,14 @@ let createRenderTarget = (gl, width, height) => {
   if (a == Js.Nullable.null) {
     raise(WebGL2Exception("missing extension OES_texture_float_linear"));
   };
-  let b = WebGL2.getExtension(gl, "EXT_color_buffer_float");
+  let colorBufferExtName =
+    if (WebGL2.getMY_VERSION(gl) == 2) {
+      "EXT_color_buffer_float";
+    } else {
+      "WEBGL_color_buffer_float";
+    };
+  let b = WebGL2.getExtension(gl, colorBufferExtName);
+  let ttypeRef = ref(getFLOAT(gl));
   let _ =
     if (b == Js.Nullable.null) {
       /*
@@ -423,9 +440,13 @@ let createRenderTarget = (gl, width, height) => {
        */
       let b = WebGL2.getExtension(gl, "EXT_color_buffer_half_float");
       if (b == Js.Nullable.null) {
+        ttypeRef := getUNSIGNED_BYTE(gl);
+        showWarning("Warning: No color buffer floats. Water will look bad. Try Chrome >= 64.");
+        /*
         raise(
           WebGL2Exception("missing extension EXT_color_buffer_half_float")
         );
+        */
       };
       b;
     } else {
@@ -440,7 +461,7 @@ let createRenderTarget = (gl, width, height) => {
   let level = 0;
   let border = 0;
   let format = getRGBA(gl);
-  let ttype = getFLOAT(gl);
+  let ttype = ttypeRef^;
   let data = Js.Nullable.null;
   /*
    Js.log(("internalFormat", internalFormat));

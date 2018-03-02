@@ -1,5 +1,7 @@
 [@bs.send] external split : (string, string) => array(string) = "";
 
+[@bs.send] external indexOf : (string, string) => int = "";
+
 [@bs.send] external replace : (string, string, string) => string = "";
 
 [@bs.send] external replaceRe : (string, Js.Re.t, string) => string = "replace";
