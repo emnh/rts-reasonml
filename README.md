@@ -13,3 +13,7 @@ npm start
 ```
 
 Go to http://localhost:8080/index .
+
+# Resources
+ - https://opengameart.org/content/roguelike-tiles-large-collection
+ - https://www.npmjs.com/package/hqx
