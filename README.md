@@ -8,7 +8,6 @@ sudo npm install -g budo
 npm install bs-platform
 npm install
 git submodule update --init
-npm run
 npm start
 ```
 
