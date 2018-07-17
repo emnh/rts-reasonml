@@ -38,11 +38,13 @@ let getShaderExampleProgram =
   Memoize.partialMemoize2((fg, bg) => ShaderExample.makeProgramSource(fg, bg));
 
 let getWaterProgram =
-  Memoize.partialMemoize1(tref => WaterRenderer.Water.makeProgramSource(tref));
+  Memoize.partialMemoize2((tref, href) =>
+    WaterRenderer.Water.makeProgramSource(tref, href)
+  );
 
 let getWaterNormalProgram =
-  Memoize.partialMemoize1(tref =>
-    WaterRenderer.Water.makeNormalProgramSource(tref)
+  Memoize.partialMemoize2((tref, href) =>
+    WaterRenderer.Water.makeNormalProgramSource(tref, href)
   );
 
 let getCopyProgram =
@@ -481,12 +483,18 @@ let doMeasure2 = (gl, queryExt, name) =>
       switch (readMeasure()) {
       | Some(nanoseconds) =>
         let p = Document.createElement("p");
-        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(nanoseconds) ++ "ms");
+        Document.setInnerHTML(
+          p,
+          name ++ ":" ++ string_of_int(nanoseconds) ++ "ms"
+        );
         let _ = Document.appendChild2(rep, p);
         measure;
       | None =>
         let p = Document.createElement("p");
-        Document.setInnerHTML(p, name ++ ":" ++ string_of_int(getLast()) ++ "ms");
+        Document.setInnerHTML(
+          p,
+          name ++ ":" ++ string_of_int(getLast()) ++ "ms"
+        );
         let _ = Document.appendChild2(rep, p);
         defaultMeasure;
       };
@@ -564,7 +572,7 @@ let runPipeline = (gl, queryExt, time) => {
     gl,
     time,
     Some(renderTarget),
-    getWaterProgram(textureRef),
+    getWaterProgram(textureRef, heightMapRef),
     quad,
     doMeasure(gl, queryExt, "Waves"),
     1
@@ -576,7 +584,7 @@ let runPipeline = (gl, queryExt, time) => {
     gl,
     time,
     Some(renderTarget),
-    getWaterProgram(textureRef),
+    getWaterProgram(textureRef, heightMapRef),
     quad,
     doMeasure(gl, queryExt, "Waves2"),
     1
@@ -588,7 +596,7 @@ let runPipeline = (gl, queryExt, time) => {
     gl,
     time,
     Some(renderTarget),
-    getWaterNormalProgram(textureRef),
+    getWaterNormalProgram(textureRef, heightMapRef),
     quad,
     doMeasure(gl, queryExt, "Normals"),
     1
@@ -653,24 +661,24 @@ let runPipeline = (gl, queryExt, time) => {
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",
-    count
+    count * 0
   );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */
   /*
-   runFrameBuffer(
-     gl,
-     time,
-     None,
-     getCopyProgram(terrainRenderRef),
-     quad,
-     doMeasure(gl, queryExt, "Copy"),
-     1
-   );
+    runFrameBuffer(
+      gl,
+      time,
+      None,
+      getCopyProgram(terrainRenderRef),
+      quad,
+      doMeasure(gl, queryExt, "Copy"),
+      1
+    );
    */
   /* runFrameBuffer(gl, time, None, getCopyProgram(textureRef)); */
-  /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy")); */
+  /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy"), 1); */
 };
 
 let runDemo = (gl, time) => {

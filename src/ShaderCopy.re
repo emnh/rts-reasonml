@@ -65,7 +65,7 @@ let heightMapBody2 =
     let value = floatvar("value");
     value
     =@ ShaderAshima.snoise(uv * f(1.63))
-    * f(0.1)
+    * f(0.5)
     + ShaderAshima.snoise(uv * f(10.0))
     * f(0.002)
     + ShaderAshima.snoise(uv * f(20.0))

@@ -197,7 +197,7 @@ let createQuadGeometry = () => {
 
 let createTreesGeometry = () => {
   let box = protoQuad;
-  let count = 20000 / Terrain.getTileWidth();
+  let count = 1000 / Terrain.getTileWidth();
   let duplicateF32 = ar => {
     let len = Float32Array.length(ar);
     let newar = Float32Array.createSize(len * count);
