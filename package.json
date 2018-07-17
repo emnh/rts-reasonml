@@ -30,6 +30,7 @@
     "glsl-transpiler": "^1.5.7",
     "glslify": "^6.1.0",
     "glslx": "^0.1.26",
+    "hqx": "^1.0.2",
     "seedrandom": "^2.4.3",
     "stats.js": "^0.17.0",
     "three": "^0.89.0"
