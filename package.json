@@ -25,6 +25,7 @@
   "dependencies": {
     "@types/three": "^0.89.6",
     "@types/webgl2": "0.0.2",
+    "ccapture.js": "^1.1.0",
     "dat.gui": "^0.7.1",
     "gl-reset": "^1.0.0",
     "glsl-transpiler": "^1.5.7",
