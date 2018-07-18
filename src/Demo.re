@@ -661,7 +661,7 @@ let runPipeline = (gl, queryExt, time) => {
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",
-    count * 0
+    count * 1
   );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));

@@ -23,6 +23,7 @@ let vertexShader =
      vertexId =@ gl_VertexID;
       */
     vertexId =@ int2float(idiv(gl_VertexId, i(4))) / f(100000.0);
+    /*
     let tileCountX = f(32.0);
     let tileCountY = f(30.0);
     let tileCount = f(931.0);
@@ -38,6 +39,8 @@ let vertexShader =
          f(0.0),
          f(1.0)
        );
+       */
+    v_uv =@ f(1.0) - a_uv;
     /*
      vertexId =@ floor(int2float(gl_VertexId) / f(4.0) + f(0.5)) / f(100000.0);
      vertexId =@ floor(int2float(idiv(gl_VertexId, i(4))) + f(0.5)) / f(100000.0);
@@ -54,7 +57,9 @@ let vertexShader =
       f(0.01)
       + f(0.02)
       * (ShaderLib.rand(vec22f(rand1, rand2)) - f(0.5) + f(1.0));
-    let quadMul = quadMul + f(0.1);
+    /*
+    let quadMul = quadMul + f(0.01);
+    */
     let quadMul = quadMul * f(float_of_int(Terrain.getTileWidth()));
     let treeHeightMul = f(2.0);
     position =@ gl_Vertex **. xyz' * quadMul;
@@ -93,7 +98,7 @@ let vertexShader =
       && abs(xoffset) < f(0.9)
       && abs(zoffset) < f(0.9)
       && zoffset < f(0.5),
-      () => position **. y' += (yoffset + quadMinY - f(0.1)),
+      () => position **. y' += (yoffset + quadMinY - f(0.0)),
       () => position **. y' =@ f(1000.0)
     );
     v_position_uv =@ uv;

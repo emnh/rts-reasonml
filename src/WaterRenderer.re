@@ -610,21 +610,17 @@ module Renderer = {
           let h = f(1.0) - f(36.0) * (position2 **. y') + t;
           let s = f(1.0);
           let v = f(1.0);
-          let abovewaterColor =
-            (
-              f(0.0)
-              * abovewaterColor
-              + f(1.0)
-              * abovewaterColor
-              * ShaderLib.hsv2rgb(vec33f(h, s, v))
-            )
+          let abovewaterColor1 =
+            vec33f(f(1.0), f(164.0) / f(256.0), f(1.0))
+            * f(1.5)
+            * ShaderLib.hsv2rgb(vec33f(h, s, v))
             * pow(h1, f(10.1))
             * f(150.0)
             + f(0.0)
             * vec33f(f(-0.0), f(0.0), h * f(1.0))
             - f(0.1)
             / h1;
-          let abovewaterColor1 = abovewaterColor * pow(h1, f(2.0));
+          let abovewaterColor = abovewaterColor * pow(h1, f(2.0));
           reflectedColor
           =@ getSurfaceRayColor(position2, reflectedRay, abovewaterColor);
           refractedColor
@@ -966,16 +962,18 @@ module Water = {
       );
   let delta = vec2uniform("delta");
   let pos = vec2arg("pos");
-  let isWater2 = (x, y) => texture(heightMap, x) **. r' < y * waveHeight;
+  let isWater2 = (x, y) => texture(heightMap, x) **. r' <= y * abs(waveHeight);
   let isWater = x => isWater2(x, texture(water, x) **. r');
   let getWaterBody =
     body(() => {
-      let minabs2 = (x, y) => ternary(x < abs(y), x, y);
-      let minabs = (x, y) => ternary(x > f(0.0), minabs2(x, y), f(0.0));
+      let thisHeight = texture(water, coord) **. r';
+      let zero = f(0.0);
+      let minabs2 = (w, whd) => ternary(w < abs(whd), w, whd);
+      let minabs = (w, whd) => ternary(w > f(0.0), minabs2(w, whd), zero);
       /* Positive contribution if whd > 0, else negative */
-      let minabs3 = (tw, hw, whd) =>
+      let minabs3 = (tw, hw, whd, wdir) =>
         ternary(
-          whd > f(0.0),
+          wdir >= f(0.0),
           minabs(tw, whd),
           f(0.0) - minabs(hw, f(0.0) - whd)
         );
@@ -985,6 +983,11 @@ module Water = {
         texture(water, coord) **. r' - texture(heightMap, coord) **. r';
       let waterHeightDiff =
         texture(water, pos) **. r' - texture(water, coord) **. r';
+      let waterDir =
+        max(texture(water, pos) **. r', texture(heightMap, pos) **. r')
+        - max(texture(water, coord) **. r', texture(heightMap, coord) **. r');
+      let waterAverage =
+        thisHeight + (texture(water, pos) **. r' - thisHeight) / f(2.0);
       let getWaterHeight2 = x =>
         ternary(
           x
@@ -994,9 +997,15 @@ module Water = {
           && x
           **. x' < f(1.0)
           && x
-          **. y' < f(1.0),
-          f(0.25) * minabs3(totalWater, homeWater, waterHeightDiff),
-          f(0.0)
+          **. y' < f(1.0)
+          && (isWater(x) || isWater(coord)),
+          f(0.25)
+          * (
+            f(1.0)
+            * thisHeight
+            + minabs3(totalWater, homeWater, waterHeightDiff, waterDir)
+          ),
+          zero
         );
       let contribution = floatvar("contribution");
       contribution =@ getWaterHeight2(pos);
@@ -1029,9 +1038,14 @@ module Water = {
              f(0.0)
            )*/
         * f(0.00005)
+        * f(1.0)
         * ShaderAshima3.snoise(
-            vec3(x * f(40.0) |+| info **. r' + u_time / f(1.0))
+            vec3(x * f(20.0) |+| info **. r' + u_time / f(1.0))
           );
+      let bigWaves = x =>
+        f(0.001) * ShaderAshima3.snoise(
+          vec3(x * f(2.0) |+| info **. r' + u_time / f(10.0))
+        );
       let getWaterHeight = x =>
         ternary(
           x
@@ -1042,7 +1056,8 @@ module Water = {
           **. x' < f(1.0)
           && x
           **. y' < f(1.0),
-          ternary(isWater(x), texture(water, x) **. r', f(0.0)),
+          /* ternary(isWater(x), texture(water, x) **. r', f(0.0)), */
+          texture(water, x) **. r',
           f(0.0)
         );
       /*
@@ -1063,16 +1078,33 @@ module Water = {
       /*
        info **. g' += (average - thisHeight) * f(2.0);
        */
-      average
-      =@ getWater(coord - dx)
-      + getWater(coord - dy)
-      + getWater(coord + dx)
-      + getWater(coord + dy);
-      let delta = info **. g' + average;
+      /*
+       average
+       =@ (
+         average
+         + getWater(coord - dx)
+         + getWater(coord - dy)
+         + getWater(coord + dx)
+         + getWater(coord + dy)
+       )
+       / f(2.0);
+       */
+      /*
+       let minabs = (x, y) => ternary(abs(x) < abs(y) || x * y <= f(0.0), x, y);
+       let delta = minabs(info **. g', average) + wind(coord) * f(0.0);
+       */
+      /*
+       let transfer = info **. g' + average;
+       */
+      let transfer = floatvar("transfer");
+      /*
+       average += wind(coord);
+       */
+      transfer =@ info **. g' + (average - thisHeight) * f(2.0);
       /*
        info **. g' += delta;
+       info **. g' =@ delta;
        */
-      info **. g' =@ delta;
       /*
        + wind(coord));
        */
@@ -1080,31 +1112,26 @@ module Water = {
       /*
        info **. g' *= f(0.995);
        info **. g' *= f(0.9995);
-       ifstmt(
-         ! isWater(coord),
-         () => {
-           info **. g' *= f(0.0);
-           info **. r' *= f(0.0);
-         }
-       );
         */
       /* move the vertex along the velocity */
       let speed = waveSpeed;
       let speed1 = f(0.05) * ((sin(u_time) + f(1.0)) / f(2.0) + f(0.5));
       let speed2 = clamp(pow(length(coord - f(0.5)), f(1.0)), f(0.0), f(1.0));
       let speed3 = clamp(info **. r', f(0.0), f(1.0));
-      let rain = f(0.001);
-      let condensation = f(0.97);
+      let rain = f(0.001) - f(0.001);
+      let condensation = f(0.95) + f(0.05);
+      let oldHeight = floatvar("oldHeight");
+      oldHeight =@ info **. r';
       info
       **. r'
-      =@ (
-        max(texture(heightMap, coord) **. r', info **. r')
-        + delta
-        * speed
-        + rain
-        + wind(coord)
-      )
-      * condensation;
+      =@ max(texture(heightMap, coord) **. r', info **. r')
+      + transfer
+      * speed
+      + bigWaves(coord);
+      info **. g' =@ transfer;
+      info **. g' *= f(0.995);
+      info **. g' =@ clamp(info **. g', f(-5.0), f(5.0));
+      /* info **. r' - oldHeight; */
       /*
        ifstmt(
          ! isWater2(coord, info **. r'),
@@ -1113,7 +1140,7 @@ module Water = {
            info **. r' *= f(0.0);
          }
        );
-       */
+        */
       /*
        info **. r' += wind(coord));
        */
@@ -1132,7 +1159,7 @@ module Water = {
     body(() => {
       /* get vertex info */
       let info = vec4var("info");
-      let scale = f(0.0) - waveHeight;
+      let scale = abs(waveHeight);
       info =@ texture(water, coord) * scale;
       /* update the normal */
       let dx = vec3var("dx");

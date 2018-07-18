@@ -19,9 +19,9 @@ let vertexShader =
 let fragmentShader =
   body(() => {
     gl_FragColor =@ texture(input, gl_FragCoord **. xy' / u_resolution);
-    /* XXX: for debug 
-      gl_FragColor **. gba' =@ vec33f(f(0.0), f(0.0), f(1.0));
-     */
+    /* XXX: for debug
+        gl_FragColor **. gba' =@ vec33f(f(0.0), f(0.0), f(1.0));
+       */
     gl_FragColor **. a' =@ f(1.0);
   });
 
@@ -37,22 +37,27 @@ let heightMapBody =
   body(() => {
     let value = floatvar("value");
     /*
-    let uv = vec3(uv |+| u_time / f(20.0));
-    */
+     let uv = vec3(uv |+| u_time / f(20.0));
+     */
+    let time = f(1.0);
+    /*
+     let ns = x => ShaderAshima3.snoise(vec3(x |+| time));
+     */
+    let ns = x => ShaderAshima.snoise(x);
     value
-    =@ ShaderAshima.snoise(uv * f(1.63))
+    =@ ns(uv * f(1.63))
     * f(0.1)
-    + ShaderAshima.snoise(uv * f(10.0))
+    + ns(uv * f(10.0))
     * f(0.002)
-    + ShaderAshima.snoise(uv * f(20.0))
+    + ns(uv * f(20.0))
     * f(0.0005)
-    + ShaderAshima.snoise(uv * f(40.0))
+    + ns(uv * f(40.0))
     * f(0.00025)
     /*
      + ShaderAshima.snoise(uv * f(40.0))
      * f(0.002)
      * */
-    + ShaderAshima.snoise(uv * f(20.0))
+    + ns(uv * f(20.0))
     * f(0.01);
     return(value * f(2.0));
   });
@@ -65,7 +70,7 @@ let heightMapBody2 =
     let value = floatvar("value");
     value
     =@ ShaderAshima.snoise(uv * f(1.63))
-    * f(0.5)
+    * f(0.1)
     + ShaderAshima.snoise(uv * f(10.0))
     * f(0.002)
     + ShaderAshima.snoise(uv * f(20.0))
@@ -138,7 +143,9 @@ let getUniforms = texture => [
 let getUniforms2 = () => [
   r(u_modelViewMatrix, arg => arg.modelViewMatrix),
   r(u_projectionMatrix, arg => arg.projectionMatrix),
-  r(u_resolution, arg => [|float_of_int(arg.width), float_of_int(arg.height)|]),
+  r(u_resolution, arg =>
+    [|float_of_int(arg.width), float_of_int(arg.height)|]
+  ),
   r(u_time, arg => [|arg.time|])
 ];
 
