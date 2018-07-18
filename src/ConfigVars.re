@@ -24,7 +24,7 @@ let rotationSpeed =
 
 let count = Config.intConfigVar(["object", "count"], 1, ());
 
-let size = Config.floatConfigVar(["object", "size"], 1.0, ());
+let size = Config.floatConfigVar(["object", "size"], 3.0, ());
 
 let cameraRotationX =
   Config.floatConfigVar(["camera", "rotation", "x"], 0.0, ());
@@ -37,17 +37,17 @@ let cameraRotationZ =
 
 let cameraX = Config.floatConfigVar(["camera", "position", "x"], 0.0, ());
 
-let cameraY = Config.floatConfigVar(["camera", "position", "y"], 2.0, ());
+let cameraY = Config.floatConfigVar(["camera", "position", "y"], 4.0, ());
 
-let cameraZ = Config.floatConfigVar(["camera", "position", "z"], -2.0, ());
+let cameraZ = Config.floatConfigVar(["camera", "position", "z"], -6.0, ());
 
-let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.1, ());
+let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.5, ());
 
 let waveSpeed = Config.floatConfigVar(["water", "waveSpeed"], 0.005, ());
 
 let poolHeight = Config.floatConfigVar(["water", "poolHeight"], 1.5, ());
 
-let causticScale = Config.floatConfigVar(["water", "causticScale"], 6.0, ());
+let causticScale = Config.floatConfigVar(["water", "causticScale"], 2.0, ());
 
 let waterColor =
   Config.colorConfigVar(["water", "color"], (256 / 4, 256, 256, 1.0), ());
@@ -66,7 +66,7 @@ let lightZ = Config.floatConfigVar(["light", "position", "z"], 0.0, ());
 
 let eyeX = Config.floatConfigVar(["camera", "eye", "x"], 0.0, ());
 
-let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 3.5, ());
+let eyeY = Config.floatConfigVar(["camera", "eye", "y"], 1.0, ());
 
 let eyeZ = Config.floatConfigVar(["camera", "eye", "z"], 0.0, ());
 

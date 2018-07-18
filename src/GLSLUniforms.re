@@ -154,6 +154,7 @@ let computeUniformBlock =
     (
       gl,
       time,
+      tick,
       width,
       height,
       eye,
@@ -167,7 +168,7 @@ let computeUniformBlock =
     gl,
     time,
     eye,
-    tick: 0.0,
+    tick,
     width,
     height,
     modelMatrix,

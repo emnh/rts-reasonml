@@ -24,6 +24,8 @@ let heightMultiplier = Terrain.heightMultiplier;
 
 let u_time = floatuniform("u_time");
 
+let u_tick = floatuniform("u_tick");
+
 let waveHeight = floatuniform("u_waterOffset");
 
 let waveSpeed = floatuniform("u_waterSpeed");
@@ -1163,10 +1165,10 @@ module Water = {
       **. r'
       =@ max(texture(heightMap, coord) **. r', info **. r')
       + transfer
-      * speed
+      * speed * u_tick
       + bigWaves(coord);
       info **. g' =@ transfer;
-      info **. g' *= f(0.995);
+      info **. g' *= pow(f(0.995), u_tick);
       info **. g' =@ clamp(info **. g', f(-5.0), f(5.0));
       /* info **. r' - oldHeight; */
       /*
@@ -1238,6 +1240,7 @@ module Water = {
       [|1.0 /. float_of_int(arg.width), 1.0 /. float_of_int(arg.height)|]
     ),
     r(u_time, arg => [|arg.time|]),
+    r(u_tick, arg => [|arg.tick|]),
     r(waveHeight, (_) => [|ConfigVars.waveHeight#get()|]),
     r(waveSpeed, (_) => [|ConfigVars.waveSpeed#get()|]),
     registerTextureUniform(water, arg =>

@@ -275,6 +275,8 @@ external checkFramebufferStatus : (glT, framebufferTypeT) => int =
 [@bs.send]
 external attachShader : (glT, programT, shaderT) => unit = "attachShader";
 
+[@bs.send] external getError : (glT) => unit = "getError";
+
 [@bs.send] external linkProgram : (glT, programT) => unit = "linkProgram";
 
 [@bs.send] external useProgram : (glT, programT) => unit = "useProgram";

@@ -119,7 +119,7 @@ type viewTransformT = {
   projectionMatrix: array(float)
 };
 
-let protoBox = createBoxBufferGeometry(1.0, 1.0, 1.0, 1, 1, 1);
+let protoBox = createBoxBufferGeometry(1.0, 1.0, 1.0, 128, 128, 128);
 
 let protoBoxMaterial = createBasicMaterial();
 

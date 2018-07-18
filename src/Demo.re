@@ -213,6 +213,7 @@ let renderObj =
       width,
       height,
       time,
+      tick,
       uniforms,
       twist,
       measure,
@@ -225,6 +226,7 @@ let renderObj =
     GLSLUniforms.computeUniformBlock(
       gl,
       time,
+      tick,
       width,
       height,
       cameraPosition,
@@ -271,6 +273,7 @@ let runFrameBuffer =
     (
       gl,
       time,
+      tick,
       renderTarget: option(WebGL2Util.renderTargetT),
       programSource,
       geoType,
@@ -331,6 +334,7 @@ let runFrameBuffer =
         width,
         height,
         time,
+        tick,
         uniforms,
         twist,
         measure,
@@ -347,7 +351,7 @@ let runFrameBuffer =
   };
 };
 
-let run = (gl, time, uAndProgram, measure, geometryType, count) => {
+let run = (gl, time, tick, uAndProgram, measure, geometryType, count) => {
   /*
    let geometryType = ConfigVars.geometryType#get();
    */
@@ -408,6 +412,7 @@ let run = (gl, time, uAndProgram, measure, geometryType, count) => {
         width,
         height,
         time *. (1.0 +. iseed /. float_of_int(count)) +. iseed,
+        tick,
         uniforms,
         twist,
         measure,
@@ -473,7 +478,7 @@ let reportElement =
     elem;
   });
 
-let doMeasure2 = (gl, queryExt, name) =>
+let doMeasure2 = (gl, queryExt, name) => {
   switch queryExt {
   | Some(queryExt) =>
     let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
@@ -501,13 +506,14 @@ let doMeasure2 = (gl, queryExt, name) =>
     measure;
   | None => (f => f())
   };
+};
 
 /*
  let doMeasure = (_, _, _, f) => f();
  */
 let doMeasure = doMeasure2;
 
-let runPipeline = (gl, queryExt, time) => {
+let runPipeline = (gl, queryExt, time, tick) => {
   let sz = 128 * Terrain.getTileWidth();
   let sz =
     if (sz < 256) {
@@ -541,6 +547,7 @@ let runPipeline = (gl, queryExt, time) => {
     runFrameBuffer(
       gl,
       time,
+      tick,
       Some(heightMapRT),
       ShaderCopy.makeRandomProgramSource(),
       quad,
@@ -557,6 +564,7 @@ let runPipeline = (gl, queryExt, time) => {
     runFrameBuffer(
       gl,
       time,
+      tick,
       Some(renderTarget),
       ShaderCopy.makeRandomProgramSource2(),
       quad,
@@ -571,6 +579,7 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
+    tick,
     Some(renderTarget),
     getWaterProgram(textureRef, heightMapRef),
     quad,
@@ -583,6 +592,7 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
+    tick,
     Some(renderTarget),
     getWaterProgram(textureRef, heightMapRef),
     quad,
@@ -595,6 +605,7 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
+    tick,
     Some(renderTarget),
     getWaterNormalProgram(textureRef, heightMapRef),
     quad,
@@ -607,6 +618,7 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
+    tick,
     Some(renderTargetCaustics),
     WaterRenderer.Renderer.makeCausticsProgramSource(textureRef),
     "Plane",
@@ -618,6 +630,7 @@ let runPipeline = (gl, queryExt, time) => {
   runFrameBuffer(
     gl,
     time,
+    tick,
     Some(renderTargetTerrain),
     ShaderTerrain.makeProgramSource(heightMapRef),
     "BigPlane",
@@ -632,6 +645,7 @@ let runPipeline = (gl, queryExt, time) => {
   run(
     gl,
     time,
+    tick,
     WaterRenderer.Renderer.makeProgramSource(
       textureRef,
       causticsRef,
@@ -658,9 +672,10 @@ let runPipeline = (gl, queryExt, time) => {
   run(
     gl,
     time,
+    tick,
     /*
-    ShaderTrees.makeProgramSource(textureRef),
-    */
+     ShaderTrees.makeProgramSource(textureRef),
+     */
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",
@@ -684,18 +699,22 @@ let runPipeline = (gl, queryExt, time) => {
   /* runFrameBuffer(gl, time, None, getCopyProgram(causticsRef), quad, doMeasure(gl, queryExt, "Copy"), 1); */
 };
 
-let runDemo = (gl, time) => {
+let runDemo = (gl, time, tick) => {
   let fg = ConfigVars.foregroundColor#get();
   let bg = ConfigVars.backgroundColor#get();
   /* run(gl, time, getWaterRendererProgram(ref(None))); */
-  run(gl, time, getShaderExampleProgram(fg, bg));
+  run(gl, time, tick, getShaderExampleProgram(fg, bg));
 };
+
+let oldTime = ref(0.0);
 
 let rec renderLoop =
         (reset, queryExt, stats, startTime, canvas, gl, startIteration) => {
   let t = Date.now() -. startTime;
+  let tick = (t -. oldTime^) *. 60.0 /. 1000.0;
+  oldTime := t;
   Stats.beginStats(stats);
-  runPipeline(gl, queryExt, t /. 1000.0);
+  runPipeline(gl, queryExt, t /. 1000.0, tick);
   Stats.endStats(stats);
   /*
    runDemo(gl, t /. 1000.0);
