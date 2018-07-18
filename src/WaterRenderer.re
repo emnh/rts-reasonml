@@ -606,21 +606,56 @@ module Renderer = {
              );*/
           let t =
             ShaderAshima3.snoise(vec3(position2 **. xz' |+| u_time / f(5.0)));
-          let h1 = f(1.0) - f(8.0) * (position2 **. y');
-          let h = f(1.0) - f(36.0) * (position2 **. y') + t;
+          /*
+           let ypos = f(-0.001) + fmod(position2 **. y', f(0.001));
+           */
+          /*
+           let ypos = f(-0.5) * fmod(position2 **. y', f(0.5)) * waveHeight;
+           */
+          let ypos = position2 **. y';
+          let sinc = x => (sin(x) + f(1.0)) / f(2.0);
+          let ypos2 = sinc(position2 **. y' * f(0.3) + f(0.3));
+          let h11 = f(1.0) - f(8.0) * ypos;
+          let h = sinc(f(1.0) - f(36.0) * ypos + t);
+          let h1 = ypos2;
+          let h = ypos2 + sinc(t);
           let s = f(1.0);
           let v = f(1.0);
           let abovewaterColor1 =
-            vec33f(f(1.0), f(164.0) / f(256.0), f(1.0))
-            * f(1.5)
-            * ShaderLib.hsv2rgb(vec33f(h, s, v))
-            * pow(h1, f(10.1))
-            * f(150.0)
-            + f(0.0)
-            * vec33f(f(-0.0), f(0.0), h * f(1.0))
-            - f(0.1)
-            / h1;
-          let abovewaterColor = abovewaterColor * pow(h1, f(2.0));
+            ternary(
+              h1 >= f(0.0) || h1 <= f(1.0),
+              (
+                vec33f(f(1.0), f(164.0) / f(256.0), f(1.0))
+                * f(1.5)
+                * ShaderLib.hsv2rgb(vec33f(h, s, v))
+                * pow(h1, f(10.1))
+                * f(150.0)
+                + f(0.0)
+                * vec33f(f(-0.0), f(0.0), h * f(1.0))
+                - f(0.1)
+                / h1
+              )
+              * pow(h1, f(2.0)),
+              abovewaterColor
+            );
+          let abovewaterColor2 = abovewaterColor * pow(h, f(4.0) - f(2.0) * length(position2));
+          let abovewaterColor =
+            mix(
+              abovewaterColor1,
+              abovewaterColor2,
+              clamp(f(4.0) * sin(f(0.5) * u_time + length(position2)), f(0.0), f(1.0))
+            );
+          /*
+           ternary(
+             length(position2) < f(0.5),
+             abovewaterColor1,
+             mix(
+               abovewaterColor1,
+               abovewaterColor2,
+               (length(position2) - f(0.5)) / f(0.5) * f(1.0)
+             )
+           );
+           */
           reflectedColor
           =@ getSurfaceRayColor(position2, reflectedRay, abovewaterColor);
           refractedColor
@@ -1001,7 +1036,7 @@ module Water = {
           && (isWater(x) || isWater(coord)),
           f(0.25)
           * (
-            f(1.0)
+            f(0.0)
             * thisHeight
             + minabs3(totalWater, homeWater, waterHeightDiff, waterDir)
           ),
@@ -1043,8 +1078,12 @@ module Water = {
             vec3(x * f(20.0) |+| info **. r' + u_time / f(1.0))
           );
       let bigWaves = x =>
-        f(0.001) * ShaderAshima3.snoise(
-          vec3(x * f(2.0) |+| info **. r' + u_time / f(10.0))
+        f(0.001)
+        * (
+          f(0.0)
+          + ShaderAshima3.snoise(
+              vec3(x * f(2.0) |+| info **. r' + u_time / f(10.0))
+            )
         );
       let getWaterHeight = x =>
         ternary(
@@ -1078,17 +1117,15 @@ module Water = {
       /*
        info **. g' += (average - thisHeight) * f(2.0);
        */
-      /*
-       average
-       =@ (
-         average
-         + getWater(coord - dx)
-         + getWater(coord - dy)
-         + getWater(coord + dx)
-         + getWater(coord + dy)
-       )
-       / f(2.0);
-       */
+      average
+      =@ (
+        average
+        + getWater(coord - dx)
+        + getWater(coord - dy)
+        + getWater(coord + dx)
+        + getWater(coord + dy)
+      )
+      / f(1.0);
       /*
        let minabs = (x, y) => ternary(abs(x) < abs(y) || x * y <= f(0.0), x, y);
        let delta = minabs(info **. g', average) + wind(coord) * f(0.0);
@@ -1160,7 +1197,8 @@ module Water = {
       /* get vertex info */
       let info = vec4var("info");
       let scale = abs(waveHeight);
-      info =@ texture(water, coord) * scale;
+      let offset = f(0.0);
+      info =@ texture(water, coord) * scale + offset;
       /* update the normal */
       let dx = vec3var("dx");
       let dy = vec3var("dy");
@@ -1170,6 +1208,7 @@ module Water = {
            texture(water, vec22f(coord **. x' + delta **. x', coord **. y'))
            **. r'
            * scale
+           + offset
            - info
            **. r',
            f(0.0)
@@ -1180,6 +1219,7 @@ module Water = {
            texture(water, vec22f(coord **. x', coord **. y' + delta **. y'))
            **. r'
            * scale
+           + offset
            - info
            **. r',
            delta **. y'

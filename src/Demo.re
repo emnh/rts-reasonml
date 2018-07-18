@@ -658,6 +658,9 @@ let runPipeline = (gl, queryExt, time) => {
   run(
     gl,
     time,
+    /*
+    ShaderTrees.makeProgramSource(textureRef),
+    */
     ShaderTrees.makeProgramSource(heightMapRef),
     doMeasure(gl, queryExt, "Render trees"),
     "Trees",

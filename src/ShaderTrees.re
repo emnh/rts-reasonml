@@ -22,8 +22,11 @@ let vertexShader =
     /*
      vertexId =@ gl_VertexID;
       */
-    vertexId =@ int2float(idiv(gl_VertexId, i(4))) / f(100000.0);
+    let div = f(100000.0);
+    vertexId =@ int2float(idiv(gl_VertexId, i(4))) / div;
     /*
+     v_uv =@ f(1.0) - a_uv;
+     */
     let tileCountX = f(32.0);
     let tileCountY = f(30.0);
     let tileCount = f(931.0);
@@ -39,8 +42,6 @@ let vertexShader =
          f(0.0),
          f(1.0)
        );
-       */
-    v_uv =@ f(1.0) - a_uv;
     /*
      vertexId =@ floor(int2float(gl_VertexId) / f(4.0) + f(0.5)) / f(100000.0);
      vertexId =@ floor(int2float(idiv(gl_VertexId, i(4))) + f(0.5)) / f(100000.0);
@@ -53,13 +54,15 @@ let vertexShader =
     let rand4 = fmod(rand3, f(0.23404));
     let rand5 = vertexId * f(3.7812314);
     let rand6 = fmod(rand5, f(0.254654));
+    let nrand3 = (vertexId + f(1.0) / div) * f(7.823579) + f(0.432423);
+    let nrand4 = fmod(nrand3, f(0.23404));
+    let nrand5 = (vertexId + f(1.0) / div) * f(3.7812314);
+    let nrand6 = fmod(nrand5, f(0.254654));
     let quadMul =
       f(0.01)
       + f(0.02)
       * (ShaderLib.rand(vec22f(rand1, rand2)) - f(0.5) + f(1.0));
-    /*
     let quadMul = quadMul + f(0.01);
-    */
     let quadMul = quadMul * f(float_of_int(Terrain.getTileWidth()));
     let treeHeightMul = f(2.0);
     position =@ gl_Vertex **. xyz' * quadMul;
@@ -73,12 +76,26 @@ let vertexShader =
     zoffset =@ c * (ShaderLib.rand(vec22f(rand5, rand6)) - f(0.5));
     let ixy = vec2var("ixy");
     ixy =@ Terrain.getIXY(objectId);
-    position **. x' += xoffset;
-    position **. z' += zoffset;
     /*
+     position **. x' += xoffset;
+     position **. z' += zoffset;
      let xoffset2 = (xoffset + ixy **. x') * (Terrain.getHMMul() **. x');
      let zoffset2 = (zoffset + ixy **. y') * (Terrain.getHMMul() **. y');
      */
+    let xoffset2 = floatvar("xoffset2");
+    xoffset2 =@ c * (ShaderLib.rand(vec22f(nrand3, nrand4)) - f(0.5));
+    let zoffset2 = floatvar("zoffset2");
+    zoffset2 =@ c * (ShaderLib.rand(vec22f(nrand5, nrand6)) - f(0.5));
+    let sinc = x => (sin(x) + f(1.0)) / f(2.0);
+    let tp = sinc(f(10.0) * u_time * rand1 + f(10000.0) * rand2);
+    /*
+     position **. x' += mix(0.0, xoffset, xoffset2, tp);
+     position **. z' += mix(0.0, zoffset, zoffset2, tp);
+     */
+    position **. x' += mix(f(0.0), xoffset, f(1.0)); 
+    position **. z' += mix(f(0.0), zoffset, f(1.0));
+    let sqr = x => x * x;
+    position **. y' += pow((f(0.5) - f(1.0) * sqr(tp - f(0.5))), f(4.0));
     uv =@ vec22f(xoffset, zoffset) * f(0.5) + f(0.5);
     uv =@ (uv + ixy) * Terrain.getHMMul();
     /* Trees are blowing in the wind */
