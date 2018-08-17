@@ -92,7 +92,7 @@ let vertexShader =
      position **. x' += mix(0.0, xoffset, xoffset2, tp);
      position **. z' += mix(0.0, zoffset, zoffset2, tp);
      */
-    position **. x' += mix(f(0.0), xoffset, f(1.0)); 
+    position **. x' += mix(f(0.0), xoffset, f(1.0));
     position **. z' += mix(f(0.0), zoffset, f(1.0));
     let sqr = x => x * x;
     position **. y' += pow((f(0.5) - f(1.0) * sqr(tp - f(0.5))), f(4.0));
@@ -159,7 +159,7 @@ let registeredTrees =
       let retval =
         switch treeTexture^ {
         | Some(texture) => texture
-        | None => getNewTexture(arg.gl, "resources/tree.png")
+        | None => getNewTexture(arg.gl, "resources/monsters.png")
         };
       treeTexture := Some(retval);
       retval;
