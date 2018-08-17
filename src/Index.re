@@ -3,6 +3,29 @@ type t;
 [%%bs.raw
   {|
 
+  /*
+var CCapture = require('ccapture.js');
+
+window.capturer = new CCapture( 
+  { 
+    format: 'ffmpegserver',
+    framerate: 24,
+    name: 'glacialsyrup',
+    extension: '.mp4',
+    codec: 'libx264',
+    verbose: true,
+    display: true,
+    timeLimit: 5.0,
+    ffmpegArguments: [
+      "-preset", "slow",
+      "-crf", "18",
+      "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart"
+    ]
+  }
+);
+  */
+
 //
 // Main
 //
