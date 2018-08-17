@@ -148,6 +148,12 @@ let setupDocument = () => {
   let setCanvasSize = (_) => {
     let width = Document.getWidth(Document.window);
     let height = Document.getHeight(Document.window);
+    /*
+    let width = 3840;
+    let height = 2160;
+    let width = 1920;
+    let height = 1080;
+    */
     Document.setWidth(canvas, width);
     Document.setHeight(canvas, height);
     state.window.width = width;
@@ -478,7 +484,7 @@ let reportElement =
     elem;
   });
 
-let doMeasure2 = (gl, queryExt, name) => {
+let doMeasure2 = (gl, queryExt, name) =>
   switch queryExt {
   | Some(queryExt) =>
     let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
@@ -506,7 +512,6 @@ let doMeasure2 = (gl, queryExt, name) => {
     measure;
   | None => (f => f())
   };
-};
 
 /*
  let doMeasure = (_, _, _, f) => f();
@@ -708,10 +713,23 @@ let runDemo = (gl, time, tick) => {
 
 let oldTime = ref(0.0);
 
+type capturerT;
+
+let capturer: capturerT = [%bs.raw "window.capturer"];
+
+[@bs.send] external startCapture : capturerT => unit = "start";
+
+[@bs.send]
+external capture : (capturerT, Document.element) => unit = "capture";
+
+[@bs.send] external save : capturerT => unit = "save";
+
 let rec renderLoop =
-        (reset, queryExt, stats, startTime, canvas, gl, startIteration) => {
+        (reset, queryExt, stats, startTime, canvas, gl, startIteration, count) => {
   let t = Date.now() -. startTime;
   let tick = (t -. oldTime^) *. 60.0 /. 1000.0;
+  let tick = tick < 0.1 ? 0.1 : tick;
+  let tick = tick > 5.0 ? 5.0 : tick;
   oldTime := t;
   Stats.beginStats(stats);
   runPipeline(gl, queryExt, t /. 1000.0, tick);
@@ -723,8 +741,14 @@ let rec renderLoop =
   if (currentIteration == startIteration) {
     /* reset(); */
     Document.requestAnimationFrame(() =>
-      renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration)
+      renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration, count + 1)
     );
+    /*
+    capture(capturer, canvas);
+    if (count > 0 && count mod 60 == 0) {
+      save(capturer);
+    }
+    */
   } else {
     /*
      Document.setTimeout(
@@ -766,7 +790,10 @@ let main = (_) => {
       raise(NoElementIndexExtension);
     };
   };
-  renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration);
+  renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration, 0);
+  /*
+  startCapture(capturer);
+  */
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();
