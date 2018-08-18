@@ -317,8 +317,8 @@ module Renderer = {
       ixy =@ Terrain.getIXY(objectId);
       uv =@ (uv + ixy) * Terrain.getHMMul();
       /* Triangle wave to tile terrain. */
-      */
       uv =@ abs(fmod(uv, f(2.0)) - f(1.0));
+      */
 
       /* Sine wave to tile terrain. */
       /* uv =@ sin(uv); */
@@ -1132,7 +1132,6 @@ module Water = {
       /*
        info **. g' += (average - thisHeight) * f(2.0);
        */
-      /*
       average
       =@ (
         average
@@ -1142,7 +1141,6 @@ module Water = {
         + getWater(coord + dy)
       )
       / f(1.0);
-      */
       /*
        let minabs = (x, y) => ternary(abs(x) < abs(y) || x * y <= f(0.0), x, y);
        let delta = minabs(info **. g', average) + wind(coord) * f(0.0);
