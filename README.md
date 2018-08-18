@@ -16,3 +16,19 @@ Go to http://localhost:8080/index .
 # Resources
  - https://opengameart.org/content/roguelike-tiles-large-collection
  - https://www.npmjs.com/package/hqx
+
+# TODO
+ - Multi-view from different angles
+ - Fix reuse of WebGL context on reload
+ - Tower defense game
+ - Camera movement with WASD/arrows, mouse trackball rotation and mouse scrolling, FPS mode
+ - Simple 3D boats or cars carrying 2D units
+ - Tower placement with mouse
+ - Unit selection
+ - Finding k nearest neighbours
+ - Attack animation
+ - Damage graphs and heat maps
+ - Health bars
+ - Unit deaths or explosions
+ - Fish jumping in sea, underwater view
+ - Volcanoes, floods, smoke and forest fires
