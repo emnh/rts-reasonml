@@ -305,23 +305,32 @@ module Renderer = {
       let normal = vec3var("normal");
       normal =@ vec31f(f(0.0));
       let uv = vec2var("uv");
-      uv =@ point **. xz' * f(0.5) * uvMul + f(0.5);
+      let uvPoint = point **. xz' * f(3.0);
+      /*
+       * let point = point * vec33f(f(0.2), f(1.0), f(0.2));
+       * */
+      uv =@ uvPoint * f(0.5) * uvMul + f(0.5);
+
       /* Tiling */
+      /*
       let ixy = vec2var("ixy");
       ixy =@ Terrain.getIXY(objectId);
       uv =@ (uv + ixy) * Terrain.getHMMul();
       /* Triangle wave to tile terrain. */
+      */
       uv =@ abs(fmod(uv, f(2.0)) - f(1.0));
+
       /* Sine wave to tile terrain. */
       /* uv =@ sin(uv); */
       /*
         let color = texture(tiles, uv);
         let color = texture(terrain, fract(uv * f(0.1)));
        */
-      let color = texture(terrain, uv);
+      let color = texture(tiles, uv);
       let gray = dot(color **. rgb', vec33f(f(0.299), f(0.587), f(0.114)));
       wallColor =@ vec31f(gray);
-      normal =@ texture(heightMap, uv) **. yzw';
+      normal =@ texture(heightMap, uv * f(0.1)) **. yzw';
+      normal =@ vec33f(f(0.0), f(1.0), f(0.0));
       scale /= length(point * uvMul3); /* pool ambient occlusion */
       /* caustics */
       let incomingRay = vec3var("incomingRay");
@@ -496,7 +505,7 @@ module Renderer = {
       ifelsestmt(
         isWater < f(0.0),
         () => position **. y' += height * heightMultiplier,
-        () => position **. y' += waterHeight2 * heightMultiplier
+        () => position **. y' += waterHeight2 * heightMultiplier * f(2.0)
       );
       let glposition = vec3var("glposition");
       glposition =@ position;
@@ -623,6 +632,8 @@ module Renderer = {
           let h = ypos2 + sinc(t);
           let s = f(1.0);
           let v = f(1.0);
+
+          /*
           let abovewaterColor1 =
             ternary(
               h1 >= f(0.0) || h1 <= f(1.0),
@@ -647,6 +658,8 @@ module Renderer = {
               abovewaterColor2,
               clamp(f(4.0) * sin(f(0.5) * u_time + length(position2)), f(0.0), f(1.0))
             );
+          */
+
           /*
            ternary(
              length(position2) < f(0.5),
@@ -857,7 +870,7 @@ module Renderer = {
         let retval =
           switch tilesTexture^ {
           | Some(texture) => texture
-          | None => getNewTexture(arg.gl, "resources/tiles.jpg")
+          | None => getNewTexture(arg.gl, "resources/pebbles.jpg")
           };
         tilesTexture := Some(retval);
         retval;
@@ -1074,13 +1087,13 @@ module Water = {
              f(1.0),
              f(0.0)
            )*/
-        * f(0.00005)
-        * f(1.0)
+        * f(0.00001)
+        * f(0.0)
         * ShaderAshima3.snoise(
-            vec3(x * f(20.0) |+| info **. r' + u_time / f(1.0))
+            vec3(x * f(40.0) |+| info **. r' + u_time / f(1.0))
           );
       let bigWaves = x =>
-        f(0.001)
+        f(0.000)
         * (
           f(0.0)
           + ShaderAshima3.snoise(
@@ -1119,6 +1132,7 @@ module Water = {
       /*
        info **. g' += (average - thisHeight) * f(2.0);
        */
+      /*
       average
       =@ (
         average
@@ -1128,6 +1142,7 @@ module Water = {
         + getWater(coord + dy)
       )
       / f(1.0);
+      */
       /*
        let minabs = (x, y) => ternary(abs(x) < abs(y) || x * y <= f(0.0), x, y);
        let delta = minabs(info **. g', average) + wind(coord) * f(0.0);
@@ -1165,10 +1180,13 @@ module Water = {
       **. r'
       =@ max(texture(heightMap, coord) **. r', info **. r')
       + transfer
-      * speed * u_tick
+      * speed * min(u_tick, f(2.0))
+      + wind(coord)
       + bigWaves(coord);
       info **. g' =@ transfer;
+      /*
       info **. g' *= pow(f(0.995), u_tick);
+      */
       info **. g' =@ clamp(info **. g', f(-5.0), f(5.0));
       /* info **. r' - oldHeight; */
       /*

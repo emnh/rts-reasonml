@@ -526,8 +526,9 @@ let runPipeline = (gl, queryExt, time, tick) => {
     } else {
       sz;
     };
-  let width = sz;
-  let height = sz;
+  let sz2 = 64;
+  let width = sz2;
+  let height = sz2;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
   let renderTarget2 = getWaterRT(gl, width, height, "wrt2");
   let csz = 1024;
