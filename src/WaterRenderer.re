@@ -1152,7 +1152,9 @@ module Water = {
       /*
        average += wind(coord);
        */
-      transfer =@ info **. g' + (average - thisHeight) * f(2.0);
+      let speed = waveSpeed;
+      let tick = min(u_tick, f(1.0));
+      transfer =@ info **. g' + (average - thisHeight) * f(2.0) * tick * speed;
       /*
        info **. g' += delta;
        info **. g' =@ delta;
@@ -1166,19 +1168,19 @@ module Water = {
        info **. g' *= f(0.9995);
         */
       /* move the vertex along the velocity */
-      let speed = waveSpeed;
       let speed1 = f(0.05) * ((sin(u_time) + f(1.0)) / f(2.0) + f(0.5));
       let speed2 = clamp(pow(length(coord - f(0.5)), f(1.0)), f(0.0), f(1.0));
       let speed3 = clamp(info **. r', f(0.0), f(1.0));
       let rain = f(0.001) - f(0.001);
       let condensation = f(0.95) + f(0.05);
       let oldHeight = floatvar("oldHeight");
+      let realTransfer = transfer;
+      /* * speed * tick;*/
       oldHeight =@ info **. r';
       info
       **. r'
       =@ max(texture(heightMap, coord) **. r', info **. r')
-      + transfer
-      * speed * min(u_tick, f(2.0))
+      + realTransfer
       + wind(coord)
       + bigWaves(coord);
       info **. g' =@ transfer;
