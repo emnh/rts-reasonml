@@ -142,19 +142,91 @@ function serializerDefault () {
 //
 
 function ObjectWithoutPrototypeCache () {
-  this.cache = Object.create(null)
+  this.cache = Object.create(null);
 }
 
 ObjectWithoutPrototypeCache.prototype.has = function (key) {
-  return (key in this.cache)
+  return (key in this.cache);
 }
 
 ObjectWithoutPrototypeCache.prototype.get = function (key) {
-  return this.cache[key]
+  return this.cache[key];
 }
 
 ObjectWithoutPrototypeCache.prototype.set = function (key, value) {
-  this.cache[key] = value
+  this.cache[key] = value;
+}
+
+ObjectWithoutPrototypeCache.prototype.get2 = function(key1, key2) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    return a;
+  }
+  return a[key2];
+}
+
+ObjectWithoutPrototypeCache.prototype.set2 = function(key1, key2, value) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    this.cache[key1] = {};
+  }
+  this.cache[key1][key2] = value;
+}
+
+ObjectWithoutPrototypeCache.prototype.get3 = function(key1, key2, key3) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    return a;
+  }
+  var b = a[key2];
+  if (typeof b === 'undefined') {
+    return b;
+  }
+  return b[key3];
+}
+
+ObjectWithoutPrototypeCache.prototype.set3 = function(key1, key2, key3, value) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    this.cache[key1] = {};
+  }
+  var b = this.cache[key1][key2];
+  if (typeof b === 'undefined') {
+    this.cache[key1][key2] = {};
+  }
+  this.cache[key1][key2][key3] = value;
+}
+
+ObjectWithoutPrototypeCache.prototype.get4 = function(key1, key2, key3, key4) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    return a;
+  }
+  var b = a[key2];
+  if (typeof b === 'undefined') {
+    return b;
+  }
+  var c = b[key3];
+  if (typeof c === 'undefined') {
+    return c;
+  }
+  return c[key4];
+}
+
+ObjectWithoutPrototypeCache.prototype.set4 = function(key1, key2, key3, key4, value) {
+  var a = this.cache[key1];
+  if (typeof a === 'undefined') {
+    this.cache[key1] = {};
+  }
+  var b = this.cache[key1][key2];
+  if (typeof b === 'undefined') {
+    this.cache[key1][key2] = {};
+  }
+  var c = this.cache[key1][key2][key3];
+  if (typeof c === 'undefined') {
+    this.cache[key1][key2][key3] = {};
+  }
+  this.cache[key1][key2][key3][key4] = value;
 }
 
 var cacheDefault = {
@@ -167,57 +239,75 @@ var cacheDefault = {
 // API
 //
 
+  function serialize(obj) {
+    if (obj !== Object(obj)) {
+      return obj;
+    }
+    if ("memoizeId" in obj) {
+      return obj.memoizeId;
+    }
+    obj.memoizeId = window.memoizeId++;
+    return obj.memoizeId;
+    //return JSON.stringify(obj);
+  }
+
   function memoize0(cache, f) {
-    var args = [];
-    var cacheId = JSON.stringify(args);
+    var cacheId = "";
     var retval = cache.get(cacheId);
     if (typeof retval === 'undefined') {
       retval = f();
       cache.set(cacheId, retval);
+      console.log("memoize0: ", retval);
     }
     return retval;
   };
 
   function memoize1(cache, f, a) {
-    var args = [a];
-    var cacheId = JSON.stringify(args);
-    var retval = cache.get(cacheId);
+    var sa = serialize(a);
+    var retval = cache.get(sa);
     if (typeof retval === 'undefined') {
       retval = f(a);
-      cache.set(cacheId, retval);
+      cache.set(sa, retval);
+      console.log("memoize1: ", retval, sa);
     }
     return retval;
   };
 
   function memoize2(cache, f, a, b) {
-    var args = [a, b];
-    var cacheId = JSON.stringify(args);
-    var retval = cache.get(cacheId);
+    var sa = serialize(a);
+    var sb = serialize(b);
+    var retval = cache.get2(sa, sb);
     if (typeof retval === 'undefined') {
       retval = f(a, b);
-      cache.set(cacheId, retval);
+      cache.set2(sa, sb, retval);
+      console.log("memoize2: ", retval, sa, sb);
     }
     return retval;
   };
 
   function memoize3(cache, f, a, b, c) {
-    var args = [a, b, c];
-    var cacheId = JSON.stringify(args);
-    var retval = cache.get(cacheId);
+    var sa = serialize(a);
+    var sb = serialize(b);
+    var sc = serialize(c);
+    var retval = cache.get3(sa, sb, sc);
     if (typeof retval === 'undefined') {
       retval = f(a, b, c);
-      cache.set(cacheId, retval);
+      cache.set3(sa, sb, sc, retval);
+      console.log("memoize3: ", retval, sa, sb, sc);
     }
     return retval;
   };
 
   function memoize4(cache, f, a, b, c, d) {
-    var args = [a, b, c, d];
-    var cacheId = JSON.stringify(args);
-    var retval = cache.get(cacheId);
+    var sa = serialize(a);
+    var sb = serialize(b);
+    var sc = serialize(c);
+    var sd = serialize(d);
+    var retval = cache.get4(sa, sb, sc, sd);
     if (typeof retval === 'undefined') {
       retval = f(a, b, c, d);
-      cache.set(cacheId, retval);
+      cache.set4(sa, sb, sc, sd, retval);
+      console.log("memoize4: ", retval, sa, sb, sc, sd);
     }
     return retval;
   };
@@ -246,6 +336,7 @@ var cacheDefault = {
     var cache = new ObjectWithoutPrototypeCache();
     return memoize4.bind(this, cache, f);
   }
+
   var App = require("./Demo.bs.js");
 
   if (window.iteration === undefined) {

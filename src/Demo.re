@@ -189,13 +189,17 @@ let getGeometryAndBuffers =
     (geometry, buffers, ());
   });
 
+let buildTriplet = Memoize.partialMemoize3((x, y, z) => {
+  (x, y, z);
+});
+
 let getCamera = (width, height) => {
-  let cameraPosition = (
+  let cameraPosition = buildTriplet(
     ConfigVars.cameraX#get(),
     ConfigVars.cameraY#get() *. float_of_int(Terrain.getTileWidth()),
     ConfigVars.cameraZ#get() *. float_of_int(Terrain.getTileHeight())
   );
-  let cameraRotation = (
+  let cameraRotation = buildTriplet(
     ConfigVars.cameraRotationX#get(),
     ConfigVars.cameraRotationY#get(),
     ConfigVars.cameraRotationZ#get()
@@ -319,17 +323,19 @@ let runFrameBuffer =
      */
     let (_, buffers, vao) = getGeometryAndBuffers(gl, geoType);
     WebGL2Util.preRender(gl, width, height);
+    /*
     Math.globalSeedRandom(ConfigVars.seed#get());
+    */
     let (x, y, z) = (0.0, 0.0, (-1.0));
     let (rx, ry, rz) = (0.0, 0.0, 0.0);
     let sz = 2.0;
-    let cameraPosition = (0.0, 0.0, 0.0);
+    let cameraPosition = buildTriplet(0.0, 0.0, 0.0);
     let rf = i =>
       renderObj(
         gl,
         program,
         (
-          Three.getCamera(width, height, cameraPosition, (0.0, 0.0, 0.0)),
+          Three.getCamera(width, height, cameraPosition, buildTriplet(0.0, 0.0, 0.0)),
           cameraPosition
         ),
         buffers,
@@ -370,7 +376,9 @@ let run = (gl, time, tick, uAndProgram, measure, geometryType, count) => {
     Memoize.setMemoizeId(program);
     Document.debug(Document.window, gl);
     Document.debug(Document.window, uniforms);
+    /*
     Math.globalSeedRandom(ConfigVars.seed#get());
+    */
     /*
      let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
      */

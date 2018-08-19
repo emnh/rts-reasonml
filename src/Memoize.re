@@ -40,7 +40,6 @@ external getMemoizeIdentity : 'a => Js_null_undefined.t(int) = "memoizeId";
 
 [@bs.set] external setMemoizeIdentity : ('a, int) => unit = "memoizeId";
 
-/* TODO: Use global identifier instead of Math.random */
 let setMemoizeId = x => {
   let om = getMemoizeIdentity(x);
   switch (Js_null_undefined.to_opt(om)) {
