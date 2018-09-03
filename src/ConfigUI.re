@@ -41,6 +41,7 @@ let getNameFolderAndStorageObject = var => {
 
 let registerCreateHandlers = () => {
   let genericOnChange = (var, v) => var#set(v);
+  /*
   let transformColor = (var, v) => {
     let (r, g, b, a) = v;
     let r = r + 0;
@@ -48,6 +49,7 @@ let registerCreateHandlers = () => {
     let b = b + 0;
     var#set((r, g, b, a));
   };
+  */
   Config.addCreateVarCallBack(cvar => {
     let f = () => {
       let (controller, onChange) =

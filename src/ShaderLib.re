@@ -1,6 +1,8 @@
 open! GLSL;
 
-open GLSLUniforms;
+/*
+ * open GLSLUniforms;
+ * */
 
 let co = vec2arg("co");
 
@@ -22,7 +24,7 @@ let normalize = (x, y, z) => {
 
 let c = vec3arg("c");
 
-let hsv2rgbBody = 
+let hsv2rgbBody =
   body(() =>
        {
          let k = vec4var("K");

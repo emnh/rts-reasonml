@@ -42,11 +42,11 @@ external getMemoizeIdentity : 'a => Js_null_undefined.t(int) = "memoizeId";
 
 let setMemoizeId = x => {
   let om = getMemoizeIdentity(x);
-  switch (Js_null_undefined.to_opt(om)) {
+  switch (Js_null_undefined.toOption(om)) {
   | None =>
     let id = getMemoizeIdentity(Document.window);
     let id =
-      switch (Js_null_undefined.to_opt(id)) {
+      switch (Js_null_undefined.toOption(id)) {
       | Some(id) => id + 1
       | None => raise(Bug)
       };

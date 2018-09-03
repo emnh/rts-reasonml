@@ -38,8 +38,8 @@ let heightMapBody =
     let value = floatvar("value");
     /*
      let uv = vec3(uv |+| u_time / f(20.0));
+     let time = f(1.0);
      */
-    let time = f(1.0);
     /*
      let ns = x => ShaderAshima3.snoise(vec3(x |+| time));
      */

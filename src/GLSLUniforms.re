@@ -205,6 +205,7 @@ let computeUniformBlock =
           switch t {
           | GLSL.Void => x
           | GLSL.Int => x
+          | GLSL.UInt => x
           | GLSL.Float => x
           | GLSL.Vec2 => alignAt2(x)
           | GLSL.Vec3 => alignAt4(x)
@@ -226,7 +227,7 @@ let computeUniformBlock =
   let uniformBlock = Float32Array.create(l);
   let setUniforms = program =>
     if (WebGL2.getMY_VERSION(gl) < 2) {
-      let l =
+      let _ =
         List.iter(
           ((u, f)) => {
             let (t, name) =
@@ -321,7 +322,7 @@ let getNewRandomTexture = (gl, randf) => {
     border,
     srcFormat,
     srcType,
-    Js.Nullable.from_opt(Some(pixels))
+    Js.Nullable.fromOption(Some(pixels))
   );
   texture;
 };

@@ -288,6 +288,7 @@ let getViewMatrices = (camera, matrixWorld, twist) => {
     0.0,
     1.0
   |];
+  /*
   let tmpArray2 = [|
     3.1733386516571045,
     0.0,
@@ -306,8 +307,11 @@ let getViewMatrices = (camera, matrixWorld, twist) => {
     (-1.0),
     0.0
   |];
+  */
   let modelViewMatrix2 = cloneMatrix4(modelViewMatrix);
+  /*
   let projectionMatrix2 = cloneMatrix4(projectionMatrix);
+  */
   setElements(modelViewMatrix2, tmpArray);
   /* setElements(projectionMatrix, tmpArray2);*/
   transposeMatrix4(modelViewMatrix2);

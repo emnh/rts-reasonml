@@ -18,6 +18,7 @@ Go to http://localhost:8080/index .
  - https://www.npmjs.com/package/hqx
 
 # TODO
+ - Perf fixes: uniform array concat, currying, caml_get_public_method
  - Multi-view from different angles
  - Fix reuse of WebGL context on reload
  - Tower defense game

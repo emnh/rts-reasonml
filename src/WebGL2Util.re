@@ -9,7 +9,7 @@ let createShader = (gl, stype, source) => {
   shaderSource(gl, shader, source);
   compileShader(gl, shader);
   let success = getShaderParameter(gl, shader, getCOMPILE_STATUS(gl));
-  if (Js.to_bool(success)) {
+  if (success) {
     Some(shader);
   } else {
     Js.log(getShaderInfoLog(gl, shader));
@@ -24,7 +24,7 @@ let createProgram = (gl, vertexShader, fragmentShader) => {
   attachShader(gl, program, fragmentShader);
   linkProgram(gl, program);
   let success = getProgramParameter(gl, program, getLINK_STATUS(gl));
-  if (Js.to_bool(success)) {
+  if (success) {
     Some(program);
   } else {
     Js.log(getProgramInfoLog(gl, program));
@@ -157,7 +157,7 @@ let createAttributes = (gl, program, buffers) => {
       enableVertexAttribArray(gl, floatIndexAttributeLocation);
     };
     let size = 1;
-    let normalize = Js.Boolean.to_js_boolean(false);
+    let normalize = false;
     let stride = 0;
     let offset = 0;
     vertexAttribPointer(
@@ -181,7 +181,7 @@ let createAttributes = (gl, program, buffers) => {
       enableVertexAttribArray(gl, positionAttributeLocation);
     };
     let size = 3;
-    let normalize = Js.Boolean.to_js_boolean(false);
+    let normalize = false;
     let stride = 0;
     let offset = 0;
     vertexAttribPointer(
@@ -204,7 +204,7 @@ let createAttributes = (gl, program, buffers) => {
       enableVertexAttribArray(gl, uvAttributeLocation);
     };
     let size = 2;
-    let normalize = Js.Boolean.to_js_boolean(false);
+    let normalize = false;
     let stride = 0;
     let offset = 0;
     vertexAttribPointer(
@@ -387,29 +387,30 @@ type renderTargetT = {
   texture: textureT
 };
 
-let showWarning = Memoize.partialMemoize1((msg) => {
-  let elem = Document.createElement("div");
-  let _ = Document.appendChild(elem);
-  let style = Document.getStyle(elem);
-  Document.setPosition(style, "fixed");
-  Document.setTop(style, "120px");
-  Document.setLeft(style, "0px");
-  Document.setInnerHTML(elem, msg);
-});
+let showWarning =
+  Memoize.partialMemoize1(msg => {
+    let elem = Document.createElement("div");
+    let _ = Document.appendChild(elem);
+    let style = Document.getStyle(elem);
+    Document.setPosition(style, "fixed");
+    Document.setTop(style, "120px");
+    Document.setLeft(style, "0px");
+    Document.setInnerHTML(elem, msg);
+  });
 
 let createRenderTarget = (gl, width, height) => {
   /* TODO: memoize extensions? */
   let internalFormat = ref(getRGBA32F(gl));
   if (WebGL2.getMY_VERSION(gl) == 1) {
     let c = WebGL2.getExtension(gl, "OES_texture_float");
-    switch (Js.Nullable.to_opt(c)) {
+    switch (Js.Nullable.toOption(c)) {
     | Some(_) => internalFormat := WebGL2.getRGBA(gl)
     | None =>
       /*
        Js.log("missing extension OES_texture_float, trying half_float instead");
        */
       let c = WebGL2.getExtension(gl, "OES_texture_half_float");
-      switch (Js.Nullable.to_opt(c)) {
+      switch (Js.Nullable.toOption(c)) {
       | Some(c) => internalFormat := WebGL2.getRGBA16F_EXT(c)
       | None =>
         raise(
@@ -439,15 +440,18 @@ let createRenderTarget = (gl, width, height) => {
        );
        */
       let b = WebGL2.getExtension(gl, "EXT_color_buffer_half_float");
-      if (b == Js.Nullable.null) {
-        ttypeRef := getUNSIGNED_BYTE(gl);
-        showWarning("Warning: No color buffer floats. Water will look bad. Try Chrome >= 64.");
+      if (b == Js.Nullable.null)
+        {
+          ttypeRef := getUNSIGNED_BYTE(gl);
+          showWarning(
+            "Warning: No color buffer floats. Water will look bad. Try Chrome >= 64."
+          );
+        };
         /*
-        raise(
-          WebGL2Exception("missing extension EXT_color_buffer_half_float")
-        );
-        */
-      };
+         raise(
+           WebGL2Exception("missing extension EXT_color_buffer_half_float")
+         );
+         */
       b;
     } else {
       b;
@@ -505,7 +509,7 @@ let createRenderTarget = (gl, width, height) => {
   );
   /* Create and bind the framebuffer */
   let fb = createFramebuffer(gl);
-  bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.from_opt(Some(fb)));
+  bindFramebuffer(gl, getFRAMEBUFFER(gl), Js.Nullable.fromOption(Some(fb)));
   /* Attach the texture as the first color attachment */
   let attachmentPoint = getCOLOR_ATTACHMENT0(gl);
   framebufferTexture2D(
@@ -533,7 +537,7 @@ let renderToTarget = (gl, renderTarget, renderFunction) => {
   bindFramebuffer(
     gl,
     getFRAMEBUFFER(gl),
-    Js.Nullable.from_opt(Some(renderTarget.framebuffer))
+    Js.Nullable.fromOption(Some(renderTarget.framebuffer))
   );
   /* Tell WebGL how to convert from clip space to pixels */
   viewport(gl, 0, 0, renderTarget.width, renderTarget.height);

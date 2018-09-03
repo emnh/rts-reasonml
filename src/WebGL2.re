@@ -253,11 +253,11 @@ external shaderSource : (glT, shaderT, string) => unit = "shaderSource";
 [@bs.send] external compileShader : (glT, shaderT) => unit = "compileShader";
 
 [@bs.send]
-external getShaderParameter : (glT, shaderT, compileStatusT) => Js.boolean =
+external getShaderParameter : (glT, shaderT, compileStatusT) => bool =
   "getShaderParameter";
 
 [@bs.send]
-external getProgramParameter : (glT, programT, linkStatusT) => Js.boolean =
+external getProgramParameter : (glT, programT, linkStatusT) => bool =
   "getProgramParameter";
 
 [@bs.send]
@@ -275,7 +275,7 @@ external checkFramebufferStatus : (glT, framebufferTypeT) => int =
 [@bs.send]
 external attachShader : (glT, programT, shaderT) => unit = "attachShader";
 
-[@bs.send] external getError : (glT) => unit = "getError";
+[@bs.send] external getError : glT => unit = "getError";
 
 [@bs.send] external linkProgram : (glT, programT) => unit = "linkProgram";
 
@@ -298,7 +298,8 @@ external bindBuffer : (glT, arrayBufferTypeT, bufferT) => unit = "bindBuffer";
 external bindTexture : (glT, texture2DT, textureT) => unit = "bindTexture";
 
 [@bs.send]
-external bindTexture2 : (glT, texture2DT, Js.Nullable.t(textureT)) => unit = "bindTexture";
+external bindTexture2 : (glT, texture2DT, Js.Nullable.t(textureT)) => unit =
+  "bindTexture";
 
 [@bs.send]
 external bindFramebuffer :
@@ -339,7 +340,7 @@ external disableVertexAttribArray : (glT, attributeLocationT) => unit =
 
 [@bs.send]
 external vertexAttribPointer :
-  (glT, attributeLocationT, int, primitiveT, Js.boolean, int, int) => unit =
+  (glT, attributeLocationT, int, primitiveT, bool, int, int) => unit =
   "vertexAttribPointer";
 
 [@bs.send] external viewport : (glT, int, int, int, int) => unit = "viewport";

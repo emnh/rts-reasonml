@@ -1,7 +1,8 @@
 type context;
 
 [@bs.send]
-external getContext : (Document.element, string) => Js.Nullable.t(context) = "getContext";
+external getContext : (Document.element, string) => Js.Nullable.t(context) =
+  "getContext";
 
 [@bs.send] external beginPath : context => unit = "beginPath";
 
@@ -21,5 +22,5 @@ external clearRect : (context, float, float, float, float) => unit =
   "clearRect";
 
 [@bs.send]
-external arc : (context, float, float, float, float, float, Js.boolean) => unit =
+external arc : (context, float, float, float, float, float, bool) => unit =
   "arc";

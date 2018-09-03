@@ -101,16 +101,16 @@ let setupDocument = () => {
     let (ngl, tryversion) =
       if (MyString.indexOf(Document.userAgent, "Chromium/62") != (-1)
           || MyString.indexOf(Document.userAgent, "Windows") == (-1)) {
-        (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl")), 1);
+        (Js.Nullable.toOption(WebGL2.getContext(canvas, "webgl")), 1);
       } else {
-        (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl2")), 2);
+        (Js.Nullable.toOption(WebGL2.getContext(canvas, "webgl2")), 2);
       };
     switch ngl {
     | Some(gl) =>
       Memoize.setMemoizeId(gl);
       (gl, tryversion);
     | None =>
-      switch (Js.Nullable.to_opt(WebGL2.getContext(canvas, "webgl"))) {
+      switch (Js.Nullable.toOption(WebGL2.getContext(canvas, "webgl"))) {
       | Some(gl) =>
         Memoize.setMemoizeId(gl);
         (gl, 1);
@@ -527,6 +527,7 @@ let doMeasure2 = (gl, queryExt, name) =>
 let doMeasure = doMeasure2;
 
 let runPipeline = (gl, queryExt, time, tick) => {
+  /*
   let sz = 128 * Terrain.getTileWidth();
   let sz =
     if (sz < 256) {
@@ -534,6 +535,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
     } else {
       sz;
     };
+    */
   let sz2 = 64;
   let width = sz2;
   let height = sz2;
@@ -784,7 +786,7 @@ let main = (_) => {
   let style = Document.getStyle(statsdom);
   Document.setMargin(style, "10px");
   let ext = WebGL2.getExtension(gl, "EXT_disjoint_timer_query_webgl2");
-  let oext = Js.Nullable.to_opt(ext);
+  let oext = Js.Nullable.toOption(ext);
   let queryExt = oext;
   let reset = GLReset.createReset(gl);
   if (WebGL2.getMY_VERSION(gl) == 1) {

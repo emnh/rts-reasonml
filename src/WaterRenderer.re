@@ -529,8 +529,10 @@ module Renderer = {
       let info = vec4var("info");
       coord =@ ocoord;
       info =@ texture(water, ocoord);
+      /*
       let hdiff =
         f(0.5) * ShaderAshima.snoise(position **. xz' * f(40.0) + u_time);
+        */
       /* make water look more "peaked" */
       /*
        /* TODO: int var */
@@ -615,16 +617,17 @@ module Renderer = {
                |+| f(2.0)
                * (sin(u_time * f(1.0)) + f(1.0))
              );*/
-          let t =
-            ShaderAshima3.snoise(vec3(position2 **. xz' |+| u_time / f(5.0)));
           /*
            let ypos = f(-0.001) + fmod(position2 **. y', f(0.001));
            */
           /*
            let ypos = f(-0.5) * fmod(position2 **. y', f(0.5)) * waveHeight;
            */
-          let ypos = position2 **. y';
+          /*
+          let t =
+            ShaderAshima3.snoise(vec3(position2 **. xz' |+| u_time / f(5.0)));
           let sinc = x => (sin(x) + f(1.0)) / f(2.0);
+          let ypos = position2 **. y';
           let ypos2 = sinc(position2 **. y' * f(0.3) + f(0.3));
           let h11 = f(1.0) - f(8.0) * ypos;
           let h = sinc(f(1.0) - f(36.0) * ypos + t);
@@ -633,7 +636,6 @@ module Renderer = {
           let s = f(1.0);
           let v = f(1.0);
 
-          /*
           let abovewaterColor1 =
             ternary(
               h1 >= f(0.0) || h1 <= f(1.0),
@@ -1036,8 +1038,10 @@ module Water = {
       let waterDir =
         max(texture(water, pos) **. r', texture(heightMap, pos) **. r')
         - max(texture(water, coord) **. r', texture(heightMap, coord) **. r');
+      /*
       let waterAverage =
         thisHeight + (texture(water, pos) **. r' - thisHeight) / f(2.0);
+        */
       let getWaterHeight2 = x =>
         ternary(
           x
@@ -1168,11 +1172,13 @@ module Water = {
        info **. g' *= f(0.9995);
         */
       /* move the vertex along the velocity */
+      /*
       let speed1 = f(0.05) * ((sin(u_time) + f(1.0)) / f(2.0) + f(0.5));
       let speed2 = clamp(pow(length(coord - f(0.5)), f(1.0)), f(0.0), f(1.0));
       let speed3 = clamp(info **. r', f(0.0), f(1.0));
       let rain = f(0.001) - f(0.001);
       let condensation = f(0.95) + f(0.05);
+      */
       let oldHeight = floatvar("oldHeight");
       let realTransfer = transfer;
       /* * speed * tick;*/
