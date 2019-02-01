@@ -26,6 +26,10 @@ exception Bug;
    [@bs.uncurry] (('a, 'b, 'c, 'd) => 'r) =
    "window.partialMemoize4";
    */
+
+/*
+ * [@bs.val] external partialMemoize0 : (unit => 'a) => (unit => 'a) = "window.partialMemoize0";
+ * */
 [@bs.val] external partialMemoize0 : 'a => 'a = "window.partialMemoize0";
 
 [@bs.val] external partialMemoize1 : 'a => 'a = "window.partialMemoize1";

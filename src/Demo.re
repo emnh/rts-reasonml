@@ -149,11 +149,11 @@ let setupDocument = () => {
     let width = Document.getWidth(Document.window);
     let height = Document.getHeight(Document.window);
     /*
-    let width = 3840;
-    let height = 2160;
-    let width = 1920;
-    let height = 1080;
-    */
+     let width = 3840;
+     let height = 2160;
+     let width = 1920;
+     let height = 1080;
+     */
     Document.setWidth(canvas, width);
     Document.setHeight(canvas, height);
     state.window.width = width;
@@ -189,21 +189,21 @@ let getGeometryAndBuffers =
     (geometry, buffers, ());
   });
 
-let buildTriplet = Memoize.partialMemoize3((x, y, z) => {
-  (x, y, z);
-});
+let buildTriplet = Memoize.partialMemoize3((x, y, z) => (x, y, z));
 
 let getCamera = (width, height) => {
-  let cameraPosition = buildTriplet(
-    ConfigVars.cameraX#get(),
-    ConfigVars.cameraY#get() *. float_of_int(Terrain.getTileWidth()),
-    ConfigVars.cameraZ#get() *. float_of_int(Terrain.getTileHeight())
-  );
-  let cameraRotation = buildTriplet(
-    ConfigVars.cameraRotationX#get(),
-    ConfigVars.cameraRotationY#get(),
-    ConfigVars.cameraRotationZ#get()
-  );
+  let cameraPosition =
+    buildTriplet(
+      ConfigVars.cameraX#get(),
+      ConfigVars.cameraY#get() *. float_of_int(Terrain.getTileWidth()),
+      ConfigVars.cameraZ#get() *. float_of_int(Terrain.getTileHeight())
+    );
+  let cameraRotation =
+    buildTriplet(
+      ConfigVars.cameraRotationX#get(),
+      ConfigVars.cameraRotationY#get(),
+      ConfigVars.cameraRotationZ#get()
+    );
   (
     Three.getCamera(width, height, cameraPosition, cameraRotation),
     cameraPosition
@@ -324,8 +324,8 @@ let runFrameBuffer =
     let (_, buffers, vao) = getGeometryAndBuffers(gl, geoType);
     WebGL2Util.preRender(gl, width, height);
     /*
-    Math.globalSeedRandom(ConfigVars.seed#get());
-    */
+     Math.globalSeedRandom(ConfigVars.seed#get());
+     */
     let (x, y, z) = (0.0, 0.0, (-1.0));
     let (rx, ry, rz) = (0.0, 0.0, 0.0);
     let sz = 2.0;
@@ -335,7 +335,12 @@ let runFrameBuffer =
         gl,
         program,
         (
-          Three.getCamera(width, height, cameraPosition, buildTriplet(0.0, 0.0, 0.0)),
+          Three.getCamera(
+            width,
+            height,
+            cameraPosition,
+            buildTriplet(0.0, 0.0, 0.0)
+          ),
           cameraPosition
         ),
         buffers,
@@ -377,8 +382,8 @@ let run = (gl, time, tick, uAndProgram, measure, geometryType, count) => {
     Document.debug(Document.window, gl);
     Document.debug(Document.window, uniforms);
     /*
-    Math.globalSeedRandom(ConfigVars.seed#get());
-    */
+     Math.globalSeedRandom(ConfigVars.seed#get());
+     */
     /*
      let irows = int_of_float(Math.ceil(Math.sqrt(float_of_int(count))));
      */
@@ -481,7 +486,7 @@ let getMeasure =
     (measure, readMeasure, () => lastValue^);
   });
 
-let reportElement =
+let reportElement = (_) =>
   Memoize.partialMemoize0(() => {
     let elem = Document.createElement("div");
     let _ = Document.appendChild(elem);
@@ -497,7 +502,7 @@ let doMeasure2 = (gl, queryExt, name) =>
   | Some(queryExt) =>
     let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
     let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
-    let rep = reportElement();
+    let rep = reportElement(0);
     let measure =
       switch (readMeasure()) {
       | Some(nanoseconds) =>
@@ -528,14 +533,14 @@ let doMeasure = doMeasure2;
 
 let runPipeline = (gl, queryExt, time, tick) => {
   /*
-  let sz = 128 * Terrain.getTileWidth();
-  let sz =
-    if (sz < 256) {
-      256;
-    } else {
-      sz;
-    };
-    */
+   let sz = 128 * Terrain.getTileWidth();
+   let sz =
+     if (sz < 256) {
+       256;
+     } else {
+       sz;
+     };
+     */
   let sz2 = 256;
   let width = sz2;
   let height = sz2;
@@ -686,19 +691,19 @@ let runPipeline = (gl, queryExt, time, tick) => {
    WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
    */
   /*
-  run(
-    gl,
-    time,
-    tick,
-    /*
-     ShaderTrees.makeProgramSource(textureRef),
-     */
-    ShaderTrees.makeProgramSource(heightMapRef),
-    doMeasure(gl, queryExt, "Render trees"),
-    "Trees",
-    count * 1
-  );
-  */
+   run(
+     gl,
+     time,
+     tick,
+     /*
+      ShaderTrees.makeProgramSource(textureRef),
+      */
+     ShaderTrees.makeProgramSource(heightMapRef),
+     doMeasure(gl, queryExt, "Render trees"),
+     "Trees",
+     count * 1
+   );
+   */
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */
@@ -753,15 +758,25 @@ let rec renderLoop =
   let currentIteration = Document.iteration(Document.window);
   if (currentIteration == startIteration) {
     /* reset(); */
-    Document.requestAnimationFrame(() =>
-      renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration, count + 1)
-    );
-    /*
-    capture(capturer, canvas);
-    if (count > 0 && count mod 60 == 0) {
-      save(capturer);
-    }
-    */
+    Document.requestAnimationFrame(()
+      =>
+        renderLoop(
+          reset,
+          queryExt,
+          stats,
+          startTime,
+          canvas,
+          gl,
+          startIteration,
+          count + 1
+        )
+      );
+      /*
+       capture(capturer, canvas);
+       if (count > 0 && count mod 60 == 0) {
+         save(capturer);
+       }
+       */
   } else {
     /*
      Document.setTimeout(
@@ -782,7 +797,7 @@ let main = (_) => {
   let (canvas, gl) = setupDocument();
   let startTime = Date.now();
   let startIteration = Document.iteration(Document.window);
-  let stats = Stats.createStats();
+  let stats = [@bs] Stats.createStats();
   let statsdom = Stats.dom(stats);
   let _ = Document.appendChild(statsdom);
   let style = Document.getStyle(statsdom);
@@ -805,8 +820,8 @@ let main = (_) => {
   };
   renderLoop(reset, queryExt, stats, startTime, canvas, gl, startIteration, 0);
   /*
-  startCapture(capturer);
-  */
+   startCapture(capturer);
+   */
   () => {
     Js.log("destroying last app generation");
     ConfigUI.destroy();

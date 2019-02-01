@@ -8,7 +8,7 @@ type statsT;
  [@bs.new] [@bs.module "stats.js"]
  external createStats : unit => statsT = "Stats";
  */
-let createStats: unit => statsT = {
+let createStats: [@bs] unit => statsT = {
   let _ = statsModule;
   [%bs.raw {| function() { return new StatsJs(); } |}];
 };
