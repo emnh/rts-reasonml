@@ -536,7 +536,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
       sz;
     };
     */
-  let sz2 = 64;
+  let sz2 = 256;
   let width = sz2;
   let height = sz2;
   let renderTarget1 = getWaterRT(gl, width, height, "wrt1");
@@ -685,6 +685,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
   /*
    WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
    */
+  /*
   run(
     gl,
     time,
@@ -697,6 +698,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
     "Trees",
     count * 1
   );
+  */
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */

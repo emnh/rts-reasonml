@@ -746,9 +746,13 @@ module Renderer = {
   let projectBody =
     body(() => {
       /* project the ray onto the plane */
+      /*
       let tcube = vec2var("tcube");
-      tcube =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
-      origin += ray * (tcube **. y');
+      */
+      /* tcube =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax); */
+      /* origin += ray * (tcube **. y'); */
+      let t = f(1.0);
+      origin += ray * t;
       let tplane = floatvar("tplane");
       tplane =@ (f(0.0) - origin **. y' - f(1.0)) / (refractedLight **. y');
       return(origin + refractedLight * tplane);
@@ -1136,6 +1140,7 @@ module Water = {
       /*
        info **. g' += (average - thisHeight) * f(2.0);
        */
+      /*
       average
       =@ (
         average
@@ -1145,6 +1150,7 @@ module Water = {
         + getWater(coord + dy)
       )
       / f(1.0);
+      */
       /*
        let minabs = (x, y) => ternary(abs(x) < abs(y) || x * y <= f(0.0), x, y);
        let delta = minabs(info **. g', average) + wind(coord) * f(0.0);
@@ -1186,13 +1192,16 @@ module Water = {
       info
       **. r'
       =@ max(texture(heightMap, coord) **. r', info **. r')
-      + realTransfer
+      + realTransfer;
+      /*
       + wind(coord)
       + bigWaves(coord);
+      */
       info **. g' =@ transfer;
       /*
       info **. g' *= pow(f(0.995), u_tick);
       */
+      info **. g' *= pow(f(0.9995), u_tick);
       info **. g' =@ clamp(info **. g', f(-5.0), f(5.0));
       /* info **. r' - oldHeight; */
       /*
