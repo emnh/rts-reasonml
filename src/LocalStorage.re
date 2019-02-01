@@ -11,7 +11,7 @@ let setFloat = (name, value) => set(name, string_of_float(value));
 let setString = (name, value) => set(name, value);
 
 let getInt = name => {
-  let value = Js.Nullable.to_opt(get(name));
+  let value = Js.Nullable.toOption(get(name));
   switch value {
   | Some(x) => Some(int_of_string(x))
   | None => None
@@ -19,7 +19,7 @@ let getInt = name => {
 };
 
 let getFloat = name => {
-  let value = Js.Nullable.to_opt(get(name));
+  let value = Js.Nullable.toOption(get(name));
   switch value {
   | Some(x) => Some(float_of_string(x))
   | None => None
@@ -27,6 +27,6 @@ let getFloat = name => {
 };
 
 let getString = name => {
-  let value = Js.Nullable.to_opt(get(name));
+  let value = Js.Nullable.toOption(get(name));
   value;
 };

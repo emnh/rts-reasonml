@@ -322,7 +322,7 @@ module Renderer = {
           let caustic = vec4var("caustic");
           let causticUV = vec2var("causticUV");
           causticUV
-          =@ f(0.75)
+          =@ f(0.75) / f(2.0)
           * (
             point
             **. xz'
@@ -336,6 +336,7 @@ module Renderer = {
           + f(0.5);
           /* Just add some fake repeated caustics at edge of map */
           /* TODO: do it in a better way */
+          /*
           let cl = f(0.25);
           causticUV
           **. x'
@@ -365,8 +366,10 @@ module Renderer = {
                f(2.0) * (f(1.0) - cl) - causticUV **. y',
                causticUV **. y'
              );
+             */
+          causticUV =@ clamp(causticUV, f(0.0), f(1.0));
           caustic =@ texture(causticTex, causticUV);
-          scale += diffuse * (caustic **. r') * f(2.0) * (caustic **. g');
+          scale += diffuse * (caustic **. r') * f(2.0) * f(1.0); /* (caustic **. g'); */
         },
         () => ()
       );
@@ -628,9 +631,20 @@ module Renderer = {
   let projectBody =
     body(() => {
       /* project the ray onto the plane */
+      /*
       let tcube = vec2var("tcube");
       tcube =@ intersectCube(origin, ray, globalCubeMin, globalCubeMax);
       origin += ray * (tcube **. y');
+      let tplane = floatvar("tplane");
+      tplane =@ (f(0.0) - origin **. y' - f(1.0)) / (refractedLight **. y');
+      return(origin + refractedLight * tplane);
+      */
+      /*
+      let uvc = ray **. xz';
+      let t = f(-3.0) - f(10.0) * heightMultiplier * texture(heightMap, uvc) **. x';
+      */
+      let t = f(-3.0);
+      origin += ray * t;
       let tplane = floatvar("tplane");
       tplane =@ (f(0.0) - origin **. y' - f(1.0)) / (refractedLight **. y');
       return(origin + refractedLight * tplane);
@@ -854,9 +868,9 @@ module Renderer = {
       );
     });
   let makeCausticsProgramSource =
-    Memoize.partialMemoize1(textureRef => {
+    Memoize.partialMemoize2((textureRef, heightMapRef) => {
       let uniformBlock =
-        getUniforms(textureRef, ref(None), ref(None), ref(None), 1.0);
+        getUniforms(textureRef, ref(None), ref(None), heightMapRef, 1.0);
       (
         uniformBlock,
         getProgram(uniformBlock, causticsVertexShader, causticsFragmentShader)
@@ -914,13 +928,35 @@ module Water = {
       )
       * f(0.25);
       /* change the velocity to move toward the average */
-      info **. g' += (average - info **. r') * f(2.0);
+      let fhz = f(60.0 /. 144.0);
+      info **. g' += (average - info **. r') * f(2.0) * fhz;
       /* attenuate the velocity a little so waves do not last forever */
       /*
-       info **. g' *= f(0.9995);
        */
+      /* info **. g' += f(0.0001) * (sin(f(100.0) * coord **. x') + sin(f(100.0) * coord **. y')) * sin(f(10.0) * u_time); */
+      /*
+      let c = f(20.0);
+      let r = ShaderAshima3.snoise(vec33f(c * coord **. x', c * coord **. y', u_time));
+      let uv = vec33f(c * coord **. x', c * coord **. y', f(1.0) * u_time);
+      let value = floatvar("value");
+      value
+      =@ ShaderAshima3.snoise(uv * f(1.63))
+      * f(0.1)
+      + ShaderAshima3.snoise(uv * f(10.0))
+      * f(0.002)
+      + ShaderAshima3.snoise(uv * f(20.0))
+      * f(0.0005);
+      info **. g' *= f(0.995);
+      info **. g' += f(0.0005) * value;
+      let c2 = f(100000.0);
+      info **. r' += 
+        ShaderAshima3.snoise(uv * vec33f(c2, c2, f(0.1)))
+        * f(0.0005);
+      */
       /* move the vertex along the velocity */
-      info **. r' += info **. g' * f(0.1);
+      info **. r' += info **. g' * f(0.1) * fhz;
+      /*
+       * info **. r' += f(0.05) * value; */
       gl_FragColor =@ info;
     });
   /* XXX: debug */
@@ -971,6 +1007,7 @@ module Water = {
       [|1.0 /. float_of_int(arg.width), 1.0 /. float_of_int(arg.height)|]
     ),
     r(waveHeight, (_) => [|ConfigVars.waveHeight#get()|]),
+    r(u_time, arg => [|arg.time|]),
     registerTextureUniform(water, arg =>
       switch textureRef^ {
       | Some(x) => x

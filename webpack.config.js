@@ -3,6 +3,7 @@ const path = require('path');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
+  mode: 'development',
   entry: './src/Index.bs.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -15,6 +16,6 @@ module.exports = {
     port: 8080
   },
   plugins: [
-    new UglifyJsPlugin()
+    //new UglifyJsPlugin()
   ]
 };

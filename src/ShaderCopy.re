@@ -71,12 +71,16 @@ let heightMapBody2 =
     + ShaderAshima.snoise(uv * f(20.0))
     * f(0.0005)
     + ShaderAshima.snoise(uv * f(40.0))
-    * f(0.00025);
+    * f(0.0005)
+    + ShaderAshima.snoise(uv * f(2000.0))
+    * f(0.0005);
+    /*
     let rnd = ShaderAshima.snoise(uv * f(1.0));
     ifstmt(rnd < f(0.0), () =>
       value += ShaderAshima.snoise(uv * f(40.0)) * f(0.005)
     );
-    return(value * f(2.0));
+    */
+    return(value * f(2.0) * f(4.0));
   });
 
 let heightMap2 = x => fundecl1(floatfun("heightmap"), uv, heightMapBody2, x);
