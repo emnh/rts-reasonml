@@ -41,7 +41,7 @@ let cameraY = Config.floatConfigVar(["camera", "position", "y"], 4.0, ());
 
 let cameraZ = Config.floatConfigVar(["camera", "position", "z"], -6.0, ());
 
-let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.5, ());
+let waveHeight = Config.floatConfigVar(["water", "waveHeight"], 0.25, ());
 
 let waveSpeed = Config.floatConfigVar(["water", "waveSpeed"], 0.005, ());
 
@@ -52,9 +52,9 @@ let causticScale = Config.floatConfigVar(["water", "causticScale"], 2.0, ());
 let waterColor =
   Config.colorConfigVar(["water", "color"], (256 / 4, 256, 256, 1.0), ());
 
-let objectX = Config.floatConfigVar(["object", "position", "x"], 0.01, ());
+let objectX = Config.floatConfigVar(["object", "position", "x"], -0.4, ());
 
-let objectY = Config.floatConfigVar(["object", "position", "y"], 0.50, ());
+let objectY = Config.floatConfigVar(["object", "position", "y"], 0.65, ());
 
 let objectZ = Config.floatConfigVar(["object", "position", "z"], 0.01, ());
 
