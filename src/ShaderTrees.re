@@ -59,8 +59,8 @@ let vertexShader =
     let nrand5 = (vertexId + f(1.0) / div) * f(3.7812314);
     let nrand6 = fmod(nrand5, f(0.254654));
     let quadMul =
-      f(0.01)
-      + f(0.02)
+      f(0.008)
+      + f(0.001)
       * (ShaderLib.rand(vec22f(rand1, rand2)) - f(0.5) + f(1.0));
     let quadMul = quadMul + f(0.01);
     let quadMul = quadMul * f(float_of_int(Terrain.getTileWidth()));
@@ -87,7 +87,7 @@ let vertexShader =
     let zoffset2 = floatvar("zoffset2");
     zoffset2 =@ c * (ShaderLib.rand(vec22f(nrand5, nrand6)) - f(0.5));
     let sinc = x => (sin(x) + f(1.0)) / f(2.0);
-    let tp = sinc(f(10.0) * u_time * rand1 + f(10000.0) * rand2);
+    let tp = sinc(f(4.0) * u_time * rand1 + f(10000.0) * rand2);
     /*
      position **. x' += mix(0.0, xoffset, xoffset2, tp);
      position **. z' += mix(0.0, zoffset, zoffset2, tp);
