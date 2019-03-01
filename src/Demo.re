@@ -690,20 +690,18 @@ let runPipeline = (gl, queryExt, time, tick) => {
   /*
    WebGL2.disable(gl, WebGL2.getDEPTH_TEST(gl));
    */
-  /*
-   run(
-     gl,
-     time,
-     tick,
-     /*
-      ShaderTrees.makeProgramSource(textureRef),
+  run(
+    gl,
+    time,
+    tick,
+    /*
+     ShaderTrees.makeProgramSource(textureRef),
       */
-     ShaderTrees.makeProgramSource(heightMapRef),
-     doMeasure(gl, queryExt, "Render trees"),
-     "Trees",
-     count * 1
-   );
-   */
+    ShaderTrees.makeProgramSource(heightMapRef),
+    doMeasure(gl, queryExt, "Render trees"),
+    "Trees",
+    count * 1
+  );
   WebGL2.enable(gl, WebGL2.getDEPTH_TEST(gl));
   WebGL2.disable(gl, WebGL2.getBLEND(gl));
   /* Copy to screen for debug */

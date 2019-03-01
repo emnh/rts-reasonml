@@ -252,7 +252,7 @@ let getObjectMatrix = (position, scale, rotation) => {
 
 let getCamera =
   Memoize.partialMemoize4((width, height, pos, rot) => {
-    let viewAngle = 45.0;
+    let viewAngle = 20.0;
     let aspect = float_of_int(width) /. float_of_int(height);
     let near = 0.1;
     let far = 10000.0;

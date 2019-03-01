@@ -54,7 +54,7 @@ let waterColor =
 
 let objectX = Config.floatConfigVar(["object", "position", "x"], 0.01, ());
 
-let objectY = Config.floatConfigVar(["object", "position", "y"], 0.01, ());
+let objectY = Config.floatConfigVar(["object", "position", "y"], 0.50, ());
 
 let objectZ = Config.floatConfigVar(["object", "position", "z"], 0.01, ());
 
