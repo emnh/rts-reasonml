@@ -30,7 +30,11 @@ exception Bug;
 /*
  * [@bs.val] external partialMemoize0 : (unit => 'a) => (unit => 'a) = "window.partialMemoize0";
  * */
+
+/*
+ * partialMemoize0 doesn't work
 [@bs.val] external partialMemoize0 : 'a => 'a = "window.partialMemoize0";
+*/
 
 [@bs.val] external partialMemoize1 : 'a => 'a = "window.partialMemoize1";
 
@@ -55,7 +59,7 @@ let setMemoizeId = x => {
       | Some(id) => id + 1
       | None => raise(Bug)
       };
-    Js.log(("id", id));
+    /* Js.log(("id", id)); */
     setMemoizeIdentity(x, id);
     setMemoizeIdentity(Document.window, id);
   | Some(_) => ()

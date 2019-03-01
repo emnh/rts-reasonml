@@ -257,7 +257,7 @@ var cacheDefault = {
     if (typeof retval === 'undefined') {
       retval = f();
       cache.set(cacheId, retval);
-      console.log("memoize0: ", retval);
+      //console.log("memoize0: ", retval);
     }
     return retval;
   };
@@ -268,7 +268,7 @@ var cacheDefault = {
     if (typeof retval === 'undefined') {
       retval = f(a);
       cache.set(sa, retval);
-      console.log("memoize1: ", retval, sa);
+      //console.log("memoize1: ", retval, sa);
     }
     return retval;
   };
@@ -280,7 +280,7 @@ var cacheDefault = {
     if (typeof retval === 'undefined') {
       retval = f(a, b);
       cache.set2(sa, sb, retval);
-      console.log("memoize2: ", retval, sa, sb);
+      //console.log("memoize2: ", retval, sa, sb);
     }
     return retval;
   };
@@ -293,7 +293,7 @@ var cacheDefault = {
     if (typeof retval === 'undefined') {
       retval = f(a, b, c);
       cache.set3(sa, sb, sc, retval);
-      console.log("memoize3: ", retval, sa, sb, sc);
+      //console.log("memoize3: ", retval, sa, sb, sc);
     }
     return retval;
   };
@@ -307,7 +307,7 @@ var cacheDefault = {
     if (typeof retval === 'undefined') {
       retval = f(a, b, c, d);
       cache.set4(sa, sb, sc, sd, retval);
-      console.log("memoize4: ", retval, sa, sb, sc, sd);
+      //console.log("memoize4: ", retval, sa, sb, sc, sd);
     }
     return retval;
   };

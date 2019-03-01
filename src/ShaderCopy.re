@@ -155,7 +155,7 @@ let makeProgramSource = texture => {
 };
 
 let makeRandomProgramSource =
-  Memoize.partialMemoize0(() => {
+  Memoize.partialMemoize1((_ : int) => {
     let uniformBlock = getUniforms2();
     (
       uniformBlock,
@@ -164,7 +164,7 @@ let makeRandomProgramSource =
   });
 
 let makeRandomProgramSource2 =
-  Memoize.partialMemoize0(() => {
+  Memoize.partialMemoize1((_ : int) => {
     let uniformBlock = getUniforms2();
     (
       uniformBlock,

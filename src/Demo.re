@@ -486,8 +486,8 @@ let getMeasure =
     (measure, readMeasure, () => lastValue^);
   });
 
-let reportElement = (_) =>
-  Memoize.partialMemoize0(() => {
+let reportElement =
+  Memoize.partialMemoize1(() => {
     let elem = Document.createElement("div");
     let _ = Document.appendChild(elem);
     let style = Document.getStyle(elem);
@@ -502,7 +502,7 @@ let doMeasure2 = (gl, queryExt, name) =>
   | Some(queryExt) =>
     let (defaultMeasure, _, _) = getMeasure(gl, queryExt, "Default");
     let (measure, readMeasure, getLast) = getMeasure(gl, queryExt, name);
-    let rep = reportElement(0);
+    let rep = reportElement();
     let measure =
       switch (readMeasure()) {
       | Some(nanoseconds) =>
@@ -570,7 +570,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
       time,
       tick,
       Some(heightMapRT),
-      ShaderCopy.makeRandomProgramSource(),
+      ShaderCopy.makeRandomProgramSource(0),
       quad,
       doMeasure2(gl, queryExt, "HeightMap"),
       1
@@ -587,7 +587,7 @@ let runPipeline = (gl, queryExt, time, tick) => {
       time,
       tick,
       Some(renderTarget),
-      ShaderCopy.makeRandomProgramSource2(),
+      ShaderCopy.makeRandomProgramSource2(0),
       quad,
       doMeasure(gl, queryExt, "Initial wave"),
       1
